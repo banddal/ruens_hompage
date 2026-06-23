@@ -8665,8 +8665,195 @@ body::before {
 
 .education-v6-table,
 .leadership-v6-table,
-.trials-v6-table {
+/* ── Trial horizontal axis (year = X, 3 lanes stacked) ── */
+.trials-h {
   margin-top: 24px;
+}
+
+.trials-h-scroll {
+  overflow-x: auto;
+  padding-bottom: 6px;
+  cursor: grab;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  user-select: none;
+}
+
+.trials-h-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.trials-h-scroll.dragging {
+  cursor: grabbing;
+}
+
+.trials-h-yearaxis,
+.trials-h-lane {
+  display: grid;
+  grid-template-columns: 116px repeat(30, minmax(72px, 1fr));
+  align-items: stretch;
+}
+
+.trials-h-span3 {
+  grid-column: span 3;
+}
+
+.trials-h-lifeline {
+  margin-top: 6px;
+  border-top: 0;
+}
+
+.trials-h-lifeline .trials-h-axis-label {
+  color: #111;
+}
+
+/* life timeline 기간 막대 — 평소 빈 윤곽선, reveal 시 왼→우 그라데이션 채움 */
+.trials-h-lifebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  margin: 14px 2px;
+  position: relative;
+  border-radius: 2px;
+  word-break: keep-all;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color .8s ease, border-color .8s ease;
+}
+
+/* 채워지는 그라데이션 레이어 (텍스트 아래) — --fill 0~1로 진행도 제어 */
+.trials-h-lifebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #a8a8a8 0%, #d2d2d2 100%);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left center;
+  transition: transform .08s linear;
+  z-index: -1;
+}
+
+/* 화살표 꼬리 */
+.trials-h-lifebar::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 7px solid transparent;
+  transition: border-left-color .8s ease;
+  z-index: 1;
+}
+
+.trials-h-lifebar.label-visible {
+  color: #555;
+}
+
+.trials-h-lifebar.revealed::after {
+  border-left-color: #a8a8a8;
+}
+
+.lifebar-elementary { grid-column: span 2; }
+.lifebar-mid  { grid-column: span 3; }
+.lifebar-high { grid-column: span 3; }
+.lifebar-univ { grid-column: span 8; }
+.lifebar-work { grid-column: span 9; }
+
+.trials-h-lifeline .trials-h-cell {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* 시련 셀: 평소 완전히 빈 칸 → reveal 클래스로 색+글씨 등장 */
+.trials-h-cell:not(:empty):not(.life) {
+  background: transparent;
+  color: transparent;
+  font-weight: 700;
+  transition: background 1.15s ease, color .65s ease;
+}
+
+/* Own World — 진한 빨강 */
+.lane-strong .trials-h-cell:not(:empty):not(.life) {
+  transition: background 2.25s ease, color .85s ease;
+}
+
+.lane-strong .trials-h-cell:not(:empty):not(.life).is-box-visible {
+  background: var(--red, #b5121b);
+}
+
+.lane-strong .trials-h-cell:not(:empty):not(.life).revealed {
+  color: #fff;
+}
+
+/* Outside / Connected World — 옅은 빨강 */
+.lane-soft .trials-h-cell:not(:empty):not(.life).is-box-visible {
+  background: rgba(181,18,27,.32);
+}
+
+.lane-soft .trials-h-cell:not(:empty):not(.life).revealed {
+  color: #fff;
+}
+
+.trials-h-axis-label {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--red);
+  letter-spacing: .02em;
+  position: sticky;
+  left: 0;
+  background: var(--panel, #fff);
+  z-index: 2;
+  border-right: 1px solid #111;
+}
+
+.trials-h-year {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 2px;
+  font-size: 10px;
+  font-weight: 900;
+  color: #111;
+  border-bottom: 1px solid #111;
+}
+
+.trials-h-yearaxis .trials-h-axis-label {
+  border-bottom: 1px solid #111;
+}
+
+.trials-h-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 4px;
+  min-height: 64px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: #333;
+  border-right: 1px dotted rgba(20,20,20,.18);
+  border-bottom: 1px dotted rgba(20,20,20,.18);
+  word-break: keep-all;
+}
+
+.trials-h-cell:empty::after {
+  content: "·";
+  color: rgba(0,0,0,.08);
+}
+
+.trials-v6-table {
   border-top: 1px solid #111;
   border-left: 1px solid #111;
 }
@@ -8719,15 +8906,15 @@ body::before {
 .education-v6-flow {
   margin-top: 28px;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(280px, .62fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   align-items: stretch;
 }
 
 .education-v6-group {
   position: relative;
-  min-height: 100%;
-  padding: 22px 22px 22px 26px;
+  min-height: 0;
+  padding: 22px 24px 22px 28px;
   background:
     linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.54)),
     rgba(17,17,17,.035);
@@ -8783,14 +8970,17 @@ body::before {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  grid-auto-rows: 88px;
 }
 
 .education-v6-item {
   position: relative;
   display: grid;
-  grid-template-columns: 118px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: 156px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  min-height: 88px;
   padding: 16px 16px 16px 18px;
   background: rgba(255,255,255,.76);
   box-shadow: inset 0 0 0 1px rgba(20,20,20,.06);
@@ -8801,17 +8991,21 @@ body::before {
   padding-right: 112px;
 }
 
+.education-v6-group[aria-label="Unofficial education"] .education-v6-item {
+  padding-right: 112px;
+}
+
 .education-v6-item::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 22px;
+  top: 50%;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--red);
   box-shadow: 0 0 0 4px #fff;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .education-v6-group[aria-label="Unofficial education"] .education-v6-item::before {
@@ -8834,6 +9028,7 @@ body::before {
   font-weight: 950;
   line-height: 1.25;
   letter-spacing: -.02em;
+  white-space: nowrap;
 }
 
 .education-v6-group[aria-label="Unofficial education"] .education-v6-period {
@@ -8842,15 +9037,44 @@ body::before {
 
 .education-v6-body {
   display: grid;
-  gap: 6px;
+  grid-template-columns: minmax(360px, .86fr) minmax(220px, .48fr);
+  align-items: center;
+  column-gap: 28px;
+  row-gap: 6px;
+}
+
+.education-v6-title-row {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .education-v6-body h3 {
+  min-width: 0;
   margin: 0;
   color: var(--red);
-  font-size: 22px;
+  font-size: 16px;
   line-height: 1.22;
   letter-spacing: -.055em;
+}
+
+.education-v6-title-row h3 {
+  font-size: 16px !important;
+}
+
+.education-v6-degree {
+  min-width: 0;
+  color: var(--red);
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1.22;
+  letter-spacing: -.055em;
+}
+
+.education-v6-group[aria-label="Unofficial education"] .education-v6-degree {
+  color: #222;
 }
 
 .education-v6-body p {
@@ -8862,10 +9086,19 @@ body::before {
 }
 
 .education-v6-school {
+  grid-column: 2;
   display: block;
   color: #555 !important;
   font-size: 12px !important;
   font-weight: 850 !important;
+  white-space: nowrap;
+  transition: color .18s ease, font-size .18s ease, letter-spacing .18s ease;
+}
+
+.education-v6-item:hover .education-v6-school {
+  color: #222 !important;
+  font-size: 18px !important;
+  letter-spacing: -.02em;
 }
 
 .education-v6-logo {
@@ -8904,91 +9137,185 @@ body::before {
 .education-v6-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
+  flex: 0 0 auto;
+  align-items: center;
 }
 
 .education-v6-tags span {
-  padding: 4px 8px;
-  border: 1px solid rgba(180,0,0,.16);
-  color: rgba(180,0,0,.86);
-  background: rgba(180,0,0,.035);
+  padding: 3px 7px;
+  border: 1px solid rgba(180,0,0,.18);
+  color: rgba(180,0,0,.82);
+  background: rgba(255,255,255,.58);
   font-size: 10px;
   font-weight: 900;
   line-height: 1.2;
 }
 
+.education-v6-group[aria-label="Unofficial education"] .education-v6-tags span {
+  border-color: rgba(20,20,20,.18);
+  color: rgba(20,20,20,.72);
+}
+
 .moving-v6-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(350px, 38%);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 38%);
   gap: 24px;
   margin-top: 24px;
+  align-items: stretch;
 }
 
 .moving-v6-table {
-  border-top: 1px solid #111;
-  border-left: 1px solid #111;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  border: 0;
+  overflow: visible;
+  align-content: start;
 }
 
-.moving-v6-table button {
+.moving-v6-table-head {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
-  width: 100%;
-  min-height: 58px;
+  grid-template-columns: 104px minmax(0, .84fr) minmax(0, .84fr) minmax(0, .72fr);
+  background: transparent;
+  border-bottom: 1px solid rgba(20,20,20,.16);
+}
+
+.moving-v6-table-head > * {
+  padding: 4px 8px;
   border: 0;
-  background: #fff;
-  cursor: pointer;
+  color: #666;
+  font-size: 10px;
+  font-weight: 950;
   text-align: left;
 }
 
-.moving-v6-table button > * {
-  display: flex;
-  align-items: center;
-  padding: 12px 14px;
+.moving-v6-table button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 104px minmax(0, .84fr) minmax(0, .84fr) minmax(0, .72fr);
+  column-gap: 0;
+  row-gap: 0;
+  width: 100%;
+  min-height: 27px;
+  border: 0;
+  border-bottom: 1px solid rgba(20,20,20,.08);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
   box-sizing: border-box;
-  border-right: 1px solid #111;
-  border-bottom: 1px dotted rgba(20,20,20,.22);
+}
+
+.moving-v6-table button::before {
+  content: none;
+}
+
+.moving-v6-table button::after {
+  content: none;
+}
+
+.moving-v6-table button > * {
+  display: block;
+  padding: 6px 8px;
+  border: 0;
   word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 
 .moving-v6-table time {
   color: var(--red);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 950;
+  align-self: center;
 }
 
 .moving-v6-table span {
   color: #111;
-  font-size: 13px;
+  font-size: 10.5px;
   font-weight: 800;
+  line-height: 1.25;
+}
+
+.moving-v6-table span:empty::before {
+  content: "";
 }
 
 .moving-v6-table button span:nth-child(2) {
-  box-shadow: inset 3px 0 0 var(--red);
+  color: rgba(177,0,0,.88);
 }
 
 .moving-v6-table button span:nth-child(3) {
-  box-shadow: inset 3px 0 0 #111;
+  color: #333;
+}
+
+.moving-v6-table button span:nth-child(4) {
+  color: #666;
+  font-weight: 750;
 }
 
 .moving-v6-table button.active {
   background: #fafafa;
+  box-shadow: inset 3px 0 0 var(--red), inset 0 0 0 1px rgba(177,0,0,.12);
+}
+
+.moving-v6-table button.active::before {
+  content: none;
 }
 
 .moving-v6-map {
-  border: 1px solid #111;
+  border: 0;
   background: #fff;
-  padding: 18px;
+  padding: 22px;
+  margin-top: 0;
+  box-shadow: 0 10px 28px rgba(20,20,20,.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  box-sizing: border-box;
 }
 
 .moving-v6-map-canvas {
   position: relative;
-  height: 540px;
+  width: min(100%, 440px);
+  aspect-ratio: 240 / 309;
+  height: auto;
+  margin: clamp(54px, 20%, 92px) auto 0;
 }
 
-.moving-v6-map-canvas svg {
+.moving-v6-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.moving-v6-route path {
+  fill: none;
+  stroke: rgba(177,0,0,.72);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 4 5;
+}
+
+.moving-v6-route circle {
+  fill: #fff;
+  stroke: rgba(20,20,20,.55);
+  stroke-width: 1.2;
+}
+
+.moving-v6-map-image {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 .v6-map-land,
@@ -9024,10 +9351,11 @@ body::before {
   left: var(--x);
   top: var(--y);
   transform: translate(-50%, -50%);
-  color: #777;
-  font-size: 10px;
+  color: transparent;
+  font-size: 0;
   font-weight: 850;
   pointer-events: none;
+  opacity: 0;
 }
 
 .v6-map-pin {
@@ -9058,7 +9386,7 @@ body::before {
   grid-template-columns: 1fr 1fr auto;
   gap: 10px;
   padding-top: 14px;
-  margin-top: 14px;
+  margin-top: 28px;
   border-top: 1px dotted rgba(20,20,20,.24);
 }
 
@@ -9150,20 +9478,47 @@ body::before {
   }
   .education-v6-row,
   .leadership-v6-row,
-  .trials-v6-row,
-  .moving-v6-table button {
+  .trials-v6-row {
     grid-template-columns: 1fr;
+  }
+  .moving-v6-table {
+    grid-template-columns: 1fr;
+  }
+  .moving-v6-table button,
+  .moving-v6-table-head {
+    grid-template-columns: 84px minmax(0, .82fr) minmax(0, .82fr) minmax(0, .7fr);
   }
   .education-v6-flow {
     grid-template-columns: 1fr;
   }
+  .education-v6-list {
+    grid-auto-rows: auto;
+  }
   .education-v6-item {
     grid-template-columns: 1fr;
     gap: 8px;
+    min-height: 0;
     padding: 14px 14px 14px 18px;
+  }
+  .education-v6-body {
+    grid-template-columns: 1fr;
+    align-items: start;
+    row-gap: 6px;
+  }
+  .education-v6-school {
+    grid-column: 1;
+    white-space: normal;
+  }
+  .education-v6-title-row {
+    grid-column: 1;
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
   .education-v6-item.has-school-mark {
     padding-right: 86px;
+  }
+  .education-v6-group[aria-label="Unofficial education"] .education-v6-item {
+    padding-right: 14px;
   }
   .education-v6-logo {
     right: 12px;
@@ -9186,25 +9541,6 @@ body::before {
   }
 }
 
-
-.education-v6-logo-badge {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--panel, #f5f5f5);
-  border: 1px solid var(--line, #ddd);
-  color: var(--muted, #888);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .04em;
-}
 </style>
 </head>
 <body>
@@ -10356,52 +10692,49 @@ body::before {
       </div>
       <div class="education-v6-flow">
         <section class="education-v6-group" aria-label="Official education">
-          <header><strong>official</strong><span>졸업 · 학위</span></header>
+          <header><strong>official</strong></header>
           <div class="education-v6-list">
             <article class="education-v6-item has-school-mark">
-              <img class="education-v6-logo logo-seal" src="yonsei.png" alt="연세대학교 로고">
-              <div class="education-v6-period">2017.9.<br>~ 2022.8.</div>
+              <img class="education-v6-logo logo-seal" src="homo_ruens_assets/education/yonsei.png" alt="연세대학교 로고">
+              <div class="education-v6-period">2017.9. ~ 2022.8.</div>
               <div class="education-v6-body">
-                <h3>공공정책학석사</h3>
+                <div class="education-v6-title-row"><div class="education-v6-tags"><span>학위</span><span>졸업</span></div><span class="education-v6-degree">공공정책석사</span></div>
                 <p class="education-v6-school">연세대학교 행정대학원</p>
-                <div class="education-v6-tags"><span>전공</span></div>
               </div>
             </article>
             <article class="education-v6-item has-school-mark">
-              <img class="education-v6-logo logo-seal" src="kookmin.png" alt="국민대학교 로고">
-              <div class="education-v6-period">2004.3.<br>~ 2011.2.</div>
+              <img class="education-v6-logo logo-seal" src="homo_ruens_assets/education/kookmin.png" alt="국민대학교 로고">
+              <div class="education-v6-period">2004.3. ~ 2011.2.</div>
               <div class="education-v6-body">
-                <h3>언론정보학사 · 광고학사</h3>
+                <div class="education-v6-title-row"><div class="education-v6-tags"><span>학위</span><span>졸업</span></div><span class="education-v6-degree">언론정보학사 · 광고학사</span></div>
                 <p class="education-v6-school">국민대학교 언론정보학부</p>
-                <div class="education-v6-tags"><span>전공</span><span>복수전공</span></div>
               </div>
             </article>
             <article class="education-v6-item has-school-mark">
-              <img class="education-v6-logo logo-animation" src="animation-high.png" alt="한국애니메이션고등학교 로고">
-              <div class="education-v6-period">2000.3.<br>~ 2003.2.</div>
+              <img class="education-v6-logo logo-animation" src="homo_ruens_assets/education/animation-high.png" alt="한국애니메이션고등학교 로고">
+              <div class="education-v6-period">2000.3. ~ 2003.2.</div>
               <div class="education-v6-body">
-                <h3>1기</h3>
+                <div class="education-v6-title-row"><div class="education-v6-tags"><span>졸업</span></div><span class="education-v6-degree">1기</span></div>
                 <p class="education-v6-school">한국애니메이션고등학교</p>
               </div>
             </article>
           </div>
         </section>
         <section class="education-v6-group" aria-label="Unofficial education">
-          <header><strong>unofficial</strong><span>교육 이수 · 역량</span></header>
+          <header><strong>unofficial</strong></header>
           <div class="education-v6-list">
             <article class="education-v6-item">
-              <div class="education-v6-period">2026.6.<br>~ 2026.7.</div>
+              <div class="education-v6-period">2026.6. ~ 2026.7.</div>
               <div class="education-v6-body">
-                <h3>벤처투자전문인력 양성 교육</h3>
+                <div class="education-v6-title-row"><div class="education-v6-tags"><span>수료</span></div><span class="education-v6-degree">벤처투자전문인력 양성 교육</span></div>
                 <p class="education-v6-school">한국벤처캐피탈협회</p>
               </div>
             </article>
             <article class="education-v6-item">
-              <div class="education-v6-period">2012.2.<br>~ 2014.12.</div>
+              <div class="education-v6-period">2012.2. ~ 2014.12.</div>
               <div class="education-v6-body">
-                <h3>법률 학습</h3>
+                <div class="education-v6-title-row"><div class="education-v6-tags"><span>역량</span></div><span class="education-v6-degree">법률(헌법, 형법, 민법, 상법, 행정법, 노동법 등)</span></div>
                 <p class="education-v6-school">로스쿨 / 사법시험 준비</p>
-                <div class="education-v6-tags"><span>학점 이수</span></div>
               </div>
             </article>
           </div>
@@ -10419,47 +10752,59 @@ body::before {
       </div>
       <div class="moving-v6-layout">
         <div class="moving-v6-table">
-          <button class="active" data-year="2026" data-home="gangnam" data-work="pangyo" data-home-label="서울 강남 자곡동" data-work-label="경기 성남 판교"><time>2026</time><span>서울 강남(2) 자곡동</span><span>경기 성남 판교</span></button>
-          <button data-year="2023-2025" data-home="gwanggyo" data-work="pangyo" data-home-label="경기 수원 광교" data-work-label="판교 · 스타트업 현장"><time>2023-2025</time><span>경기 수원 광교</span><span>판교 · 스타트업 현장</span></button>
-          <button data-year="2018-2022" data-home="gangnam" data-work="suwon" data-home-label="서울 강남 자곡동" data-work-label="경기 수원 · 공공기관"><time>2018-2022</time><span>서울 강남(1) 자곡동</span><span>경기 수원 · 공공기관</span></button>
-          <button data-year="2012-2014" data-home="songpa" data-work="songpa" data-home-label="서울 송파 문정동" data-work-label="서울 송파 문정동"><time>2012-2014</time><span>서울 송파 문정동</span><span>서울 송파 문정동</span></button>
-          <button data-year="2004-2011" data-home="seoul" data-work="kookmin" data-home-label="서울 송파 · 성북" data-work-label="국민대학교"><time>2004-2011</time><span>서울 송파 · 성북</span><span>국민대학교</span></button>
-          <button data-year="1998-2002" data-home="yongin" data-work="hanam" data-home-label="경기 용인 기흥 · 포곡" data-work-label="경기 하남 · 학교"><time>1998-2002</time><span>경기 용인</span><span>경기 하남 · 학교</span></button>
-          <button data-year="1994-1997" data-home="suwon" data-work="suwon" data-home-label="경기 수원 매탄" data-work-label="경기 수원"><time>1994-1997</time><span>경기 수원 매탄</span><span>경기 수원</span></button>
-          <button data-year="1992-1993" data-home="daecheon" data-work="daecheon" data-home-label="충남 대천" data-work-label="충남 대천"><time>1992-1993</time><span>충남 대천</span><span>충남 대천</span></button>
-          <button data-year="1988-1991" data-home="gwangyang" data-work="gwangyang" data-home-label="전남 광양" data-work-label="전남 광양"><time>1988-1991</time><span>전남 광양</span><span>전남 광양</span></button>
-          <button data-year="1984-1987" data-home="geoje" data-work="geoje" data-home-label="경남 거제 장승포" data-work-label="경남 거제 장승포"><time>1984-1987</time><span>경남 거제 장승포</span><span>경남 거제 장승포</span></button>
+          <div class="moving-v6-table-head"><b>연도</b><span>거주지</span><span>주활동지역</span><span>비고</span></div>
+          <button class="active" data-year="1986" data-period="1984-1986" data-home="geoje" data-work="geoje" data-home-label="경남 거제시" data-work-label="경남 거제시"><time>1984-1986</time><span>경남 거제시</span><span>경남 거제시</span><span>-</span></button>
+          <button data-year="1988" data-period="1987-1988" data-home="gwangyang" data-work="gwangyang" data-home-label="전남 광양군" data-work-label="전남 광양군"><time>1987-1988</time><span>전남 광양군</span><span>전남 광양군</span><span>-</span></button>
+          <button data-year="1991" data-period="1989-1991" data-home="gwangyang" data-work="gwangyang" data-home-label="전남 동광양시" data-work-label="전남 동광양시"><time>1989-1991</time><span>전남 동광양시</span><span>전남 동광양시</span><span>초등학교 입학</span></button>
+          <button data-year="1992" data-period="1992" data-home="daecheon" data-work="daecheon" data-home-label="충남 대천시 대천동" data-work-label="충남 대천시 대천동"><time>1992</time><span>충남 대천시 대천동</span><span>충남 대천시 대천동</span><span>전학</span></button>
+          <button data-year="1993" data-period="1993" data-home="daecheon" data-work="daecheon" data-home-label="충남 대천시 대천1동" data-work-label="충남 대천시 대천1동"><time>1993</time><span>충남 대천시 대천1동</span><span>충남 대천시 대천1동</span><span>전학</span></button>
+          <button data-year="1995" data-period="1994-1995" data-home="suwon" data-work="suwon" data-home-label="경기 수원시 매탄동" data-work-label="경기 수원시 매탄동"><time>1994-1995</time><span>경기 수원시 매탄동</span><span>경기 수원시 매탄동</span><span>전학</span></button>
+          <button data-year="1996" data-period="1996" data-home="suwon" data-work="suwon" data-home-label="경기 수원시 원천동" data-work-label="경기 수원시 매탄동"><time>1996</time><span>경기 수원시 원천동</span><span>경기 수원시 매탄동</span><span>초등학교 졸업</span></button>
+          <button data-year="1999" data-period="1997-1999" data-home="yongin" data-work="suwon" data-home-label="경기 용인시 기흥읍(구)" data-work-label="경기 수원시 매탄동"><time>1997-1999</time><span>경기 용인시 기흥읍(구)</span><span>경기 수원시 매탄동</span><span>중학교 입학</span></button>
+          <button data-year="2002" data-period="2000-2002" data-home="yongin" data-work="hanam" data-home-label="경기 용인시 포곡면" data-work-label="경기도 하남시 창우동"><time>2000-2002</time><span>경기 용인시 포곡면</span><span>경기도 하남시 창우동</span><span>중학교 졸업 / 고등학교 입학</span></button>
+          <button data-year="2003" data-period="2003" data-home="yongin" data-work="yongin" data-home-label="경기 용인시 포곡면" data-work-label="경기 용인시 포곡면"><time>2003</time><span>경기 용인시 포곡면</span><span>경기 용인시 포곡면</span><span>고등학교 졸업 / 재수</span></button>
+          <button data-year="2004" data-period="2004" data-home="bundang" data-work="seongbuk" data-home-label="경기 성남시 분당구" data-work-label="서울시 성북구 정릉동"><time>2004</time><span>경기 성남시 분당구</span><span>서울시 성북구 정릉동</span><span>대학교 입학</span></button>
+          <button data-year="2005" data-period="2005" data-home="jamsil" data-work="seocho" data-home-label="서울시 송파구 잠실동" data-work-label="서울시 서초구"><time>2005</time><span>서울시 송파구 잠실동</span><span>서울시 서초구</span><span>밴드 연습실</span></button>
+          <button data-year="2007" data-period="2006-2007" data-home="jamsil" data-work="seongbuk" data-home-label="서울시 송파구 잠실동" data-work-label="서울시 성북구 정릉동"><time>2006-2007</time><span>서울시 송파구 잠실동</span><span>서울시 성북구 정릉동</span><span>-</span></button>
+          <button data-year="2008" data-period="2008" data-home="garak" data-work="seongbuk" data-home-label="서울시 송파구 가락본동" data-work-label="서울시 성북구 정릉동"><time>2008</time><span>서울시 송파구 가락본동</span><span>서울시 성북구 정릉동</span><span>-</span></button>
+          <button data-year="2009" data-period="2009" data-home="seongbuk" data-work="seongbuk" data-home-label="서울시 성북구 정릉동" data-work-label="서울시 성북구 정릉동"><time>2009</time><span>서울시 성북구 정릉동</span><span>서울시 성북구 정릉동</span><span>학교 앞 자취</span></button>
+          <button data-year="2010" data-period="2010" data-home="munjeong" data-work="seongbuk" data-home-label="서울시 송파구 문정1동" data-work-label="서울시 성북구 정릉동"><time>2010</time><span>서울시 송파구 문정1동</span><span>서울시 성북구 정릉동</span><span>-</span></button>
+          <button data-year="2011" data-period="2011" data-home="munjeong" data-work="munjeong" data-home-label="서울시 송파구 문정2동" data-work-label="서울시 송파구 문정2동"><time>2011</time><span>서울시 송파구 문정2동</span><span>서울시 송파구 문정2동</span><span>대학교 졸업</span></button>
+          <button data-year="2014" data-period="2012-2014" data-home="munjeong" data-work="munjeong" data-home-label="서울시 송파구 문정2동" data-work-label="서울시 송파구 문정2동"><time>2012-2014</time><span>서울시 송파구 문정2동</span><span>서울시 송파구 문정2동</span><span>로스쿨 입시</span></button>
+          <button data-year="2015" data-period="2015" data-home="munjeong" data-work="gwanggyo" data-home-label="서울시 송파구 문정2동" data-work-label="경기 수원시 광교"><time>2015</time><span>서울시 송파구 문정2동</span><span>경기 수원시 광교</span><span>경기도경제과학진흥원 입사</span></button>
+          <button data-year="2019" data-period="2016-2019" data-home="gangnam" data-work="gwanggyo" data-home-label="서울시 강남구 자곡동" data-work-label="경기 수원시 광교"><time>2016-2019</time><span>서울시 강남구 자곡동</span><span>경기 수원시 광교</span><span>독립</span></button>
+          <button data-year="2023" data-period="2020-2023" data-home="gangnam" data-work="gwanggyo" data-home-label="서울시 강남구 자곡동 밤고개로" data-work-label="경기 수원시 광교"><time>2020-2023</time><span>서울시 강남구 자곡동 밤고개로</span><span>경기 수원시 광교</span><span>자가 구입</span></button>
+          <button data-year="2026" data-period="2024-2026" data-home="gangnam" data-work="pangyo" data-home-label="서울시 강남구 자곡동 밤고개로" data-work-label="경기 성남시 판교"><time>2024-2026</time><span>서울시 강남구 자곡동 밤고개로</span><span>경기 성남시 판교</span><span>퇴사 / 스테이션케이 입사</span></button>
         </div>
         <aside class="moving-v6-map">
           <div class="moving-v6-map-canvas">
-            <svg viewBox="0 0 320 430" role="img" aria-label="한국 지도">
-              <path class="v6-map-land" d="M186 28 C205 31 225 47 240 72 C258 101 266 135 257 166 C252 184 240 200 226 216 C240 238 244 267 231 294 C218 320 195 333 171 347 C151 359 135 376 113 390 C94 402 72 397 61 379 C72 361 72 343 64 326 C52 301 59 277 76 258 C61 238 61 213 73 194 C82 179 97 169 111 160 C98 142 99 118 112 101 C123 86 139 81 153 75 C158 52 171 35 186 28 Z" />
-              <path class="v6-map-dmz" d="M153 75 C178 68 210 70 240 72" />
-              <path class="v6-map-east" d="M226 78 C215 113 218 146 204 181 C190 216 193 252 174 287 C160 312 140 337 121 363" />
-              <path class="v6-map-west" d="M113 102 C94 128 98 151 81 177 C63 204 74 228 58 253 C44 276 55 302 43 327" />
-              <path class="v6-map-jeju" d="M81 397 C111 382 150 385 173 402 C146 419 105 418 81 397 Z" />
-              <path class="v6-map-island" d="M58 241 c6 -5 13 -4 17 1 c-6 5 -12 5 -17 -1 Z M47 266 c5 -4 11 -3 14 2 c-5 4 -10 4 -14 -2 Z M219 334 c5 -4 11 -3 14 2 c-5 4 -10 4 -14 -2 Z" />
-              <path class="v6-capital-zone" d="M113 91 C139 76 176 82 195 106 C171 130 137 124 113 91 Z" />
+            <img class="moving-v6-map-image" src="homo_ruens_assets/story/korea-moving-map-clean.png" alt="한국 지도">
+            <svg class="moving-v6-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path id="storyV6MovePath"></path>
+              <g id="storyV6MoveNodes"></g>
             </svg>
-            <span class="v6-place" data-place="geoje" style="--x:57%;--y:81%">거제</span>
-            <span class="v6-place" data-place="gwangyang" style="--x:57%;--y:72%">광양</span>
-            <span class="v6-place" data-place="daecheon" style="--x:35%;--y:53%">대천</span>
-            <span class="v6-place" data-place="suwon" style="--x:43%;--y:35%">수원</span>
-            <span class="v6-place" data-place="yongin" style="--x:49%;--y:37%">용인</span>
-            <span class="v6-place" data-place="hanam" style="--x:49%;--y:31%">하남</span>
-            <span class="v6-place" data-place="seoul" style="--x:43%;--y:28%">서울</span>
-            <span class="v6-place" data-place="songpa" style="--x:45%;--y:31%">송파</span>
-            <span class="v6-place" data-place="kookmin" style="--x:40%;--y:27%">국민대</span>
-            <span class="v6-place" data-place="gangnam" style="--x:44%;--y:30%">강남</span>
-            <span class="v6-place" data-place="gwanggyo" style="--x:43%;--y:37%">광교</span>
-            <span class="v6-place" data-place="pangyo" style="--x:48%;--y:34%">판교</span>
+            <span class="v6-place" data-place="geoje" style="--x:64%;--y:75%">거제</span>
+            <span class="v6-place" data-place="gwangyang" style="--x:57%;--y:70%">광양</span>
+            <span class="v6-place" data-place="daecheon" style="--x:35%;--y:50%">대천</span>
+            <span class="v6-place" data-place="suwon" style="--x:39%;--y:32%">수원</span>
+            <span class="v6-place" data-place="yongin" style="--x:43%;--y:35%">용인</span>
+            <span class="v6-place" data-place="hanam" style="--x:43%;--y:28%">하남</span>
+            <span class="v6-place" data-place="seongbuk" style="--x:38%;--y:25%">성북</span>
+            <span class="v6-place" data-place="gangnam" style="--x:41%;--y:29%">강남</span>
+            <span class="v6-place" data-place="munjeong" style="--x:42%;--y:30%">문정</span>
+            <span class="v6-place" data-place="garak" style="--x:42%;--y:31%">가락</span>
+            <span class="v6-place" data-place="jamsil" style="--x:42%;--y:29%">잠실</span>
+            <span class="v6-place" data-place="seocho" style="--x:40%;--y:30%">서초</span>
+            <span class="v6-place" data-place="bundang" style="--x:43%;--y:33%">분당</span>
+            <span class="v6-place" data-place="gwanggyo" style="--x:40%;--y:35%">광교</span>
+            <span class="v6-place" data-place="pangyo" style="--x:43%;--y:32%">판교</span>
             <span class="v6-map-pin residence" id="storyV6HomePin"></span>
             <span class="v6-map-pin activity" id="storyV6WorkPin"></span>
           </div>
           <div class="moving-v6-caption">
-            <div><b>Residence</b><span id="storyV6HomeLabel">서울 강남 자곡동</span></div>
-            <div><b>Activity</b><span id="storyV6WorkLabel">경기 성남 판교</span></div>
-            <em id="storyV6MoveYear">2026</em>
+            <div><b>Residence</b><span id="storyV6HomeLabel">경남 거제시</span></div>
+            <div><b>Activity</b><span id="storyV6WorkLabel">경남 거제시</span></div>
+            <em id="storyV6MoveYear">1984-1986</em>
           </div>
         </aside>
       </div>
@@ -10471,16 +10816,158 @@ body::before {
           <span>04 / Times of Trial</span>
           <h2>Times of Trial</h2>
         </div>
-        <p>배치 확인을 위해 확정된 개인 사건 중심으로만 남겼습니다.</p>
+        <p>박스를 클릭하면 1995년부터 차례로 시련이 드러납니다. 좌우로 끌어 연도를 이동할 수 있습니다.</p>
       </div>
-      <div class="trials-v6-table">
-        <div class="trials-v6-row head"><b>Year</b><strong>Trial</strong><strong>Note</strong></div>
-        <div class="trials-v6-row"><b>2000</b><p>수술 / 휴학</p><p>고등학교 진입기의 중단과 회복</p></div>
-        <div class="trials-v6-row"><b>2001</b><p>수술 / 졸업</p><p>회복 이후 학교생활 복귀</p></div>
-        <div class="trials-v6-row"><b>2003</b><p>재수</p><p>다음 진입을 위한 우회</p></div>
-        <div class="trials-v6-row"><b>2012</b><p>아주대 로스쿨 예비 1번 탈락</p><p>첫 번째 거의 도착한 실패</p></div>
-        <div class="trials-v6-row"><b>2013</b><p>아주대 로스쿨 예비 1번 탈락</p><p>두 번째 거의 도착한 실패</p></div>
-        <div class="trials-v6-row"><b>2024</b><p>경기도경제과학진흥원 퇴사</p><p>공공에서 민간으로 이동</p></div>
+      <div class="trials-h">
+        <div class="trials-h-scroll" id="trialsHScroll">
+          <div class="trials-h-yearaxis">
+            <span class="trials-h-axis-label"></span>
+            <span class="trials-h-year">'95</span>
+            <span class="trials-h-year">'96</span>
+            <span class="trials-h-year">'97</span>
+            <span class="trials-h-year">'98</span>
+            <span class="trials-h-year">'99</span>
+            <span class="trials-h-year">'00</span>
+            <span class="trials-h-year">'01</span>
+            <span class="trials-h-year">'02</span>
+            <span class="trials-h-year">'03</span>
+            <span class="trials-h-year">'04</span>
+            <span class="trials-h-year">'05</span>
+            <span class="trials-h-year">'06</span>
+            <span class="trials-h-year">'07</span>
+            <span class="trials-h-year">'08</span>
+            <span class="trials-h-year">'09</span>
+            <span class="trials-h-year">'10</span>
+            <span class="trials-h-year">'11</span>
+            <span class="trials-h-year">'12</span>
+            <span class="trials-h-year">'13</span>
+            <span class="trials-h-year">'14</span>
+            <span class="trials-h-year">'15</span>
+            <span class="trials-h-year">'16</span>
+            <span class="trials-h-year">'17</span>
+            <span class="trials-h-year">'18</span>
+            <span class="trials-h-year">'19</span>
+            <span class="trials-h-year">'20</span>
+            <span class="trials-h-year">'21</span>
+            <span class="trials-h-year">'22</span>
+            <span class="trials-h-year">'23</span>
+            <span class="trials-h-year">'24</span>
+          </div>
+
+          <div class="trials-h-lane lane-soft">
+            <span class="trials-h-axis-label">Outside World</span>
+            <span data-year="1995" class="trials-h-cell"></span>
+            <span data-year="1996" class="trials-h-cell"></span>
+            <span data-year="1997" class="trials-h-cell">IMF</span>
+            <span data-year="1998" class="trials-h-cell"></span>
+            <span data-year="1999" class="trials-h-cell"></span>
+            <span data-year="2000" class="trials-h-cell"></span>
+            <span data-year="2001" class="trials-h-cell"></span>
+            <span data-year="2002" class="trials-h-cell"></span>
+            <span data-year="2003" class="trials-h-cell"></span>
+            <span data-year="2004" class="trials-h-cell"></span>
+            <span data-year="2005" class="trials-h-cell"></span>
+            <span data-year="2006" class="trials-h-cell"></span>
+            <span data-year="2007" class="trials-h-cell"></span>
+            <span data-year="2008" class="trials-h-cell">리먼 사태</span>
+            <span data-year="2009" class="trials-h-cell"></span>
+            <span data-year="2010" class="trials-h-cell"></span>
+            <span data-year="2011" class="trials-h-cell"></span>
+            <span data-year="2012" class="trials-h-cell"></span>
+            <span data-year="2013" class="trials-h-cell"></span>
+            <span data-year="2014" class="trials-h-cell"></span>
+            <span data-year="2015" class="trials-h-cell"></span>
+            <span data-year="2016" class="trials-h-cell"></span>
+            <span data-year="2017" class="trials-h-cell"></span>
+            <span data-year="2018" class="trials-h-cell"></span>
+            <span data-year="2019" class="trials-h-cell"></span>
+            <span data-year="2020" class="trials-h-cell trials-h-span3">코로나</span>
+            <span data-year="2023" class="trials-h-cell"></span>
+            <span data-year="2024" class="trials-h-cell"></span>
+          </div>
+
+          <div class="trials-h-lane lane-soft">
+            <span class="trials-h-axis-label">Connected World</span>
+            <span data-year="1995" class="trials-h-cell"></span>
+            <span data-year="1996" class="trials-h-cell"></span>
+            <span data-year="1997" class="trials-h-cell"></span>
+            <span data-year="1998" class="trials-h-cell"></span>
+            <span data-year="1999" class="trials-h-cell"></span>
+            <span data-year="2000" class="trials-h-cell">사업 부도</span>
+            <span data-year="2001" class="trials-h-cell"></span>
+            <span data-year="2002" class="trials-h-cell"></span>
+            <span data-year="2003" class="trials-h-cell"></span>
+            <span data-year="2004" class="trials-h-cell"></span>
+            <span data-year="2005" class="trials-h-cell"></span>
+            <span data-year="2006" class="trials-h-cell"></span>
+            <span data-year="2007" class="trials-h-cell"></span>
+            <span data-year="2008" class="trials-h-cell">부동산 손실</span>
+            <span data-year="2009" class="trials-h-cell"></span>
+            <span data-year="2010" class="trials-h-cell"></span>
+            <span data-year="2011" class="trials-h-cell"></span>
+            <span data-year="2012" class="trials-h-cell"></span>
+            <span data-year="2013" class="trials-h-cell"></span>
+            <span data-year="2014" class="trials-h-cell"></span>
+            <span data-year="2015" class="trials-h-cell"></span>
+            <span data-year="2016" class="trials-h-cell"></span>
+            <span data-year="2017" class="trials-h-cell"></span>
+            <span data-year="2018" class="trials-h-cell"></span>
+            <span data-year="2019" class="trials-h-cell"></span>
+            <span data-year="2020" class="trials-h-cell"></span>
+            <span data-year="2021" class="trials-h-cell"></span>
+            <span data-year="2022" class="trials-h-cell"></span>
+            <span data-year="2023" class="trials-h-cell"></span>
+            <span data-year="2024" class="trials-h-cell"></span>
+          </div>
+
+          <div class="trials-h-lane lane-strong">
+            <span class="trials-h-axis-label">Own World</span>
+            <span data-year="1995" class="trials-h-cell"></span>
+            <span data-year="1996" class="trials-h-cell"></span>
+            <span data-year="1997" class="trials-h-cell">첫 죽을 고비 / 휴학</span>
+            <span data-year="1998" class="trials-h-cell"></span>
+            <span data-year="1999" class="trials-h-cell"></span>
+            <span data-year="2000" class="trials-h-cell"></span>
+            <span data-year="2001" class="trials-h-cell"></span>
+            <span data-year="2002" class="trials-h-cell"></span>
+            <span data-year="2003" class="trials-h-cell">대학교 재수</span>
+            <span data-year="2004" class="trials-h-cell"></span>
+            <span data-year="2005" class="trials-h-cell">휴학</span>
+            <span data-year="2006" class="trials-h-cell"></span>
+            <span data-year="2007" class="trials-h-cell"></span>
+            <span data-year="2008" class="trials-h-cell"></span>
+            <span data-year="2009" class="trials-h-cell"></span>
+            <span data-year="2010" class="trials-h-cell"></span>
+            <span data-year="2011" class="trials-h-cell">두번째 죽을 고비 / 졸업</span>
+            <span data-year="2012" class="trials-h-cell">로스쿨 탈락 1차</span>
+            <span data-year="2013" class="trials-h-cell">로스쿨 탈락 2차</span>
+            <span data-year="2014" class="trials-h-cell">로스쿨 탈락 3차</span>
+            <span data-year="2015" class="trials-h-cell"></span>
+            <span data-year="2016" class="trials-h-cell"></span>
+            <span data-year="2017" class="trials-h-cell"></span>
+            <span data-year="2018" class="trials-h-cell"></span>
+            <span data-year="2019" class="trials-h-cell"></span>
+            <span data-year="2020" class="trials-h-cell"></span>
+            <span data-year="2021" class="trials-h-cell"></span>
+            <span data-year="2022" class="trials-h-cell"></span>
+            <span data-year="2023" class="trials-h-cell"></span>
+            <span data-year="2024" class="trials-h-cell">경과원 퇴사</span>
+          </div>
+
+          <div class="trials-h-lane trials-h-lifeline">
+            <span class="trials-h-axis-label">Life Timeline</span>
+            <span class="trials-h-lifebar lifebar-elementary" data-life data-from="1995" data-to="1996">초등학교</span>
+            <span class="trials-h-lifebar lifebar-mid" data-life data-from="1997" data-to="1999">중학교</span>
+            <span class="trials-h-lifebar lifebar-high" data-life data-from="2000" data-to="2002">고등학교</span>
+            <span class="trials-h-cell"></span>
+            <span class="trials-h-lifebar lifebar-univ" data-life data-from="2004" data-to="2011">대학교</span>
+            <span class="trials-h-cell"></span>
+            <span class="trials-h-cell"></span>
+            <span class="trials-h-cell"></span>
+            <span class="trials-h-cell"></span>
+            <span class="trials-h-lifebar lifebar-work" data-life data-from="2016" data-to="2024">경기도경제과학진흥원</span>
+          </div>
+        </div>
       </div>
     </section>
     <section class="story-v6-frame" id="storyV6Leadership">
@@ -10504,7 +10991,7 @@ body::before {
         <div class="leadership-v6-row"><b>2023</b><p>노동조합 통합 위원장</p><p>경기도노동조합총연합 퇴사</p><p>경기도지사 표창</p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="union-integration"></button></span></div>
         <div class="leadership-v6-row"><b>2024</b><p>경과원 퇴사</p><p>스타트업허브팀 과장</p><p>통합 위원장 임기 종료</p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="pangyo-plan"></button><button type="button" class="story-project-box js-open-project" data-project="pangyo-plus20"></button></span></div>
         <div class="leadership-v6-row"><b>2025</b><p>스테이션케이 입사</p><p>스테이션케이 팀장</p><p></p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="pangyo-approval"></button></span></div>
-        <div class="leadership-v6-row"><b>2026</b><p>벤처투자전문인력 양성 교육</p><p>기술과 기업의 세계</p><p></p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="business-plan"></button><button type="button" class="story-project-box js-open-project" data-project="wysle"></button></span></div>
+        <div class="leadership-v6-row"><b>2026</b><p>벤처투자전문인력 교육</p><p>기술과 기업의 세계</p><p></p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="business-plan"></button><button type="button" class="story-project-box js-open-project" data-project="wysle"></button></span></div>
       </div>
     </section>
 
@@ -10537,7 +11024,7 @@ body::before {
             <article style="--c:3"><i></i><strong>학생회</strong><em>한애고 부회장</em></article>
             <article style="--c:4"><i></i><strong>Band DAL</strong><em>frontman</em></article>
             <article style="--c:4"><i></i><strong>학부 회장</strong><em>국민대 언론정보학부</em></article>
-            <article style="--c:7"><i></i><strong>노조위원장</strong><em>책임과 협상</em></article>
+            <article style="--c:7"><i></i><strong>노조 위원장</strong><em>책임과 협상</em></article>
             <article style="--c:8"><i></i><strong>민간 전환</strong><em>새 역할</em></article>
           </div>
           <div class="storyline-v5-lane trial">
@@ -10576,7 +11063,7 @@ body::before {
         <div class="education-v5-row"><b>2013</b><p></p><p>아주대 로스쿨 예비 1번 탈락, 인권 변호사 경로의 중단</p></div>
         <div class="education-v5-row"><b>2017</b><p>연세대학교 행정대학원 입학(99기)</p><p>공공정책 전문가로 방향 재설계</p></div>
         <div class="education-v5-row"><b>2022</b><p>연세대학교 행정대학원 졸업, 공공정책 석사(MPP)</p><p>노동과 조직, 정책 실무의 언어 정리</p></div>
-        <div class="education-v5-row"><b>2026</b><p>벤처투자전문인력양성 교육 수료</p><p>기술과 기업의 세계에서 다음 발자국</p></div>
+        <div class="education-v5-row"><b>2026</b><p>벤처투자전문인력 교육 수료</p><p>기술과 기업의 세계에서 다음 발자국</p></div>
       </div>
     </section>
 
@@ -12693,6 +13180,8 @@ function initStoryV6() {
   const homeLabel = $("#storyV6HomeLabel");
   const workLabel = $("#storyV6WorkLabel");
   const yearLabel = $("#storyV6MoveYear");
+  const routePath = $("#storyV6MovePath");
+  const routeNodes = $("#storyV6MoveNodes");
 
   function offsetPercent(value, amount) {
     const number = parseFloat(value);
@@ -12710,14 +13199,43 @@ function initStoryV6() {
     pin.classList.add("visible");
   }
 
+  function coordPoint(place) {
+    const coord = coords[place];
+    if (!coord) return null;
+    return {
+      x: parseFloat(coord.x),
+      y: parseFloat(coord.y)
+    };
+  }
+
+  function rowPoint(row) {
+    return coordPoint(row.dataset.home) || coordPoint(row.dataset.work);
+  }
+
+  function updateRoute(row) {
+    if (!routePath || !routeNodes) return;
+    const targetYear = Number(row.dataset.year);
+    const points = rows
+      .filter(item => Number(item.dataset.year) <= targetYear)
+      .map(rowPoint)
+      .filter(Boolean);
+    const uniquePoints = points.filter((point, index, list) => {
+      const prev = list[index - 1];
+      return !prev || Math.abs(prev.x - point.x) > .2 || Math.abs(prev.y - point.y) > .2;
+    });
+    routePath.setAttribute("d", uniquePoints.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" "));
+    routeNodes.innerHTML = uniquePoints.map(point => `<circle cx="${point.x}" cy="${point.y}" r="1.2"></circle>`).join("");
+  }
+
   function activate(row) {
     rows.forEach(item => item.classList.toggle("active", item === row));
     const samePlace = row.dataset.home === row.dataset.work;
     placePin(homePin, row.dataset.home, samePlace ? -1.4 : 0);
     placePin(workPin, row.dataset.work, samePlace ? 1.4 : 0);
+    updateRoute(row);
     if (homeLabel) homeLabel.textContent = row.dataset.homeLabel || "-";
     if (workLabel) workLabel.textContent = row.dataset.workLabel || "-";
-    if (yearLabel) yearLabel.textContent = row.dataset.year || "";
+    if (yearLabel) yearLabel.textContent = row.dataset.period || row.dataset.year || "";
   }
 
   rows.forEach(row => row.addEventListener("click", () => activate(row)));
@@ -12752,29 +13270,74 @@ function initStoryV6() {
   let storyScrollTimer = null;
   let storyLinkedTimer = null;
   let storyScrollFrame = null;
-  let storyPointerJumped = false;
+  let storyScrollTarget = null;
+  let storyPausedScrollTarget = null;
+  let restoreStoryScrollBehavior = null;
+  let storyScrollActive = false;
+  let storySuppressNextClick = false;
+  const STORY_SCROLL_MAX_DURATION = 2940;
+  const STORY_SCROLL_MIN_DURATION = 850;
+  const STORY_SCROLL_MS_PER_PIXEL = 3;
 
-  function slowScrollToElement(element, duration = 4200) {
+  function getStoryScrollTargetY(element) {
+    return window.scrollY + element.getBoundingClientRect().top - (window.innerHeight - element.offsetHeight) / 2;
+  }
+
+  function stopStoryScroll(options = {}) {
+    if (options.pause && storyScrollTarget) storyPausedScrollTarget = storyScrollTarget;
     if (storyScrollFrame) cancelAnimationFrame(storyScrollFrame);
+    storyScrollFrame = null;
+    storyScrollTarget = null;
+    storyScrollActive = false;
+    if (restoreStoryScrollBehavior) {
+      restoreStoryScrollBehavior();
+      restoreStoryScrollBehavior = null;
+    }
+  }
+
+  function slowScrollToElement(element) {
+    stopStoryScroll();
+    storyPausedScrollTarget = null;
     const root = document.documentElement;
     const previousRootBehavior = root.style.scrollBehavior;
     const previousBodyBehavior = document.body.style.scrollBehavior;
     root.style.scrollBehavior = "auto";
     document.body.style.scrollBehavior = "auto";
+    restoreStoryScrollBehavior = () => {
+      root.style.scrollBehavior = previousRootBehavior;
+      document.body.style.scrollBehavior = previousBodyBehavior;
+    };
+    storyScrollTarget = element;
+    storyScrollActive = true;
     const startY = window.scrollY;
-    const targetY = startY + element.getBoundingClientRect().top - (window.innerHeight - element.offsetHeight) / 2;
+    const targetY = getStoryScrollTargetY(element);
     const distance = targetY - startY;
+    if (distance <= 4) {
+      storyScrollTarget = null;
+      storyScrollActive = false;
+      if (restoreStoryScrollBehavior) {
+        restoreStoryScrollBehavior();
+        restoreStoryScrollBehavior = null;
+      }
+      return;
+    }
+    const duration = Math.min(STORY_SCROLL_MAX_DURATION, Math.max(STORY_SCROLL_MIN_DURATION, Math.abs(distance) * STORY_SCROLL_MS_PER_PIXEL));
     const startTime = performance.now();
 
     function step(now) {
       const progress = Math.min((now - startTime) / duration, 1);
+      if (!storyScrollActive) return;
       window.scrollTo({ top: startY + distance * progress, left: 0, behavior: "instant" });
       if (progress < 1) {
         storyScrollFrame = requestAnimationFrame(step);
       } else {
         storyScrollFrame = null;
-        root.style.scrollBehavior = previousRootBehavior;
-        document.body.style.scrollBehavior = previousBodyBehavior;
+        storyScrollTarget = null;
+        storyScrollActive = false;
+        if (restoreStoryScrollBehavior) {
+          restoreStoryScrollBehavior();
+          restoreStoryScrollBehavior = null;
+        }
       }
     }
 
@@ -12785,6 +13348,10 @@ function initStoryV6() {
     const href = control.dataset.storyCard;
     const card = document.querySelector(href);
     if (!card) return;
+    if (storyScrollActive && storyScrollTarget === card) {
+      stopStoryScroll();
+      return;
+    }
     $$(".story-v6-card-strip a, .storyline-v6-years [data-story-card]").forEach(item => {
       item.classList.toggle("is-active", item === control || item === card);
     });
@@ -12812,16 +13379,57 @@ function initStoryV6() {
     if (!control) return;
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "click" && storyPointerJumped) {
-      storyPointerJumped = false;
+    if (storyScrollActive) {
+      stopStoryScroll();
       return;
     }
-    if (e.type === "pointerdown") storyPointerJumped = true;
     jumpToStoryCard(control);
   }
 
-  document.addEventListener("pointerdown", handleStoryCardJumpEvent, true);
-  document.addEventListener("click", handleStoryCardJumpEvent, true);
+  function handleStoryScrollStopEvent(e) {
+    const control = e.target.closest(".storyline-v6-years [data-story-card]");
+    const interactive = e.target.closest(".story-v6-card-strip a, a, button, input, textarea, select, [role='button']");
+    if (!storyScrollActive && !storyPausedScrollTarget && !control) return;
+    if (storyPausedScrollTarget && !storyScrollActive && !control && interactive) {
+      storyPausedScrollTarget = null;
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+    storySuppressNextClick = true;
+    window.setTimeout(() => {
+      storySuppressNextClick = false;
+    }, 120);
+    if (storyScrollActive) {
+      stopStoryScroll({ pause: true });
+      return;
+    }
+    if (control) {
+      jumpToStoryCard(control);
+      return;
+    }
+    if (storyPausedScrollTarget) {
+      const target = storyPausedScrollTarget;
+      const targetY = getStoryScrollTargetY(target);
+      if (targetY <= window.scrollY + 4) {
+        storyPausedScrollTarget = null;
+        return;
+      }
+      slowScrollToElement(target);
+    }
+  }
+
+  function suppressStoryStopClick(e) {
+    if (!storySuppressNextClick) return;
+    storySuppressNextClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+  }
+
+  document.addEventListener("pointerdown", handleStoryScrollStopEvent, true);
+  document.addEventListener("click", suppressStoryStopClick, true);
 
   $$(".story-v6-card-strip a").forEach(link => {
     link.addEventListener("click", e => {
@@ -12841,7 +13449,189 @@ function initStoryV6() {
 
 initStoryV6();
 
+/* ── Trial: 연도 타임라인 재생 (시련=칸단위, life막대=진행도 동기화) ── */
+(function initTrialsInteraction() {
+  const scroll = document.getElementById("trialsHScroll");
+  if (!scroll) return;
+
+  const Y0 = 1995, Y1 = 2024;
+  const PLAY_DURATION = 21000;
+  const EVENT_BOX_DELAY = 160;
+  const EVENT_TEXT_DELAY = 620;
+  const SAME_YEAR_STAGGER = 520;
+  const SCROLL_HOLD = 3800;
+
+  // 시련 셀: data-year 기준으로 연도별 그룹화
+  const trialCells = Array.from(scroll.querySelectorAll(".trials-h-cell[data-year]"))
+    .filter(c => c.textContent.trim().length > 0)
+    .map(c => ({ el: c, year: +c.dataset.year }));
+
+  // life 막대: from~to 범위
+  const lifeBars = Array.from(scroll.querySelectorAll(".trials-h-lifebar[data-from]"))
+    .map(b => ({ el: b, from: +b.dataset.from, to: +b.dataset.to }));
+
+  let playing = false;
+  let paused = false;
+  let isDown = false, startX = 0, startScroll = 0, dragMoved = false;
+  let playFrame = null;
+  let playTimers = [];
+  let playElapsed = 0;
+  let playStartedAt = 0;
+  let playMaxLeft = 0;
+
+  function progressForYear(year) {
+    return Math.max(0, Math.min(1, (year - Y0) / (Y1 - Y0)));
+  }
+
+  function resetAll() {
+    playTimers.forEach(timer => clearTimeout(timer));
+    playTimers = [];
+    if (playFrame) {
+      cancelAnimationFrame(playFrame);
+      playFrame = null;
+    }
+    trialCells.forEach(({ el }) => el.classList.remove("is-box-visible", "revealed"));
+    lifeBars.forEach(({ el }) => {
+      el.classList.remove("revealed", "label-visible");
+      el.style.setProperty("--fill", "0");
+    });
+    playElapsed = 0;
+    paused = false;
+  }
+
+  function setLifeProgress(currentYear) {
+    lifeBars.forEach(({ el, from, to }) => {
+      if (currentYear < from) {
+        el.classList.remove("revealed", "label-visible");
+        el.style.setProperty("--fill", "0");
+        return;
+      }
+      const span = Math.max(1, to - from);
+      const ratio = currentYear >= to ? 1 : Math.max(0, Math.min(1, (currentYear - from) / span));
+      const labelThreshold = el.classList.contains("lifebar-work") ? .45 : .3;
+      el.classList.add("revealed");
+      el.classList.toggle("label-visible", ratio >= labelThreshold);
+      el.style.setProperty("--fill", ratio.toFixed(3));
+    });
+  }
+
+  function queueEvents(offset = 0) {
+    playTimers.forEach(timer => clearTimeout(timer));
+    playTimers = [];
+    const yearCounts = new Map();
+    trialCells.forEach(({ el, year }) => {
+      const order = yearCounts.get(year) || 0;
+      yearCounts.set(year, order + 1);
+      const eventTime = progressForYear(year) * PLAY_DURATION + EVENT_BOX_DELAY + order * SAME_YEAR_STAGGER;
+      const textTime = eventTime + EVENT_TEXT_DELAY;
+      if (offset >= eventTime) {
+        el.classList.add("is-box-visible");
+      } else {
+        const boxTimer = setTimeout(() => el.classList.add("is-box-visible"), eventTime - offset);
+        playTimers.push(boxTimer);
+      }
+      if (offset >= textTime) {
+        el.classList.add("revealed");
+      } else {
+        const textTimer = setTimeout(() => el.classList.add("revealed"), textTime - offset);
+        playTimers.push(textTimer);
+      }
+    });
+  }
+
+  function startLoop() {
+    playStartedAt = performance.now();
+    function step(now) {
+      const elapsed = Math.min(PLAY_DURATION, playElapsed + now - playStartedAt);
+      const progress = Math.min(1, elapsed / PLAY_DURATION);
+      const scrollProgress = Math.max(0, Math.min(1, (elapsed - SCROLL_HOLD) / (PLAY_DURATION - SCROLL_HOLD)));
+      const currentYear = Y0 + (Y1 - Y0) * progress;
+      setLifeProgress(currentYear);
+      scroll.scrollLeft = playMaxLeft * scrollProgress;
+
+      if (progress < 1) {
+        playFrame = requestAnimationFrame(step);
+      } else {
+        setLifeProgress(Y1);
+        playFrame = null;
+        playTimers.push(setTimeout(() => {
+          playing = false;
+          paused = false;
+          playElapsed = 0;
+        }, EVENT_TEXT_DELAY + SAME_YEAR_STAGGER));
+      }
+    }
+
+    playFrame = requestAnimationFrame(step);
+  }
+
+  function pauseReveal() {
+    if (!playing) return;
+    playElapsed = Math.min(PLAY_DURATION, playElapsed + performance.now() - playStartedAt);
+    if (playFrame) {
+      cancelAnimationFrame(playFrame);
+      playFrame = null;
+    }
+    playTimers.forEach(timer => clearTimeout(timer));
+    playTimers = [];
+    playing = false;
+    paused = true;
+  }
+
+  function resumeReveal() {
+    if (!paused) return;
+    playing = true;
+    paused = false;
+    queueEvents(playElapsed);
+    startLoop();
+  }
+
+  function playReveal() {
+    if (playing) {
+      pauseReveal();
+      return;
+    }
+    if (paused) {
+      resumeReveal();
+      return;
+    }
+    playing = true;
+    resetAll();
+    scroll.scrollLeft = 0;
+    playMaxLeft = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
+    queueEvents(0);
+    startLoop();
+  }
+
+  // 블록 어느 영역을 클릭해도 재생
+  scroll.addEventListener("click", () => {
+    if (dragMoved) { dragMoved = false; return; }
+    playReveal();
+  });
+
+  // ── 클릭-드래그 스와이프 ──
+  scroll.addEventListener("pointerdown", e => {
+    isDown = true; dragMoved = false;
+    startX = e.clientX; startScroll = scroll.scrollLeft;
+    scroll.classList.add("dragging");
+    scroll.setPointerCapture(e.pointerId);
+  });
+  scroll.addEventListener("pointermove", e => {
+    if (!isDown) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 4) dragMoved = true;
+    scroll.scrollLeft = startScroll - dx;
+  });
+  function endDrag(e) {
+    if (!isDown) return;
+    isDown = false;
+    scroll.classList.remove("dragging");
+    try { scroll.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+  scroll.addEventListener("pointerup", endDrag);
+  scroll.addEventListener("pointercancel", endDrag);
+})();
+
 </script>
 
 </html>
-
