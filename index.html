@@ -8869,6 +8869,200 @@ body::before {
   grid-template-columns: 92px repeat(4, minmax(0, 1fr)) minmax(130px, .72fr);
 }
 
+/* ── Leadership flow (최신순 연도별 역할 + 포트폴리오) ── */
+.leadership-v6-grid {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: 52px 1.15fr 1fr 1.3fr 1.3fr;
+  border-top: 1px solid rgba(20,20,20,.14);
+  align-items: stretch;
+}
+
+/* 헤더 셀 */
+.lead-hcell {
+  grid-row: 1;
+  font-size: 9.5px !important;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #aaa !important;
+  border-bottom: 1px solid rgba(20,20,20,.14);
+  align-items: center;
+}
+
+.lead-year {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--red, #b5121b);
+  border-bottom: 1px solid rgba(20,20,20,.05);
+  padding: 7px 0;
+}
+
+.lead-hcell.lead-year {
+  color: #aaa;
+  justify-content: flex-start;
+  padding-left: 4px;
+}
+
+/* 셀 */
+.lc {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px 9px 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--sub, #333);
+  word-break: keep-all;
+  border-bottom: 1px solid rgba(20,20,20,.05);
+}
+
+/* 단일 셀: 텍스트 왼쪽, 점은 오른쪽 끝 고정 */
+.lc > .lc-text { flex: 1; min-width: 0; }
+.lc > .lead-pf-dots { margin-left: auto; }
+
+/* 병합 셀: 세로 가운데 + 좌측 옅은 구분선 */
+.lc.merged {
+  align-items: stretch;
+  padding-left: 0;
+  background: rgba(20,20,20,.012);
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 점 슬롯이 있는 병합 셀: 텍스트 왼쪽, 슬롯 오른쪽 끝 고정 */
+.lc.merged.has-slots {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.lc.merged.has-slots .lc-text {
+  align-self: center;
+  flex: 1;
+}
+
+/* 연도별 점 슬롯: 병합된 행 수만큼 균등 세로 분할 → 각 연도 행과 정렬 */
+.pf-slots {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-self: stretch;
+  margin-left: auto;
+}
+
+.pf-slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-height: 0;
+  padding-right: 12px;
+  position: relative;
+}
+
+/* 슬롯 사이 연도 구분 얇은 가로선 */
+.pf-slot + .pf-slot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px dotted rgba(20,20,20,.12);
+}
+
+.lc.empty { border-bottom: 1px solid rgba(20,20,20,.05); }
+
+.lc-text { min-width: 0; }
+
+/* hover 툴팁 */
+.lc-text.has-tip {
+  border-bottom: 1px dotted rgba(20,20,20,.3);
+  cursor: help;
+  position: relative;
+  outline: none;
+}
+.lc-text.has-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 7px);
+  z-index: 30;
+  width: max-content;
+  max-width: 240px;
+  padding: 7px 10px;
+  background: var(--ink, #1a1a1a);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: normal;
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity .15s, transform .15s;
+}
+.lc-text.has-tip::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  bottom: calc(100% + 2px);
+  z-index: 31;
+  border: 5px solid transparent;
+  border-top-color: var(--ink, #1a1a1a);
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+}
+.lc-text.has-tip:hover::after,
+.lc-text.has-tip:focus::after { opacity: 1; transform: translateY(0); }
+.lc-text.has-tip:hover::before,
+.lc-text.has-tip:focus::before { opacity: 1; }
+
+/* 포트폴리오 점 */
+.lc.pf-col {
+  justify-content: flex-start;
+  padding-right: 8px;
+}
+
+.lead-pf-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.lead-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red, #b5121b);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .12s, box-shadow .12s;
+}
+.lead-dot:hover {
+  transform: scale(1.5);
+  box-shadow: 0 0 0 3px rgba(181,18,27,.16);
+}
+
+@media (max-width: 820px) {
+  .leadership-v6-grid {
+    grid-template-columns: 42px 1fr 1fr;
+  }
+  .lc { white-space: normal; }
+}
+
 .education-v6-row > *,
 .leadership-v6-row > *,
 .trials-v6-row > * {
@@ -10976,22 +11170,131 @@ body::before {
           <span>05 / Leadership &amp; Passion</span>
           <h2>Leadership &amp; Passion</h2>
         </div>
-        <p>연도별로 동시에 수행한 포지션을 칸으로 분리했습니다. 포트폴리오가 있는 항목은 오른쪽의 작은 박스로 연결합니다.</p>
+        <p>2000년부터 지금까지, 한 해에도 여러 역할을 동시에 맡아 왔습니다. 포트폴리오 버튼을 누르면 해당 프로젝트 상세가 열립니다.</p>
       </div>
-      <div class="leadership-v6-table">
-        <div class="leadership-v6-row head"><b>Year</b><strong>Position A</strong><strong>Position B</strong><strong>Position C</strong><strong>Position D</strong><strong>Portfolio</strong></div>
-        <div class="leadership-v6-row"><b>2000</b><p>한국애니메이션고 입학</p><p>학생회 부회장</p><p></p><p></p><span></span></div>
-        <div class="leadership-v6-row"><b>2001</b><p>선도부장</p><p>밴드부</p><p></p><p></p><span></span></div>
-        <div class="leadership-v6-row"><b>2005</b><p>band DAL 결성</p><p>frontman</p><p></p><p></p><span></span></div>
-        <div class="leadership-v6-row"><b>2009</b><p>언론정보학부 회장</p><p>사회과학대 학생회</p><p>광고 공모전</p><p></p><span></span></div>
-        <div class="leadership-v6-row"><b>2017</b><p>연세대 행정대학원</p><p>경과원 노동조합 사무국장</p><p>직위 변경</p><p></p><span></span></div>
-        <div class="leadership-v6-row"><b>2018</b><p>경기도노동조합총연맹 사무국장</p><p>경기지방중소벤처기업청장 표창</p><p></p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="harassment-survey"></button><button type="button" class="story-project-box js-open-project" data-project="nadelgage"></button></span></div>
-        <div class="leadership-v6-row"><b>2021</b><p>전시팀 과장</p><p>경과원 노동조합 위원장</p><p>승진</p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="gfair"></button><button type="button" class="story-project-box js-open-project" data-project="collective-agreement"></button></span></div>
-        <div class="leadership-v6-row"><b>2022</b><p>연세대 행정대학원 졸업</p><p>경기도노동조합총연합 부위원장</p><p></p><p></p><span></span></div>
-        <div class="leadership-v6-row"><b>2023</b><p>노동조합 통합 위원장</p><p>경기도노동조합총연합 퇴사</p><p>경기도지사 표창</p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="union-integration"></button></span></div>
-        <div class="leadership-v6-row"><b>2024</b><p>경과원 퇴사</p><p>스타트업허브팀 과장</p><p>통합 위원장 임기 종료</p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="pangyo-plan"></button><button type="button" class="story-project-box js-open-project" data-project="pangyo-plus20"></button></span></div>
-        <div class="leadership-v6-row"><b>2025</b><p>스테이션케이 입사</p><p>스테이션케이 팀장</p><p></p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="pangyo-approval"></button></span></div>
-        <div class="leadership-v6-row"><b>2026</b><p>벤처투자전문인력 교육</p><p>기술과 기업의 세계</p><p></p><p></p><span><button type="button" class="story-project-box js-open-project" data-project="business-plan"></button><button type="button" class="story-project-box js-open-project" data-project="wysle"></button></span></div>
+      <div class="leadership-v6-grid" id="leadershipFlow">
+        <div class="lead-year lead-hcell">Year</div>
+        <div class="lc lead-hcell">회사 · 직급</div>
+        <div class="lc lead-hcell">학력</div>
+        <div class="lc lead-hcell">Role 1</div>
+        <div class="lc lead-hcell">Role 2</div>
+        <div class="lead-year" style="grid-row:2;grid-column:1;">2026</div>
+        <div class="lc merged has-slots" style="grid-row:2 / span 2;grid-column:2;"><span class="lc-text">스테이션케이 · 팀장</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="business-plan" title="사업계획 수립(170.4억)" aria-label="사업계획 수립(170.4억)"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="pangyo-approval" title="2판교 보육사업 이행계획 숭인" aria-label="2판교 보육사업 이행계획 숭인"></button></div></div></div>
+        <div class="lc empty" style="grid-row:2;grid-column:3;"></div>
+        <div class="lc merged has-slots" style="grid-row:2 / span 2;grid-column:4;"><span class="lc-text">novalabs(용역)</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="g-summit" title="경기서밋 기획/설계" aria-label="경기서밋 기획/설계"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="pangyo-case" title="1판교 성공사례" aria-label="1판교 성공사례"></button><button type="button" class="lead-dot js-open-project" data-project="pangyo-activation" title="2판교 활성화 프로세스" aria-label="2판교 활성화 프로세스"></button></div></div></div>
+        <div class="lc merged has-slots" style="grid-row:2 / span 2;grid-column:5;"><span class="lc-text">개인 Projecct</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="wysle" title="161컴퍼니" aria-label="161컴퍼니"></button><button type="button" class="lead-dot js-open-project" data-project="local-election-analysis" title="지방선거 공약(하남)" aria-label="지방선거 공약(하남)"></button><button type="button" class="lead-dot js-open-project" data-project="future-investment" title="경기미래투자공사 설립계획" aria-label="경기미래투자공사 설립계획"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="local-election-gwangju" title="지방선거분석(광주)" aria-label="지방선거분석(광주)"></button></div></div></div>
+        <div class="lead-year" style="grid-row:3;grid-column:1;">2025</div>
+        <div class="lc empty" style="grid-row:3;grid-column:3;"></div>
+        <div class="lead-year" style="grid-row:4;grid-column:1;">2024</div>
+        <div class="lc merged has-slots" style="grid-row:4 / span 4;grid-column:2;"><span class="lc-text">경기도경제과학진흥원 · 과장</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="pangyo-plus20" title="판교+20 전략 수립" aria-label="판교+20 전략 수립"></button><button type="button" class="lead-dot js-open-project" data-project="pangyo-activation-plan" title="2판교 활성화 계획" aria-label="2판교 활성화 계획"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="gfair" title="G-FAIR kOREA PM" aria-label="G-FAIR kOREA PM"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="gfair" title="G-FAIR kOREA PM" aria-label="G-FAIR kOREA PM"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="gfair" title="G-FAIR kOREA PM" aria-label="G-FAIR kOREA PM"></button><button type="button" class="lead-dot js-open-project" data-project="performance-eval" title="경과원 성과평가제도 개선 설계" aria-label="경과원 성과평가제도 개선 설계"></button></div></div></div>
+        <div class="lc empty" style="grid-row:4;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:4;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:4;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:5;grid-column:1;">2023</div>
+        <div class="lc empty" style="grid-row:5;grid-column:3;"></div>
+        <div class="lc has-slots" style="grid-row:5;grid-column:4;"><span class="lc-text">경기도경제과학진흥원 노동조합 통합 노조위원장</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="union-integration" title="경과원 노동조합 통합" aria-label="경과원 노동조합 통합"></button></div></div></div>
+        <div class="lc merged" style="grid-row:5 / span 2;grid-column:5;"><span class="lc-text has-tip" data-tip="경기도 공공기관 노조 연합체 부위원장" tabindex="0">경기도공공기관노동조합총연합 부위원장</span></div>
+        <div class="lead-year" style="grid-row:6;grid-column:1;">2022</div>
+        <div class="lc" style="grid-row:6;grid-column:3;"><span class="lc-text">연세대학교 행정대학원(6학기)</span></div>
+        <div class="lc merged" style="grid-row:6 / span 2;grid-column:4;"><span class="lc-text has-tip" data-tip="경과원 노동조합을 대표하는 위원장직 수행" tabindex="0">경기도경제과학진흥원 노동조합 노조위원장</span></div>
+        <div class="lead-year" style="grid-row:7;grid-column:1;">2021</div>
+        <div class="lc" style="grid-row:7;grid-column:3;"><span class="lc-text">연세대학교 행정대학원(5학기)</span></div>
+        <div class="lc merged has-slots" style="grid-row:7 / span 2;grid-column:5;"><span class="lc-text">경기도공공기관노동조합총연합 감사</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="presidential-camp-idea" title="대선 경기도 캠프 아이디어 제안" aria-label="대선 경기도 캠프 아이디어 제안"></button></div><div class="pf-slot"></div></div></div>
+        <div class="lead-year" style="grid-row:8;grid-column:1;">2020</div>
+        <div class="lc merged has-slots" style="grid-row:8 / span 4;grid-column:2;"><span class="lc-text">경기도경제과학진흥원 · 대리</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="work-innovation-operation" title="일터혁신 지원 운영" aria-label="일터혁신 지원 운영"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="market-support" title="전통시장 지원사업 설계" aria-label="전통시장 지원사업 설계"></button><button type="button" class="lead-dot js-open-project" data-project="work-innovation-design" title="일터혁신 지원 설계" aria-label="일터혁신 지원 설계"></button><button type="button" class="lead-dot js-open-project" data-project="job-support-budget" title="일자리 지원 도비확보(12억)" aria-label="일자리 지원 도비확보(12억)"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="nadelgage" title="나들가게 사업수주" aria-label="나들가게 사업수주"></button></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="seoul-startup-hub-benchmark" title="서울창업허브 벤치마크" aria-label="서울창업허브 벤치마크"></button><button type="button" class="lead-dot js-open-project" data-project="traditional-market-analysis" title="경기도 전통시장 현황 분석" aria-label="경기도 전통시장 현황 분석"></button></div></div></div>
+        <div class="lc empty" style="grid-row:8;grid-column:3;"></div>
+        <div class="lc has-slots" style="grid-row:8;grid-column:4;"><span class="lc-text">경기도경제과학진흥원 노동조합 노조위원장(대행)</span><div class="pf-slots"><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="harassment-survey" title="경과원 갑질-성폭력 실태조사" aria-label="경과원 갑질-성폭력 실태조사"></button><button type="button" class="lead-dot js-open-project" data-project="collective-agreement" title="경과원 단체협상" aria-label="경과원 단체협상"></button></div></div></div>
+        <div class="lead-year" style="grid-row:9;grid-column:1;">2019</div>
+        <div class="lc" style="grid-row:9;grid-column:3;"><span class="lc-text">연세대학교 행정대학원(3-4학기)</span></div>
+        <div class="lc merged" style="grid-row:9 / span 3;grid-column:4;"><span class="lc-text has-tip" data-tip="경과원 노동조합 사무국 운영 총괄" tabindex="0">경기도경제과학진흥원 노동조합 사무국장</span></div>
+        <div class="lc merged has-slots" style="grid-row:9 / span 3;grid-column:5;"><span class="lc-text">경기도공공기관노동조합총연합 사무국장</span><div class="pf-slots"><div class="pf-slot"></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="gyeonggi-transition-team" title="경기도 인수위" aria-label="경기도 인수위"></button><button type="button" class="lead-dot js-open-project" data-project="gbsa-harassment-survey" title="경기도 갑질 및 성폭력 실태조사" aria-label="경기도 갑질 및 성폭력 실태조사"></button></div><div class="pf-slot"></div></div></div>
+        <div class="lead-year" style="grid-row:10;grid-column:1;">2018</div>
+        <div class="lc" style="grid-row:10;grid-column:3;"><span class="lc-text">연세대학교 행정대학원(2학기)</span></div>
+        <div class="lead-year" style="grid-row:11;grid-column:1;">2017</div>
+        <div class="lc" style="grid-row:11;grid-column:3;"><span class="lc-text">연세대학교 행정대학원(1학기)</span></div>
+        <div class="lead-year" style="grid-row:12;grid-column:1;">2016</div>
+        <div class="lc merged has-slots" style="grid-row:12 / span 2;grid-column:2;"><span class="lc-text">경기도경제과학진흥원 · 사원</span><div class="pf-slots"><div class="pf-slot"></div><div class="pf-slot"><button type="button" class="lead-dot js-open-project" data-project="maeul-eval" title="행정안정부 사업평가" aria-label="행정안정부 사업평가"></button></div></div></div>
+        <div class="lc empty" style="grid-row:12;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:12;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:12;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:13;grid-column:1;">2015</div>
+        <div class="lc empty" style="grid-row:13;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:13;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:13;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:14;grid-column:1;">2014</div>
+        <div class="lc empty" style="grid-row:14;grid-column:2;"></div>
+        <div class="lc empty" style="grid-row:14;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:14;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:14;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:15;grid-column:1;">2013</div>
+        <div class="lc empty" style="grid-row:15;grid-column:2;"></div>
+        <div class="lc empty" style="grid-row:15;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:15;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:15;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:16;grid-column:1;">2012</div>
+        <div class="lc empty" style="grid-row:16;grid-column:2;"></div>
+        <div class="lc empty" style="grid-row:16;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:16;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:16;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:17;grid-column:1;">2011</div>
+        <div class="lc empty" style="grid-row:17;grid-column:2;"></div>
+        <div class="lc empty" style="grid-row:17;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:17;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:17;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:18;grid-column:1;">2010</div>
+        <div class="lc empty" style="grid-row:18;grid-column:2;"></div>
+        <div class="lc" style="grid-row:18;grid-column:3;"><span class="lc-text">국민대학교(9학기)</span></div>
+        <div class="lc empty" style="grid-row:18;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:18;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:19;grid-column:1;">2009</div>
+        <div class="lc empty" style="grid-row:19;grid-column:2;"></div>
+        <div class="lc" style="grid-row:19;grid-column:3;"><span class="lc-text">국민대학교(7-8학기)</span></div>
+        <div class="lc has-slots" style="grid-row:19;grid-column:4;"><span class="lc-text">국민대학교 언론정보학부 회장</span><div class="pf-slots"><div class="pf-slot"></div></div></div>
+        <div class="lc merged" style="grid-row:19 / span 2;grid-column:5;"><span class="lc-text has-tip" data-tip="사회과학대학 학생회 활동" tabindex="0">국민대학교 사회과학대 학생회</span></div>
+        <div class="lead-year" style="grid-row:20;grid-column:1;">2008</div>
+        <div class="lc empty" style="grid-row:20;grid-column:2;"></div>
+        <div class="lc" style="grid-row:20;grid-column:3;"><span class="lc-text">국민대학교(5-6학기)</span></div>
+        <div class="lc has-slots" style="grid-row:20;grid-column:4;"><span class="lc-text">국민대학교 언론정보학부 부회장</span><div class="pf-slots"><div class="pf-slot"></div></div></div>
+        <div class="lead-year" style="grid-row:21;grid-column:1;">2007</div>
+        <div class="lc empty" style="grid-row:21;grid-column:2;"></div>
+        <div class="lc" style="grid-row:21;grid-column:3;"><span class="lc-text">국민대학교(3-4학기)</span></div>
+        <div class="lc empty" style="grid-row:21;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:21;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:22;grid-column:1;">2006</div>
+        <div class="lc empty" style="grid-row:22;grid-column:2;"></div>
+        <div class="lc" style="grid-row:22;grid-column:3;"><span class="lc-text">국민대학교(2힉기)</span></div>
+        <div class="lc empty" style="grid-row:22;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:22;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:23;grid-column:1;">2005</div>
+        <div class="lc empty" style="grid-row:23;grid-column:2;"></div>
+        <div class="lc empty" style="grid-row:23;grid-column:3;"></div>
+        <div class="lc" style="grid-row:23;grid-column:4;"><span class="lc-text has-tip" data-tip="대학 시절 결성한 밴드, 프론트맨으로 활동" tabindex="0">band Dal</span></div>
+        <div class="lc empty" style="grid-row:23;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:24;grid-column:1;">2004</div>
+        <div class="lc empty" style="grid-row:24;grid-column:2;"></div>
+        <div class="lc" style="grid-row:24;grid-column:3;"><span class="lc-text">국민대학교(1학기)</span></div>
+        <div class="lc empty" style="grid-row:24;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:24;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:25;grid-column:1;">2003</div>
+        <div class="lc empty" style="grid-row:25;grid-column:2;"></div>
+        <div class="lc empty" style="grid-row:25;grid-column:3;"></div>
+        <div class="lc empty" style="grid-row:25;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:25;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:26;grid-column:1;">2002</div>
+        <div class="lc empty" style="grid-row:26;grid-column:2;"></div>
+        <div class="lc" style="grid-row:26;grid-column:3;"><span class="lc-text">한국애니메이션고등학교(3학년)</span></div>
+        <div class="lc empty" style="grid-row:26;grid-column:4;"></div>
+        <div class="lc empty" style="grid-row:26;grid-column:5;"></div>
+        <div class="lead-year" style="grid-row:27;grid-column:1;">2001</div>
+        <div class="lc empty" style="grid-row:27;grid-column:2;"></div>
+        <div class="lc" style="grid-row:27;grid-column:3;"><span class="lc-text">한국애니메이션고등학교(2학년)</span></div>
+        <div class="lc" style="grid-row:27;grid-column:4;"><span class="lc-text has-tip" data-tip="한국애니메이션고 2학년, 학생회 선도부장" tabindex="0">학생회 선도부장</span></div>
+        <div class="lc" style="grid-row:27;grid-column:5;"><span class="lc-text has-tip" data-tip="고등학교 밴드부 활동" tabindex="0">밴드부</span></div>
+        <div class="lead-year" style="grid-row:28;grid-column:1;">2000</div>
+        <div class="lc empty" style="grid-row:28;grid-column:2;"></div>
+        <div class="lc" style="grid-row:28;grid-column:3;"><span class="lc-text">한국애니메이션고등학교(1학년)</span></div>
+        <div class="lc" style="grid-row:28;grid-column:4;"><span class="lc-text has-tip" data-tip="한국애니메이션고 1학년, 학생회 부회장" tabindex="0">학생회 부회장</span></div>
+        <div class="lc empty" style="grid-row:28;grid-column:5;"></div>
       </div>
     </section>
 
