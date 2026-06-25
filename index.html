@@ -3266,22 +3266,22 @@ body::before {
 }.essay-tag-strip.dragging {
   cursor: grabbing;
 }.essay-tag-btn {
-  flex: 0 0 76px;
-  border: 1px solid rgba(255,255,255,.42);
-  background: rgba(255,255,255,.10);
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
   color: rgba(20,20,20,.66);
   min-height: 26px;
-  padding: 0 6px;
+  padding: 0 4px;
   cursor: pointer;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 850;
   text-align: center;
   white-space: nowrap;
 }.essay-tag-btn.active, .essay-tag-btn:hover {
-  background: rgba(255,255,255,.24);
-  border-color: rgba(20,20,20,.18);
-  color: #111;
+  background: transparent;
+  border-color: transparent;
+  color: var(--red);
 }.site-search {
   position: relative;
   display: grid;
@@ -3371,8 +3371,13 @@ body::before {
   background: rgba(255,255,255,.42);
   color: #111;
 }.portfolio-intro {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(220px, .30fr) minmax(0, 1fr) minmax(120px, .18fr);
+  align-items: end;
+  gap: 34px;
   margin-bottom: 34px;
-  padding: 42px 46px 38px;
+  padding: 40px 46px 36px;
   background: rgba(255,255,255,.96);
   border: 1px solid rgba(20,20,20,.10);
   box-shadow: 0 18px 44px rgba(0,0,0,.08);
@@ -3383,39 +3388,74 @@ body::before {
   font-size: 12px;
   font-weight: 900;
   letter-spacing: .06em;
+}.portfolio-intro-name {
+  margin: 0;
+  color: #111;
+  line-height: .94;
+  font-weight: 950;
+}.portfolio-intro-name .kr {
+  display: block;
+  font-size: clamp(40px, 4.7vw, 64px);
+  letter-spacing: .12em;
+  font-weight: 950;
+  white-space: nowrap;
+}.portfolio-intro-name .en {
+  display: block;
+  margin-top: 9px;
+  color: #333;
+  font-size: clamp(22px, 2.58vw, 35px);
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: -.055em;
+  white-space: nowrap;
 }.portfolio-intro h2 {
   margin: 0;
-  max-width: 820px;
-  color: #111;
-  font-size: clamp(32px, 4.3vw, 58px);
-  line-height: 1.04;
-  letter-spacing: -.065em;
+  max-width: 920px;
+  color: var(--red, #af0000);
+  font-size: clamp(21px, 2vw, 29px);
+  line-height: 1.2;
+  letter-spacing: -.045em;
+  font-weight: 520;
 }.portfolio-intro p {
-  max-width: 760px;
-  margin: 18px 0 0;
+  max-width: 940px;
+  margin: 10px 0 0;
+  color: #777;
+  font-size: clamp(13px, 1.18vw, 16px);
+  line-height: 1.36;
+  font-weight: 620;
+  letter-spacing: -.035em;
+}.portfolio-intro p strong {
   color: #555;
-  font-size: 16px;
-  line-height: 1.65;
-  font-weight: 350;
-}.portfolio-intro-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 28px;
-}.portfolio-intro-meta span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 12px;
-  border: 1px solid rgba(20,20,20,.12);
-  color: #555;
-  background: rgba(255,255,255,.62);
-  font-size: 11px;
-  font-weight: 800;
+  font-weight: 850;
+}.portfolio-intro-copy {
+  justify-self: start;
+  text-align: left;
+  align-self: end;
+  padding-left: 18px;
+}.portfolio-intro-hanja {
+  justify-self: end;
+  align-self: center;
+  color: rgba(175,0,0,.13);
+  font-size: clamp(58px, 7.2vw, 104px);
+  line-height: .86;
+  font-weight: 950;
+  letter-spacing: -.12em;
+  pointer-events: none;
+  user-select: none;
 }
 
 @media(max-width:700px) {.portfolio-intro {
     padding: 30px 24px 28px;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }.portfolio-intro-copy {
+    justify-self: start;
+    text-align: left;
+    padding-left: 0;
+  }.portfolio-intro-hanja {
+    justify-self: start;
+    font-size: 56px;
+    margin-top: 2px;
   }
 }.section-jump {
   display: none;
@@ -3518,24 +3558,31 @@ body::before {
     margin: 4px 0;
   }
 }.essay-news-track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(380px, 58%);
-  gap: 14px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scroll-padding-left: 20px;
-  -webkit-overflow-scrolling: touch;
-  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  overflow: visible;
+  padding: 20px 24px 24px;
   background: rgba(255,255,255,.28);
-  scrollbar-width: none;
-  cursor: grab;
+  scrollbar-width: auto;
+  cursor: default;
   user-select: none;
-  touch-action: pan-x;
+  touch-action: auto;
 }.essay-news-track::-webkit-scrollbar {
-  display: none;
+  display: initial;
+}.essay-global-tag {
+  border: 0;
+  background: transparent;
+  color: #555;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.4;
+  cursor: pointer;
+  letter-spacing: -.025em;
+}.essay-global-tag:hover, .essay-global-tag.active {
+  color: var(--red);
 }.essay-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3543,21 +3590,26 @@ body::before {
   padding: 20px;
   background: #d2d2d2;
 }#essayPublicBusinessGrid, #essayWorldOutsideGrid, #essayThinkingEmotionGrid, #essayOthersGrid {
-  grid-template-columns: none;
-  grid-template-rows: repeat(3, minmax(176px, 1fr));
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(240px, calc((100% - 28px) / 3));
-  max-height: 610px;
-  overflow: auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: none;
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(176px, auto);
+  max-height: 632px;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-snap-type: both proximity;
+  scroll-snap-type: y proximity;
   scroll-padding: 20px;
-  scrollbar-width: none;
-  cursor: grab;
+  scrollbar-width: thin;
+  cursor: default;
   user-select: none;
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
 }#essayPublicBusinessGrid::-webkit-scrollbar, #essayWorldOutsideGrid::-webkit-scrollbar, #essayThinkingEmotionGrid::-webkit-scrollbar, #essayOthersGrid::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+  display: initial;
+}#essayPublicBusinessGrid::-webkit-scrollbar-thumb, #essayWorldOutsideGrid::-webkit-scrollbar-thumb, #essayThinkingEmotionGrid::-webkit-scrollbar-thumb, #essayOthersGrid::-webkit-scrollbar-thumb {
+  background: rgba(20,20,20,.18);
+  border-radius: 999px;
 }#essayPublicBusinessGrid.dragging, #essayWorldOutsideGrid.dragging, #essayThinkingEmotionGrid.dragging, #essayOthersGrid.dragging {
   cursor: grabbing;
 }.essay-frame-controls {
@@ -3661,11 +3713,11 @@ body::before {
   display: inline-flex;
   align-items: center;
   min-height: 21px;
-  padding: 0 7px;
-  border: 1px solid rgba(20,20,20,.10);
-  background: rgba(255,255,255,.30);
-  color: rgba(20,20,20,.58);
-  font-size: 11px;
+  padding: 0 2px 0 0;
+  border: 0;
+  background: transparent;
+  color: rgba(20,20,20,.56);
+  font-size: 11.5px;
   font-weight: 800;
   line-height: 1;
 }.essay-card em, .essay-card span {
@@ -5448,6 +5500,7 @@ body::before {
   background: #fff;
   box-shadow: 0 22px 54px rgba(0,0,0,.10);
 }.story-v6-head {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(260px, .62fr) minmax(0, 1fr);
   gap: 24px;
@@ -5492,6 +5545,18 @@ body::before {
   --story-line-offset: 4px;
 }.storyline-v6:before {
   content: none;
+}.storyline-v6-guide {
+  position: absolute;
+  right: 0;
+  bottom: 7px;
+  z-index: 5;
+  margin: 0;
+  color: #666;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -.025em;
+  text-align: right;
 }.storyline-v6-years {
   display: grid;
   grid-template-columns: var(--story-year-w) repeat(4, minmax(0, 1fr));
@@ -5947,6 +6012,10 @@ body::before {
 .lc > .lc-text {
   flex: 0 1 auto;
   min-width: 0;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 }.lc > .lead-pf-dots {
   margin-left: 0;
@@ -5964,14 +6033,44 @@ body::before {
   align-items: stretch;
   justify-content: center;
   gap: 10px;
-  padding: 0 0 0 8px;
+  padding: 0;
 }.lc.has-slots .lc-text, .lc.merged.has-slots .lc-text {
   align-self: stretch;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 8px;
   text-align: center;
+}.leadership-v6-grid > .lc:not(.lead-hcell):not(.has-slots):not(.empty) {
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  padding: 0;
+}.leadership-v6-grid > .lc:not(.lead-hcell):not(.has-slots):not(.empty) > .lc-text {
+  align-self: stretch;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}.leadership-v6-grid > .lc:not(.lead-hcell):not(.has-slots):not(.empty)::after {
+  content: "";
+  flex: 0 0 56px;
+  min-width: 56px;
+  pointer-events: none;
+}.leadership-v6-grid > .lc[style*="grid-column:3"]:not(.lead-hcell):not(.has-slots):not(.empty) {
+  align-items: center;
+  gap: 7px;
+  padding: 9px 8px;
+}.leadership-v6-grid > .lc[style*="grid-column:3"]:not(.lead-hcell):not(.has-slots):not(.empty) > .lc-text {
+  align-self: auto;
+  flex: 0 1 auto;
+  width: 100%;
+  padding: 0;
+}.leadership-v6-grid > .lc[style*="grid-column:3"]:not(.lead-hcell):not(.has-slots):not(.empty)::after {
+  content: none;
 }/* 연도별 점 슬롯: 병합된 행 수만큼 균등 세로 분할 → 각 연도 행과 정렬 */
 .pf-slots {
   display: flex;
@@ -6014,7 +6113,9 @@ body::before {
   max-width: 240px;
   padding: 7px 10px;
   background: var(--ink, #1a1a1a);
-  color: #fff;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  text-align: left;
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1.45;
@@ -6487,12 +6588,16 @@ body::before {
   }
 }/* ═══════════ Archiving 탭 ═══════════ */
 .archiving-wrap {
-  max-width: 980px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   position: relative;
-  padding: 8px 0 40px;
+  padding: 0 0 40px;
+  display: grid;
+  gap: 34px;
+  background: transparent;
 }#taste {
-  background: #ffffff;
+  background: transparent;
 }/* 블록 네비게이션 */
 .arch-blocknav {
   position: -webkit-sticky;
@@ -6531,7 +6636,11 @@ body::before {
   justify-content: center;
 }/* 블록 공통 */
 .arch-block {
-  margin-bottom: 64px;
+  margin-bottom: 0;
+  padding: 34px 38px 38px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid rgba(20,20,20,.10);
+  box-shadow: 0 18px 44px rgba(0,0,0,.08);
   scroll-margin-top: 80px;
 }.arch-block-head {
   margin-bottom: 22px;
@@ -6609,12 +6718,16 @@ body::before {
   color: var(--muted, #999);
 }/* ── BLOCK 2: Portfolio ── */
 .arch-pf-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-width: 640px;
+  gap: 8px;
   margin-bottom: 14px;
 }.arch-pf-filter {
-  padding: 6px 14px;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 14px;
   font-size: 11.5px;
   font-weight: 700;
   font-family: inherit;
@@ -6713,7 +6826,11 @@ body::before {
   text-overflow: ellipsis;
   white-space: nowrap;
 }/* ── BLOCK 4: End ── */
-.arch-block-end { margin-bottom: 40px; }.arch-end {
+.arch-block-end {
+  padding: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}.arch-end {
   text-align: center;
   padding: 48px 24px 32px;
   border-top: 2px solid var(--ink, #111);
@@ -7188,7 +7305,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
     <nav class="topbar-section-nav" aria-label="Page sections">
       <button class="topbar-section-tab tab active" type="button" data-tab="projects">Portfolio</button>
       <button class="topbar-section-tab tab" type="button" data-tab="essay">Essay</button>
-      <button class="topbar-section-tab tab" type="button" data-tab="story">Story</button>
+      <button class="topbar-section-tab tab" type="button" data-tab="story">Curriculum Vitae</button>
       <button class="topbar-section-tab tab" type="button" data-tab="taste">Archiving</button>
     </nav>
 
@@ -7249,15 +7366,15 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
   </nav>
 
 <section class="portfolio-intro" id="portfolioIntro" aria-label="Portfolio intro copy">
-  <span class="portfolio-intro-kicker">Portfolio</span>
-  <h2>슬로건이 들어갈 자리입니다.</h2>
-  <p>기본 카피가 들어갈 영역입니다. 앞으로 이곳에 포트폴리오 전체를 관통하는 한 문장, 일의 태도, 핵심 역량을 설명하는 소개 문구를 배치할 수 있습니다.</p>
-  <div class="portfolio-intro-meta" aria-label="Portfolio copy keywords">
-    <span>Strategy</span>
-    <span>Planning</span>
-    <span>Execution</span>
-    <span>Communication</span>
+  <div class="portfolio-intro-name">
+    <span class="kr">김 성 원</span>
+    <span class="en">Kim Sung Won</span>
   </div>
+  <div class="portfolio-intro-copy">
+    <h2>누구도 할 수 없다면 도전할 이유가 됩니다.</h2>
+    <p>소방수에서 전위대, 에이전트 부터 야전 사령관까지<br>공공 정책에서 민간 전략으로, 기획부터 운영까지 <strong>Hybrid Full scale Planner</strong></p>
+  </div>
+  <div class="portfolio-intro-hanja" aria-hidden="true">疾走</div>
 </section>
 
 <section class="matrix" id="projectsSectionCompetence">
@@ -7887,7 +8004,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
 <section class="panel" id="essay">
   <nav class="section-jump" aria-label="Essay 섹션 빠른 이동">
     <span class="section-jump-track" aria-hidden="true"></span>
-    <button type="button" class="section-jump-item" data-section-target="essaySectionNews" aria-label="News로 이동">
+    <button type="button" class="section-jump-item" data-section-target="essaySectionNews" aria-label="Essay tags로 이동">
       <span class="section-jump-dot"></span>
     </button>
     <button type="button" class="section-jump-item" data-section-target="essaySectionPublicBusiness" aria-label="公과 Business로 이동">
@@ -7905,15 +8022,15 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
   </nav>
 
   <section class="essay-shell">
-    <section class="essay-news matrix" id="essaySectionNews" aria-label="Latest essay updates">
+    <section class="essay-news matrix" id="essaySectionNews" aria-label="Essay tags">
       <div class="essay-news-head section-head">
         <div>
-          <h2>News</h2>
-          <p>최근 업데이트된 포스트</p>
+          <h2>Tags</h2>
+          <p>Essay 전체 태그를 모아 둔 영역입니다.</p>
         </div>
-        <div class="rule">클릭하면 포스트를 볼 수 있습니다.</div>
+        <div class="rule">#태그를 누르면 관련 글만 볼 수 있습니다.</div>
       </div>
-      <div class="essay-news-track" id="essayNewsTrack" aria-label="News cards"></div>
+      <div class="essay-news-track" id="essayGlobalTagCloud" aria-label="Essay global tags"></div>
     </section>
 
     <section class="essay-frame matrix" id="essaySectionPublicBusiness" aria-labelledby="essayPublicBusinessTitle">
@@ -7927,8 +8044,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayPublicBusinessGrid"></div>
       <div class="essay-frame-controls" aria-label="Public & Business frame controls">
-        <button type="button" data-essay-scroll="publicBusiness" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
-        <button type="button" data-essay-scroll="publicBusiness" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
+        <button type="button" data-essay-scroll="publicBusiness" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
+        <button type="button" data-essay-scroll="publicBusiness" data-direction="1" aria-label="아래 글 보기">&darr;</button>
       </div>
     </section>
 
@@ -7943,8 +8060,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayWorldOutsideGrid"></div>
       <div class="essay-frame-controls" aria-label="The outside world frame controls">
-        <button type="button" data-essay-scroll="worldOutside" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
-        <button type="button" data-essay-scroll="worldOutside" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
+        <button type="button" data-essay-scroll="worldOutside" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
+        <button type="button" data-essay-scroll="worldOutside" data-direction="1" aria-label="아래 글 보기">&darr;</button>
       </div>
     </section>
 
@@ -7959,8 +8076,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayOthersGrid"></div>
       <div class="essay-frame-controls" aria-label="Like & Others frame controls">
-        <button type="button" data-essay-scroll="others" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
-        <button type="button" data-essay-scroll="others" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
+        <button type="button" data-essay-scroll="others" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
+        <button type="button" data-essay-scroll="others" data-direction="1" aria-label="아래 글 보기">&darr;</button>
       </div>
     </section>
 
@@ -7975,8 +8092,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayThinkingEmotionGrid"></div>
       <div class="essay-frame-controls" aria-label="Thinking & Emotion frame controls">
-        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
-        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
+        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
+        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="1" aria-label="아래 글 보기">&darr;</button>
       </div>
     </section>
   </section>
@@ -8007,6 +8124,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
         <div>
           <h2>Storyline</h2>
         </div>
+        <p class="storyline-v6-guide">각 테마를 클릭하면 타임라인이 이동합니다.</p>
       </div>
       <div class="storyline-v6-wrap">
         <div class="storyline-v6">
@@ -8330,7 +8448,6 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
           <h2>Education</h2>
           <p class="story-v6-head-copy">예술가를 꿈꾸던 문학소년에서, 정책전문가로,<br>정책전문가에서 민-관 하이브리드 기획자로</p>
         </div>
-        <p class="story-v6-head-note">공식 학력과 비공식 학습을 구분해, 제도권 학위와 이후의 역량 보강 과정을 함께 보여줍니다.</p>
       </div>
       <div class="education-v6-flow">
         <section class="education-v6-group" aria-label="Official education">
@@ -8390,7 +8507,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
           <h2>Class &amp; Moving</h2>
           <p class="story-v6-head-copy">촌출신 흙투성이부터 판교로 출근하는 강남구민까지</p>
         </div>
-        <p class="story-v6-head-note">표를 거주지와 활동지 두 칸으로 나누고, 지도에서는 거주지 빨간 점과 활동지 검은 점을 따로 표시합니다.</p>
+        <p class="story-v6-head-note">각 시점을 클릭하면 거주지와 활동지, 동선이 표시됩니다.</p>
       </div>
       <div class="moving-v6-layout">
         <div class="moving-v6-table">
@@ -8458,7 +8575,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
           <h2>Times of Trial</h2>
           <p class="story-v6-head-copy">넘어질때마다 다시 일어나기</p>
         </div>
-        <p class="story-v6-head-note">박스를 클릭하면 1995년부터 차례로 시련이 드러납니다. 좌우로 끌어 연도를 이동할 수 있습니다.</p>
+        <p class="story-v6-head-note">박스를 클릭하면 1995년 부터 부정 이벤트가 드러납니다.</p>
       </div>
       <div class="trials-h">
         <div class="trials-h-scroll" id="trialsHScroll">
@@ -8618,7 +8735,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
           <h2>Leadership &amp; Passion</h2>
           <p class="story-v6-head-copy">늘 앞에 서고 마지막까지 남는 사람,<br>1인 3역, 1인 4역의 폭발적 에너지</p>
         </div>
-        <p class="story-v6-head-note">2000년부터 지금까지, 한 해에도 여러 역할을 동시에 맡아 왔습니다. 포트폴리오 버튼을 누르면 해당 프로젝트 상세가 열립니다.</p>
+        <p class="story-v6-head-note">빨간색 점을 클릭하면 해당 포지션에서 진행했던 프로젝트의 포트폴리오를 볼 수 있습니다.</p>
       </div>
       <div class="leadership-v6-grid" id="leadershipFlow">
         <div class="lead-year lead-hcell">Year</div>
@@ -9349,31 +9466,29 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       <!-- BLOCK 1: CV -->
       <section class="arch-block" id="archCV" aria-label="CV">
         <header class="arch-block-head">
-          <span class="arch-block-no">01</span>
-          <h2>CV</h2>
-          <p>취업·협업을 위한 핵심 이력 요약</p>
+          <h2>Resume</h2>
+          <p>협업을 위한 요약 핵심 이력 사항</p>
         </header>
         <div class="arch-cv">
           <div class="arch-cv-row">
             <div class="arch-cv-key">이름</div>
-            <div class="arch-cv-val">김성원 <span class="arch-cv-sub">Kim Sung Won</span></div>
+            <div class="arch-cv-val">김성원(金星元) <span class="arch-cv-sub">Kim Sung Won</span></div>
           </div>
           <div class="arch-cv-row">
             <div class="arch-cv-key">현재</div>
-            <div class="arch-cv-val">스테이션케이 팀장 · 161컴퍼니(Wysle) 공동창업/대표</div>
+            <div class="arch-cv-val">스테이션케이(팀장) / 161컴퍼니 공동대표</div>
           </div>
           <div class="arch-cv-row">
             <div class="arch-cv-key">전문 분야</div>
-            <div class="arch-cv-val">공공·민간 경제개발 전략, 창업생태계 기획, 조직·제도 설계</div>
+            <div class="arch-cv-val">공공정책, 전략기획, 프로젝트관리(Project Manager), 대관(Public Affair)</div>
           </div>
           <div class="arch-cv-row">
             <div class="arch-cv-key">주요 경력</div>
             <div class="arch-cv-val">
               <ul class="arch-cv-list">
-                <li>스테이션케이 (2판교 벤처클러스터 액셀러레이터) 팀장 — 2025~</li>
-                <li>경기도경제과학진흥원 — 사원·대리·과장 (2015~2024)</li>
-                <li>경기도경제과학진흥원 노동조합 통합 노조위원장 (2023)</li>
-                <li>경기도공공기관노동조합총연합 부위원장 (2022~2023)</li>
+                <li>스테이션케이(2판교 주주사 출자 엑셀러레이터) 팀장(2024~현재)</li>
+                <li>경기도경제과학진흥원(2015~2024)</li>
+                <li>경기도경제과학진흥원 통합 노조위원장(2023)</li>
               </ul>
             </div>
           </div>
@@ -9381,13 +9496,13 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
             <div class="arch-cv-key">학력</div>
             <div class="arch-cv-val">
               <ul class="arch-cv-list">
-                <li>연세대학교 행정대학원 공공정책학 석사</li>
-                <li>국민대학교 언론정보학부 · 광고학 (복수전공)</li>
+                <li>연세대학교 행정대학원 공공정책석사</li>
+                <li>국민대학교 언론정보학부 언론학사(광고학 복수전공)</li>
               </ul>
             </div>
           </div>
           <div class="arch-cv-actions">
-            <a class="arch-cv-download" href="#" id="archCvDownload">CV 내려받기 (PDF)</a>
+            <a class="arch-cv-download" href="#" id="archCvDownload">내려받기</a>
             <span class="arch-cv-note">최종 갱신: 준비 중</span>
           </div>
         </div>
@@ -9396,7 +9511,6 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       <!-- BLOCK 2: Portfolio -->
       <section class="arch-block" id="archPortfolio" aria-label="Portfolio">
         <header class="arch-block-head">
-          <span class="arch-block-no">02</span>
           <h2>Portfolio</h2>
           <p>연도별 업무 기록 — 행을 클릭하면 상세가 열립니다</p>
         </header>
@@ -9415,7 +9529,6 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       <!-- BLOCK 3: Essay -->
       <section class="arch-block" id="archEssay" aria-label="Essay">
         <header class="arch-block-head">
-          <span class="arch-block-no">03</span>
           <h2>Essay</h2>
           <p>주제별 글 목록 — 제목을 클릭하면 글이 열립니다</p>
         </header>
@@ -9763,6 +9876,7 @@ const ESSAY_IMAGES = {
 
 let activeEssayId = null;
 let activeReplyPath = null;
+let activeEssayGlobalTag = null;
 const activeEssayTags = {
   publicBusiness: null,
   worldOutside: null,
@@ -9876,13 +9990,13 @@ function createEssayCard(item, isNews=false) {
   btn.dataset.lead = essay.lead;
   btn.dataset.body = essay.body.join("\n\n");
   const tagHtml = essay.tags.length
-    ? `<span class="essay-card-tags">${essay.tags.map(tag => `<small>${escapeHtml(tag)}</small>`).join("")}</span>`
+    ? `<span class="essay-card-tags">${essay.tags.map(tag => `<small>#${escapeHtml(tag)}</small>`).join("")}</span>`
     : "";
   btn.innerHTML = `
     <span class="front">
       <strong>${escapeHtml(essay.title)}</strong>
       ${tagHtml || `<span class="essay-card-tags" aria-hidden="true"></span>`}
-      <em>${escapeHtml(essay.date)}</em>
+      <em class="essay-card-date">작성일시 · ${escapeHtml(essay.date)}</em>
     </span>
     <span class="hover">
       <em>${escapeHtml(essay.lead)}</em>
@@ -9918,23 +10032,30 @@ function renderEssayTags(group) {
   const activeTag = activeEssayTags[group];
   const tags = [...new Set(ESSAYS[group].flatMap(item => Array.isArray(item[4]) ? item[4] : []))];
   strip.innerHTML = [
-    `<button type="button" class="essay-tag-btn${activeTag ? "" : " active"}" data-essay-tag-group="${group}" data-essay-tag="">All</button>`,
-    ...tags.map(tag => `<button type="button" class="essay-tag-btn${activeTag === tag ? " active" : ""}" data-essay-tag-group="${group}" data-essay-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`)
+    `<button type="button" class="essay-tag-btn${activeTag ? "" : " active"}" data-essay-tag-group="${group}" data-essay-tag="">전체</button>`,
+    ...tags.map(tag => `<button type="button" class="essay-tag-btn${activeTag === tag ? " active" : ""}" data-essay-tag-group="${group}" data-essay-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`)
+  ].join("");
+}
+
+function renderEssayGlobalTags() {
+  const cloud = $("#essayGlobalTagCloud");
+  if (!cloud) return;
+  const groups = Object.keys(ESSAY_FRAME_CONFIGS);
+  const tags = [...new Set(groups.flatMap(group => ESSAYS[group].flatMap(item => Array.isArray(item[4]) ? item[4] : [])))];
+  cloud.innerHTML = [
+    `<button type="button" class="essay-global-tag${activeEssayGlobalTag ? "" : " active"}" data-essay-global-tag="">#전체</button>`,
+    ...tags.map(tag => `<button type="button" class="essay-global-tag${activeEssayGlobalTag === tag ? " active" : ""}" data-essay-global-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`)
   ].join("");
 }
 
 function renderEssayCards() {
-  const newsTrack = $("#essayNewsTrack");
-  if (!newsTrack) return;
-
-  newsTrack.innerHTML = "";
-  ESSAYS.news.forEach(item => newsTrack.appendChild(createEssayCard(item, true)));
+  renderEssayGlobalTags();
 
   Object.entries(ESSAY_FRAME_CONFIGS).forEach(([group, config]) => {
     const grid = $(config.grid);
     if (!grid) return;
     grid.innerHTML = "";
-    const activeTag = activeEssayTags[group];
+    const activeTag = activeEssayTags[group] || activeEssayGlobalTag;
     const items = activeTag
       ? ESSAYS[group].filter(item => (item[4] || []).includes(activeTag))
       : ESSAYS[group];
@@ -10369,10 +10490,17 @@ function closeEssayModal() {
 }
 
 renderEssayCards();
-enableDragSwipe($("#essayNewsTrack"));
 Object.values(ESSAY_FRAME_CONFIGS).forEach(config => {
-  enableDragSwipe($(config.grid));
   enableDragSwipe($(config.tagStrip));
+});
+
+$("#essayGlobalTagCloud")?.addEventListener("click", e => {
+  const button = e.target.closest("[data-essay-global-tag]");
+  if (!button) return;
+  activeEssayGlobalTag = button.dataset.essayGlobalTag || null;
+  Object.keys(activeEssayTags).forEach(group => { activeEssayTags[group] = null; });
+  renderEssayCards();
+  Object.values(ESSAY_FRAME_CONFIGS).forEach(config => $(config.grid)?.scrollTo({ left: 0, top: 0 }));
 });
 
 $$("#essay .essay-tag-strip").forEach(strip => {
@@ -10380,6 +10508,7 @@ $$("#essay .essay-tag-strip").forEach(strip => {
     const button = e.target.closest("[data-essay-tag-group]");
     if (!button) return;
     const group = button.dataset.essayTagGroup;
+    activeEssayGlobalTag = null;
     activeEssayTags[group] = button.dataset.essayTag || null;
     renderEssayCards();
     $(ESSAY_FRAME_CONFIGS[group]?.grid)?.scrollTo({ left: 0, top: 0 });
@@ -10393,8 +10522,8 @@ $$("#essay [data-essay-scroll]").forEach(button => {
     const grid = $(ESSAY_FRAME_CONFIGS[group]?.grid);
     if (!grid) return;
     grid.scrollBy({
-      left: direction * Math.max(260, grid.clientWidth - 40),
-      top: 0,
+      left: 0,
+      top: direction * Math.max(220, grid.clientHeight - 80),
       behavior: "smooth"
     });
   });
@@ -11726,6 +11855,7 @@ initStoryV6();
 </script>
 
 </html>
+
 
 
 
