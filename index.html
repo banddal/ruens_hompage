@@ -3266,22 +3266,22 @@ body::before {
 }.essay-tag-strip.dragging {
   cursor: grabbing;
 }.essay-tag-btn {
-  flex: 0 0 auto;
-  border: 0;
-  background: transparent;
+  flex: 0 0 76px;
+  border: 1px solid rgba(255,255,255,.42);
+  background: rgba(255,255,255,.10);
   color: rgba(20,20,20,.66);
   min-height: 26px;
-  padding: 0 4px;
+  padding: 0 6px;
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 850;
   text-align: center;
   white-space: nowrap;
 }.essay-tag-btn.active, .essay-tag-btn:hover {
-  background: transparent;
-  border-color: transparent;
-  color: var(--red);
+  background: rgba(255,255,255,.24);
+  border-color: rgba(20,20,20,.18);
+  color: #111;
 }.site-search {
   position: relative;
   display: grid;
@@ -3558,18 +3558,24 @@ body::before {
     margin: 4px 0;
   }
 }.essay-news-track {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  overflow: visible;
-  padding: 20px 24px 24px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(380px, 58%);
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 20px;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px;
   background: rgba(255,255,255,.28);
-  scrollbar-width: auto;
-  cursor: default;
+  scrollbar-width: none;
+  cursor: grab;
   user-select: none;
-  touch-action: auto;
+  touch-action: pan-x;
 }.essay-news-track::-webkit-scrollbar {
-  display: initial;
+  display: none;
 }.essay-global-tag {
   border: 0;
   background: transparent;
@@ -3590,26 +3596,21 @@ body::before {
   padding: 20px;
   background: #d2d2d2;
 }#essayPublicBusinessGrid, #essayWorldOutsideGrid, #essayThinkingEmotionGrid, #essayOthersGrid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: none;
-  grid-auto-flow: row;
-  grid-auto-rows: minmax(176px, auto);
-  max-height: 632px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  grid-template-columns: none;
+  grid-template-rows: repeat(3, minmax(176px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(240px, calc((100% - 28px) / 3));
+  max-height: 610px;
+  overflow: auto;
   overscroll-behavior: contain;
-  scroll-snap-type: y proximity;
+  scroll-snap-type: both proximity;
   scroll-padding: 20px;
-  scrollbar-width: thin;
-  cursor: default;
+  scrollbar-width: none;
+  cursor: grab;
   user-select: none;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
 }#essayPublicBusinessGrid::-webkit-scrollbar, #essayWorldOutsideGrid::-webkit-scrollbar, #essayThinkingEmotionGrid::-webkit-scrollbar, #essayOthersGrid::-webkit-scrollbar {
-  width: 8px;
-  display: initial;
-}#essayPublicBusinessGrid::-webkit-scrollbar-thumb, #essayWorldOutsideGrid::-webkit-scrollbar-thumb, #essayThinkingEmotionGrid::-webkit-scrollbar-thumb, #essayOthersGrid::-webkit-scrollbar-thumb {
-  background: rgba(20,20,20,.18);
-  border-radius: 999px;
+  display: none;
 }#essayPublicBusinessGrid.dragging, #essayWorldOutsideGrid.dragging, #essayThinkingEmotionGrid.dragging, #essayOthersGrid.dragging {
   cursor: grabbing;
 }.essay-frame-controls {
@@ -3713,11 +3714,11 @@ body::before {
   display: inline-flex;
   align-items: center;
   min-height: 21px;
-  padding: 0 2px 0 0;
-  border: 0;
-  background: transparent;
-  color: rgba(20,20,20,.56);
-  font-size: 11.5px;
+  padding: 0 7px;
+  border: 1px solid rgba(20,20,20,.10);
+  background: rgba(255,255,255,.30);
+  color: rgba(20,20,20,.58);
+  font-size: 11px;
   font-weight: 800;
   line-height: 1;
 }.essay-card em, .essay-card span {
@@ -6792,39 +6793,112 @@ body::before {
   font-size: 11.5px;
   color: var(--muted, #777);
 }/* ── BLOCK 3: Essay ── */
-.arch-essay-cat + .arch-essay-cat { margin-top: 26px; }.arch-essay-cat-head {
+.arch-essay-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0 0 18px;
+  padding: 0 0 14px;
+  border-bottom: 1px dotted rgba(20,20,20,.18);
+}.arch-essay-tag-filter {
+  border: 0;
+  background: transparent;
+  color: #555;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.35;
+  cursor: pointer;
+  letter-spacing: -.025em;
+}.arch-essay-tag-filter:hover, .arch-essay-tag-filter.is-active {
+  color: var(--red, #af0000);
+}.arch-essay-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: -4px 0 16px;
+}.arch-essay-nav-btn {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid rgba(20,20,20,.12);
+  background: rgba(255,255,255,.44);
+  color: #333;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 850;
+  cursor: pointer;
+  letter-spacing: -.025em;
+}.arch-essay-nav-btn:hover, .arch-essay-nav-btn.is-active {
+  border-color: rgba(20,20,20,.28);
+  background: #fff;
+  color: var(--red, #af0000);
+}.arch-essay-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}.arch-essay-cat {
+  min-width: 0;
+  overflow: visible;
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(20,20,20,.10);
+  background: rgba(255,255,255,.46);
+}.arch-essay-cat + .arch-essay-cat { margin-top: 0; }.arch-essay-cat-head {
   font-size: 14px;
   font-weight: 900;
   color: var(--ink, #111);
   padding-bottom: 8px;
   margin-bottom: 4px;
   border-bottom: 1px solid rgba(20,20,20,.12);
+}.arch-essay-board {
+  max-height: 292px;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}.arch-essay-board.dragging {
+  cursor: grabbing;
 }.arch-essay-item {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 150px minmax(220px, .9fr);
+  align-items: center;
+  gap: 14px;
   padding: 12px 8px;
   border-bottom: 1px solid rgba(20,20,20,.06);
   cursor: pointer;
   transition: background .12s;
 }.arch-essay-item:hover { background: rgba(175,0,0,.03); }.arch-essay-tag {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--red, #af0000);
-  flex-shrink: 0;
-  width: 84px;
-}.arch-essay-body { flex: 1; min-width: 0; }.arch-essay-title {
+  display: none;
+}.arch-essay-body { display: contents; }.arch-essay-title {
+  min-width: 0;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 850;
   color: var(--ink, #111);
-  margin-bottom: 2px;
-}.arch-essay-desc {
-  font-size: 11.5px;
-  color: var(--muted, #888);
-  line-height: 1.4;
+  margin-bottom: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}.arch-essay-meta {
+  display: contents;
+}.arch-essay-date {
+  color: #777;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}.arch-essay-hashes {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+}.arch-essay-hash {
+  color: #666;
+  font-size: 11px;
+  font-weight: 750;
+}.arch-essay-desc {
+  display: none;
 }/* ── BLOCK 4: End ── */
 .arch-block-end {
   padding: 0;
@@ -8004,7 +8078,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
 <section class="panel" id="essay">
   <nav class="section-jump" aria-label="Essay 섹션 빠른 이동">
     <span class="section-jump-track" aria-hidden="true"></span>
-    <button type="button" class="section-jump-item" data-section-target="essaySectionNews" aria-label="Essay tags로 이동">
+    <button type="button" class="section-jump-item" data-section-target="essaySectionNews" aria-label="News로 이동">
       <span class="section-jump-dot"></span>
     </button>
     <button type="button" class="section-jump-item" data-section-target="essaySectionPublicBusiness" aria-label="公과 Business로 이동">
@@ -8022,15 +8096,15 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
   </nav>
 
   <section class="essay-shell">
-    <section class="essay-news matrix" id="essaySectionNews" aria-label="Essay tags">
+    <section class="essay-news matrix" id="essaySectionNews" aria-label="Latest essay updates">
       <div class="essay-news-head section-head">
         <div>
-          <h2>Tags</h2>
-          <p>Essay 전체 태그를 모아 둔 영역입니다.</p>
+          <h2>News</h2>
+          <p>최근 업데이트된 포스트</p>
         </div>
-        <div class="rule">#태그를 누르면 관련 글만 볼 수 있습니다.</div>
+        <div class="rule">클릭하면 포스트를 볼 수 있습니다.</div>
       </div>
-      <div class="essay-news-track" id="essayGlobalTagCloud" aria-label="Essay global tags"></div>
+      <div class="essay-news-track" id="essayNewsTrack" aria-label="News cards"></div>
     </section>
 
     <section class="essay-frame matrix" id="essaySectionPublicBusiness" aria-labelledby="essayPublicBusinessTitle">
@@ -8044,8 +8118,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayPublicBusinessGrid"></div>
       <div class="essay-frame-controls" aria-label="Public & Business frame controls">
-        <button type="button" data-essay-scroll="publicBusiness" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
-        <button type="button" data-essay-scroll="publicBusiness" data-direction="1" aria-label="아래 글 보기">&darr;</button>
+        <button type="button" data-essay-scroll="publicBusiness" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
+        <button type="button" data-essay-scroll="publicBusiness" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
       </div>
     </section>
 
@@ -8060,8 +8134,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayWorldOutsideGrid"></div>
       <div class="essay-frame-controls" aria-label="The outside world frame controls">
-        <button type="button" data-essay-scroll="worldOutside" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
-        <button type="button" data-essay-scroll="worldOutside" data-direction="1" aria-label="아래 글 보기">&darr;</button>
+        <button type="button" data-essay-scroll="worldOutside" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
+        <button type="button" data-essay-scroll="worldOutside" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
       </div>
     </section>
 
@@ -8076,8 +8150,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayOthersGrid"></div>
       <div class="essay-frame-controls" aria-label="Like & Others frame controls">
-        <button type="button" data-essay-scroll="others" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
-        <button type="button" data-essay-scroll="others" data-direction="1" aria-label="아래 글 보기">&darr;</button>
+        <button type="button" data-essay-scroll="others" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
+        <button type="button" data-essay-scroll="others" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
       </div>
     </section>
 
@@ -8092,8 +8166,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       </div>
       <div class="essay-grid cards" id="essayThinkingEmotionGrid"></div>
       <div class="essay-frame-controls" aria-label="Thinking & Emotion frame controls">
-        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="-1" aria-label="위 글 보기">&uarr;</button>
-        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="1" aria-label="아래 글 보기">&darr;</button>
+        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="-1" aria-label="이전 글 보기">&larr;</button>
+        <button type="button" data-essay-scroll="thinkingEmotion" data-direction="1" aria-label="다음 글 보기">&rarr;</button>
       </div>
     </section>
   </section>
@@ -9532,6 +9606,13 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
           <h2>Essay</h2>
           <p>주제별 글 목록 — 제목을 클릭하면 글이 열립니다</p>
         </header>
+        <div class="arch-essay-nav" id="archEssayNav" aria-label="Essay category navigation">
+          <button type="button" class="arch-essay-nav-btn is-active" data-arch-essay-target="publicBusiness">公과 Business</button>
+          <button type="button" class="arch-essay-nav-btn" data-arch-essay-target="worldOutside">세계 : The outside world</button>
+          <button type="button" class="arch-essay-nav-btn" data-arch-essay-target="others">好不好 , Like &amp; Others</button>
+          <button type="button" class="arch-essay-nav-btn" data-arch-essay-target="thinkingEmotion">私와 思, Thinking &amp; Emotion</button>
+        </div>
+        <div class="arch-essay-tags" id="archEssayTags" aria-label="Essay tags"></div>
         <div class="arch-essay-list" id="archEssayList">
           <!-- JS로 채움 -->
         </div>
@@ -9876,7 +9957,6 @@ const ESSAY_IMAGES = {
 
 let activeEssayId = null;
 let activeReplyPath = null;
-let activeEssayGlobalTag = null;
 const activeEssayTags = {
   publicBusiness: null,
   worldOutside: null,
@@ -9990,13 +10070,13 @@ function createEssayCard(item, isNews=false) {
   btn.dataset.lead = essay.lead;
   btn.dataset.body = essay.body.join("\n\n");
   const tagHtml = essay.tags.length
-    ? `<span class="essay-card-tags">${essay.tags.map(tag => `<small>#${escapeHtml(tag)}</small>`).join("")}</span>`
+    ? `<span class="essay-card-tags">${essay.tags.map(tag => `<small>${escapeHtml(tag)}</small>`).join("")}</span>`
     : "";
   btn.innerHTML = `
     <span class="front">
       <strong>${escapeHtml(essay.title)}</strong>
       ${tagHtml || `<span class="essay-card-tags" aria-hidden="true"></span>`}
-      <em class="essay-card-date">작성일시 · ${escapeHtml(essay.date)}</em>
+      <em>${escapeHtml(essay.date)}</em>
     </span>
     <span class="hover">
       <em>${escapeHtml(essay.lead)}</em>
@@ -10032,30 +10112,23 @@ function renderEssayTags(group) {
   const activeTag = activeEssayTags[group];
   const tags = [...new Set(ESSAYS[group].flatMap(item => Array.isArray(item[4]) ? item[4] : []))];
   strip.innerHTML = [
-    `<button type="button" class="essay-tag-btn${activeTag ? "" : " active"}" data-essay-tag-group="${group}" data-essay-tag="">전체</button>`,
-    ...tags.map(tag => `<button type="button" class="essay-tag-btn${activeTag === tag ? " active" : ""}" data-essay-tag-group="${group}" data-essay-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`)
-  ].join("");
-}
-
-function renderEssayGlobalTags() {
-  const cloud = $("#essayGlobalTagCloud");
-  if (!cloud) return;
-  const groups = Object.keys(ESSAY_FRAME_CONFIGS);
-  const tags = [...new Set(groups.flatMap(group => ESSAYS[group].flatMap(item => Array.isArray(item[4]) ? item[4] : [])))];
-  cloud.innerHTML = [
-    `<button type="button" class="essay-global-tag${activeEssayGlobalTag ? "" : " active"}" data-essay-global-tag="">#전체</button>`,
-    ...tags.map(tag => `<button type="button" class="essay-global-tag${activeEssayGlobalTag === tag ? " active" : ""}" data-essay-global-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`)
+    `<button type="button" class="essay-tag-btn${activeTag ? "" : " active"}" data-essay-tag-group="${group}" data-essay-tag="">All</button>`,
+    ...tags.map(tag => `<button type="button" class="essay-tag-btn${activeTag === tag ? " active" : ""}" data-essay-tag-group="${group}" data-essay-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`)
   ].join("");
 }
 
 function renderEssayCards() {
-  renderEssayGlobalTags();
+  const newsTrack = $("#essayNewsTrack");
+  if (!newsTrack) return;
+
+  newsTrack.innerHTML = "";
+  ESSAYS.news.forEach(item => newsTrack.appendChild(createEssayCard(item, true)));
 
   Object.entries(ESSAY_FRAME_CONFIGS).forEach(([group, config]) => {
     const grid = $(config.grid);
     if (!grid) return;
     grid.innerHTML = "";
-    const activeTag = activeEssayTags[group] || activeEssayGlobalTag;
+    const activeTag = activeEssayTags[group];
     const items = activeTag
       ? ESSAYS[group].filter(item => (item[4] || []).includes(activeTag))
       : ESSAYS[group];
@@ -10490,17 +10563,10 @@ function closeEssayModal() {
 }
 
 renderEssayCards();
+enableDragSwipe($("#essayNewsTrack"));
 Object.values(ESSAY_FRAME_CONFIGS).forEach(config => {
+  enableDragSwipe($(config.grid));
   enableDragSwipe($(config.tagStrip));
-});
-
-$("#essayGlobalTagCloud")?.addEventListener("click", e => {
-  const button = e.target.closest("[data-essay-global-tag]");
-  if (!button) return;
-  activeEssayGlobalTag = button.dataset.essayGlobalTag || null;
-  Object.keys(activeEssayTags).forEach(group => { activeEssayTags[group] = null; });
-  renderEssayCards();
-  Object.values(ESSAY_FRAME_CONFIGS).forEach(config => $(config.grid)?.scrollTo({ left: 0, top: 0 }));
 });
 
 $$("#essay .essay-tag-strip").forEach(strip => {
@@ -10508,7 +10574,6 @@ $$("#essay .essay-tag-strip").forEach(strip => {
     const button = e.target.closest("[data-essay-tag-group]");
     if (!button) return;
     const group = button.dataset.essayTagGroup;
-    activeEssayGlobalTag = null;
     activeEssayTags[group] = button.dataset.essayTag || null;
     renderEssayCards();
     $(ESSAY_FRAME_CONFIGS[group]?.grid)?.scrollTo({ left: 0, top: 0 });
@@ -10522,8 +10587,8 @@ $$("#essay [data-essay-scroll]").forEach(button => {
     const grid = $(ESSAY_FRAME_CONFIGS[group]?.grid);
     if (!grid) return;
     grid.scrollBy({
-      left: 0,
-      top: direction * Math.max(220, grid.clientHeight - 80),
+      left: direction * Math.max(260, grid.clientWidth - 40),
+      top: 0,
       behavior: "smooth"
     });
   });
@@ -11574,25 +11639,92 @@ initStoryV6();
 
   // ── BLOCK 3: Essay 목록 ──
   const essayList = $1("#archEssayList");
+  const essayTags = $1("#archEssayTags");
+  const essayNav = $1("#archEssayNav");
+  let archEssayActiveTag = null;
   const ESSAY_CATS = [
-    ["news", "News"],
     ["publicBusiness", "公과 Business"],
     ["worldOutside", "세계 : The outside world"],
     ["others", "好不好 , Like & Others"],
     ["thinkingEmotion", "私와 思, Thinking & Emotion"],
   ];
+  function renderEssayArchiveTags() {
+    if (!essayTags || typeof ESSAYS === "undefined") return;
+    const tags = [...new Set(ESSAY_CATS.flatMap(([key]) => (ESSAYS[key] || []).flatMap(item => Array.isArray(item[4]) ? item[4] : [])))];
+    essayTags.innerHTML = [
+      `<button type="button" class="arch-essay-tag-filter${archEssayActiveTag ? "" : " is-active"}" data-arch-essay-tag="">#전체</button>`,
+      ...tags.map(tag => `<button type="button" class="arch-essay-tag-filter${archEssayActiveTag === tag ? " is-active" : ""}" data-arch-essay-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`)
+    ].join("");
+  }
+  function enableArchEssayBoardSwipe(board) {
+    if (!board || board.dataset.dragReady === "true") return;
+    board.dataset.dragReady = "true";
+    let isDown = false;
+    let moved = false;
+    let startY = 0;
+    let scrollTop = 0;
+
+    board.addEventListener("pointerdown", e => {
+      if (e.button !== undefined && e.button !== 0) return;
+      isDown = true;
+      moved = false;
+      startY = e.clientY;
+      scrollTop = board.scrollTop;
+      board.classList.add("dragging");
+      board.setPointerCapture?.(e.pointerId);
+    });
+
+    board.addEventListener("pointermove", e => {
+      if (!isDown) return;
+      const dy = e.clientY - startY;
+      if (Math.abs(dy) > 4) moved = true;
+      board.scrollTop = scrollTop - dy;
+    });
+
+    function endDrag() {
+      if (!isDown) return;
+      isDown = false;
+      board.classList.remove("dragging");
+      if (moved) {
+        board.dataset.suppressClick = "true";
+        window.setTimeout(() => { board.dataset.suppressClick = ""; }, 80);
+      }
+    }
+
+    board.addEventListener("pointerup", endDrag);
+    board.addEventListener("pointercancel", endDrag);
+    board.addEventListener("pointerleave", endDrag);
+    board.addEventListener("wheel", e => {
+      if (board.scrollHeight > board.clientHeight) e.preventDefault();
+    }, { passive: false });
+    board.addEventListener("click", e => {
+      if (board.dataset.suppressClick === "true") {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+      }
+    }, true);
+  }
   function renderEssays() {
     if (!essayList || typeof ESSAYS === "undefined") return;
     essayList.innerHTML = "";
+    renderEssayArchiveTags();
     ESSAY_CATS.forEach(([key, label]) => {
-      const items = ESSAYS[key];
+      const sourceItems = ESSAYS[key] || [];
+      const items = archEssayActiveTag
+        ? sourceItems.filter(item => (item[4] || []).includes(archEssayActiveTag))
+        : sourceItems;
       if (!items || !items.length) return;
       const cat = document.createElement("div");
       cat.className = "arch-essay-cat";
-      cat.innerHTML = `<div class="arch-essay-cat-head">${label}</div>`;
+      cat.id = `archEssayCat-${key}`;
+      cat.dataset.archEssayCat = key;
+      cat.innerHTML = `<div class="arch-essay-cat-head">${label}</div><div class="arch-essay-board" data-arch-essay-board></div>`;
+      const board = cat.querySelector("[data-arch-essay-board]");
       items.forEach(item => {
         // item: [id, tagLabel, title, desc, [tags]]
         const [id, , title, desc] = item;
+        const essay = typeof essayToObject === "function" ? essayToObject(item) : { date: item[5] || "날짜 미정", tags: item[4] || [] };
         const row = document.createElement("div");
         row.className = "arch-essay-item js-open-essay";
         row.dataset.essayId = id;
@@ -11600,12 +11732,13 @@ initStoryV6();
           <span class="arch-essay-tag">${label.split(/[ ,:]/)[0]}</span>
           <span class="arch-essay-body">
             <span class="arch-essay-title">${title}</span>
-            <span class="arch-essay-desc">${desc || ""}</span>
+            <span class="arch-essay-meta"><span class="arch-essay-date">${essay.date}</span><span class="arch-essay-hashes">${essay.tags.map(tag => `<span class="arch-essay-hash">#${tag}</span>`).join(" ")}</span></span>
           </span>`;
         row._essayItem = item;
-        cat.appendChild(row);
+        board.appendChild(row);
       });
       essayList.appendChild(cat);
+      enableArchEssayBoardSwipe(board);
     });
     // 모달 연결
     $$(".js-open-essay", essayList).forEach(row => {
@@ -11616,7 +11749,21 @@ initStoryV6();
       });
     });
   }
+  essayTags?.addEventListener("click", e => {
+    const button = e.target.closest("[data-arch-essay-tag]");
+    if (!button) return;
+    archEssayActiveTag = button.dataset.archEssayTag || null;
+    renderEssays();
+  });
   renderEssays();
+  essayNav?.addEventListener("click", e => {
+    const button = e.target.closest("[data-arch-essay-target]");
+    if (!button || !essayList) return;
+    const target = $1(`#archEssayCat-${button.dataset.archEssayTarget}`);
+    if (!target) return;
+    $$(".arch-essay-nav-btn", essayNav).forEach(btn => btn.classList.toggle("is-active", btn === button));
+    scrollToTargetWithTopbar(target, "smooth");
+  });
 
   // ── 블록 네비게이션 ──
   const archNav = $1("#taste .arch-blocknav");
