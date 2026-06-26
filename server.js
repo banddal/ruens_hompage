@@ -13,6 +13,9 @@ const UPLOAD_ROOT = path.join(ROOT, "uploads", "projects");
 const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_BYTES || 50 * 1024 * 1024);
 const SESSION_COOKIE = "homo_ruens_admin";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "portfolio-assets";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -216,8 +219,11 @@ function securityStatus(req) {
       allowedExtensions: Array.from(ALLOWED_UPLOAD_EXTS).sort()
     },
     storage: {
-      mode: process.env.RENDER ? "render" : "local",
-      note: process.env.RENDER
+      mode: supabaseEnabled() ? "supabase" : (process.env.RENDER ? "render-local" : "local"),
+      bucket: supabaseEnabled() ? SUPABASE_STORAGE_BUCKET : "",
+      note: supabaseEnabled()
+        ? "Supabase Database와 Storage를 우선 저장소로 사용 중입니다."
+        : process.env.RENDER
         ? "Render 재배포 시 로컬 업로드 파일이 사라질 수 있으므로 Persistent Disk 또는 외부 Storage 연결이 필요합니다."
         : "현재 로컬 파일 시스템에 저장 중입니다."
     }
@@ -315,6 +321,337 @@ function initializeBackendData() {
   }
 }
 
+function supabaseEnabled() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function supabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    ...extra
+  };
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const response = await fetch(`${SUPABASE_URL}${pathname}`, {
+    ...options,
+    headers: supabaseHeaders(options.headers || {})
+  });
+  const text = await response.text();
+  let parsed = null;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    parsed = text ? { message: text } : null;
+  }
+  if (!response.ok) {
+    throw new Error(parsed?.message || parsed?.error || `Supabase request failed: ${response.status}`);
+  }
+  return parsed;
+}
+
+function dbProjectToProject(row, images = [], files = []) {
+  return normalizeProject({
+    id: row.id,
+    slug: row.slug,
+    category: row.category,
+    metric: row.metric,
+    title: row.title,
+    period: row.period,
+    short: row.short,
+    description: row.description,
+    role: row.role,
+    outcome: row.outcome,
+    tags: row.tags || [],
+    skillTags: row.skill_tags || [],
+    gallery: row.gallery || [],
+    images,
+    files,
+    status: row.status,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }, Number(row.sort_order || 0));
+}
+
+function projectToDbRow(project) {
+  const normalized = normalizeProject(project);
+  return {
+    id: normalized.id,
+    slug: normalized.slug,
+    category: normalized.category,
+    metric: normalized.metric,
+    title: normalized.title,
+    period: normalized.period,
+    short: normalized.short,
+    description: normalized.description,
+    role: normalized.role,
+    outcome: normalized.outcome,
+    tags: normalized.tags,
+    skill_tags: normalized.skillTags,
+    gallery: normalized.gallery,
+    status: normalized.status,
+    sort_order: normalized.sortOrder,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function dbAssetToAsset(row) {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title || "",
+    description: row.description || "",
+    caption: row.caption || "",
+    alt: row.alt || "",
+    originalFilename: row.original_filename || "",
+    path: row.path || row.public_url || "",
+    publicUrl: row.public_url || row.path || "",
+    storagePath: row.storage_path || "",
+    fileType: row.file_type || "file",
+    mimeType: row.mime_type || "",
+    fileSize: Number(row.file_size || 0),
+    visibility: row.visibility || "request",
+    sortOrder: Number(row.sort_order || 0),
+    createdAt: row.created_at
+  };
+}
+
+function assetToDbRow(asset) {
+  return {
+    id: asset.id,
+    project_id: asset.projectId,
+    title: asset.title || "",
+    description: asset.description || "",
+    caption: asset.caption || "",
+    alt: asset.alt || "",
+    original_filename: asset.originalFilename || "",
+    path: asset.path || asset.publicUrl || "",
+    public_url: asset.publicUrl || asset.path || "",
+    storage_path: asset.storagePath || "",
+    file_type: asset.fileType || "file",
+    mime_type: asset.mimeType || "",
+    file_size: asset.fileSize || 0,
+    visibility: asset.visibility || "request",
+    sort_order: asset.sortOrder || 0
+  };
+}
+
+function groupByProjectId(rows) {
+  return rows.reduce((map, row) => {
+    const projectId = row.project_id;
+    if (!map.has(projectId)) map.set(projectId, []);
+    map.get(projectId).push(dbAssetToAsset(row));
+    return map;
+  }, new Map());
+}
+
+async function supabaseListProjects() {
+  const [projectRows, imageRows, fileRows] = await Promise.all([
+    supabaseRequest("/rest/v1/projects?select=*&order=sort_order.asc"),
+    supabaseRequest("/rest/v1/project_images?select=*&order=sort_order.asc,created_at.asc"),
+    supabaseRequest("/rest/v1/project_files?select=*&order=sort_order.asc,created_at.asc")
+  ]);
+  const imagesByProject = groupByProjectId(imageRows || []);
+  const filesByProject = groupByProjectId(fileRows || []);
+  return (projectRows || []).map(row => dbProjectToProject(
+    row,
+    imagesByProject.get(row.id) || [],
+    filesByProject.get(row.id) || []
+  ));
+}
+
+async function seedSupabaseProjectsFromContent() {
+  const seedProjects = fs.existsSync(PROJECTS_DB)
+    ? readJson(PROJECTS_DB, [])
+    : readJson(CONTENT_PROJECTS_DB, []);
+  if (!Array.isArray(seedProjects) || !seedProjects.length) return [];
+  const rows = seedProjects.map((project, index) => projectToDbRow(normalizeProject(project, index)));
+  return supabaseRequest("/rest/v1/projects?on_conflict=id", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify(rows)
+  });
+}
+
+async function getProjectsStore() {
+  if (supabaseEnabled()) {
+    const projects = await supabaseListProjects();
+    if (projects.length) return projects;
+    await seedSupabaseProjectsFromContent();
+    return supabaseListProjects();
+  }
+  return readJson(PROJECTS_DB, []);
+}
+
+async function getProjectStore(key) {
+  const projects = await getProjectsStore();
+  return findProject(projects, key);
+}
+
+async function saveProjectStore(payload, key = null) {
+  const now = new Date().toISOString();
+  const projectId = key || payload.id || safeSegment(payload.title);
+  if (!projectId) throw new Error("Project id or title is required.");
+
+  if (supabaseEnabled()) {
+    const existing = await getProjectStore(projectId);
+    const row = projectToDbRow({
+      ...(existing || {}),
+      ...payload,
+      id: existing?.id || payload.id || projectId,
+      slug: payload.slug || existing?.slug || payload.id || projectId,
+      sortOrder: payload.sortOrder || existing?.sortOrder || 0,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    });
+    const savedRows = await supabaseRequest("/rest/v1/projects?on_conflict=id", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation"
+      },
+      body: JSON.stringify(row)
+    });
+    const saved = savedRows?.[0] ? dbProjectToProject(savedRows[0], existing?.images || [], existing?.files || []) : await getProjectStore(projectId);
+    return saved;
+  }
+
+  const projects = readJson(PROJECTS_DB, []);
+  const existing = findProject(projects, projectId);
+  if (existing) {
+    Object.assign(existing, payload, {
+      id: existing.id,
+      slug: payload.slug || existing.slug || existing.id,
+      updatedAt: now
+    });
+    writeJson(PROJECTS_DB, projects);
+    return existing;
+  }
+
+  const created = normalizeProject({
+    ...payload,
+    id: safeSegment(payload.id || projectId),
+    slug: safeSegment(payload.slug || payload.id || projectId),
+    status: payload.status || "draft",
+    sortOrder: payload.sortOrder || projects.length + 1,
+    createdAt: now,
+    updatedAt: now
+  }, projects.length);
+  projects.push(created);
+  writeJson(PROJECTS_DB, projects);
+  return created;
+}
+
+async function uploadToSupabaseStorage(storagePath, file) {
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${storagePath}`, {
+    method: "POST",
+    headers: supabaseHeaders({
+      "Content-Type": file.contentType || "application/octet-stream",
+      "Cache-Control": "3600",
+      "x-upsert": "false"
+    }),
+    body: file.content
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { message: text };
+  }
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || `Supabase storage upload failed: ${response.status}`);
+  }
+  return data;
+}
+
+function supabasePublicUrl(storagePath) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${storagePath}`;
+}
+
+async function saveAssetStore(project, target, file, fields) {
+  const originalName = path.basename(file.filename);
+  const ext = path.extname(originalName).toLowerCase();
+  if (!ALLOWED_UPLOAD_EXTS.has(ext)) throw new Error(`Unsupported file type: ${ext}`);
+
+  const slug = safeSegment(project.slug || project.id);
+  const folder = target === "images" ? "images" : "files";
+  const stem = safeSegment(path.basename(originalName, ext)) || "asset";
+  const storedName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}-${stem}${ext}`;
+  const fileType = fileKind(ext);
+  const recordBase = {
+    id: crypto.randomUUID(),
+    projectId: project.id,
+    title: fields.title || path.basename(originalName, ext),
+    description: fields.description || "",
+    caption: fields.caption || fields.description || "",
+    alt: fields.alt || fields.title || originalName,
+    originalFilename: originalName,
+    fileType,
+    mimeType: file.contentType,
+    fileSize: file.content.length,
+    visibility: fields.visibility || (target === "images" ? "public" : "request"),
+    sortOrder: Number(fields.sortOrder || 0),
+    createdAt: new Date().toISOString()
+  };
+
+  if (supabaseEnabled()) {
+    const storagePath = `projects/${slug}/${folder}/${storedName}`;
+    await uploadToSupabaseStorage(storagePath, file);
+    const publicUrl = supabasePublicUrl(storagePath);
+    const record = {
+      ...recordBase,
+      path: publicUrl,
+      publicUrl,
+      storagePath
+    };
+    const table = target === "images" ? "project_images" : "project_files";
+    const savedRows = await supabaseRequest(`/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(assetToDbRow(record))
+    });
+    return savedRows?.[0] ? dbAssetToAsset(savedRows[0]) : record;
+  }
+
+  const projects = readJson(PROJECTS_DB, []);
+  const storedProject = findProject(projects, project.id);
+  if (!storedProject) throw new Error("Project not found.");
+  const uploadDir = path.join(UPLOAD_ROOT, slug, folder);
+  ensureDir(uploadDir);
+  const filePath = path.join(uploadDir, storedName);
+  fs.writeFileSync(filePath, file.content);
+
+  const publicPath = `/uploads/projects/${slug}/${folder}/${storedName}`;
+  const record = {
+    ...recordBase,
+    path: publicPath,
+    publicUrl: publicPath,
+    storagePath: publicPath
+  };
+
+  if (target === "images") {
+    storedProject.images = [...(storedProject.images || []), record];
+  } else {
+    storedProject.files = [...(storedProject.files || []), record];
+  }
+  storedProject.updatedAt = new Date().toISOString();
+  writeJson(PROJECTS_DB, projects);
+
+  const media = readJson(MEDIA_DB, []);
+  media.push({ ...record, target });
+  writeJson(MEDIA_DB, media);
+  return record;
+}
+
 function collectRequestBody(req, maxBytes = MAX_UPLOAD_BYTES) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -378,8 +715,7 @@ function fileKind(ext) {
 }
 
 async function handleUpload(req, res, projectKey, target) {
-  const projects = readJson(PROJECTS_DB, []);
-  const project = findProject(projects, projectKey);
+  const project = await getProjectStore(projectKey);
   if (!project) return sendError(res, 404, "Project not found.");
 
   let body;
@@ -405,51 +741,12 @@ async function handleUpload(req, res, projectKey, target) {
       .map(part => [part.name, part.content.toString("utf8").trim()])
   );
 
-  const originalName = path.basename(file.filename);
-  const ext = path.extname(originalName).toLowerCase();
-  if (!ALLOWED_UPLOAD_EXTS.has(ext)) return sendError(res, 400, `Unsupported file type: ${ext}`);
-
-  const slug = safeSegment(project.slug || project.id);
-  const folder = target === "images" ? "images" : "files";
-  const uploadDir = path.join(UPLOAD_ROOT, slug, folder);
-  ensureDir(uploadDir);
-
-  const stem = safeSegment(path.basename(originalName, ext)) || "asset";
-  const storedName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}-${stem}${ext}`;
-  const filePath = path.join(uploadDir, storedName);
-  fs.writeFileSync(filePath, file.content);
-
-  const publicPath = `/uploads/projects/${slug}/${folder}/${storedName}`;
-  const record = {
-    id: crypto.randomUUID(),
-    projectId: project.id,
-    title: fields.title || path.basename(originalName, ext),
-    description: fields.description || "",
-    caption: fields.caption || fields.description || "",
-    alt: fields.alt || fields.title || originalName,
-    originalFilename: originalName,
-    path: publicPath,
-    fileType: fileKind(ext),
-    mimeType: file.contentType,
-    fileSize: file.content.length,
-    visibility: fields.visibility || "request",
-    sortOrder: Number(fields.sortOrder || 0),
-    createdAt: new Date().toISOString()
-  };
-
-  if (target === "images") {
-    project.images = [...(project.images || []), record];
-  } else {
-    project.files = [...(project.files || []), record];
+  try {
+    const record = await saveAssetStore(project, target, file, fields);
+    return sendJson(res, 201, record);
+  } catch (error) {
+    return sendError(res, 400, error.message);
   }
-  project.updatedAt = new Date().toISOString();
-  writeJson(PROJECTS_DB, projects);
-
-  const media = readJson(MEDIA_DB, []);
-  media.push({ ...record, target });
-  writeJson(MEDIA_DB, media);
-
-  sendJson(res, 201, record);
 }
 
 async function handleProjectSave(req, res, key = null) {
@@ -461,46 +758,12 @@ async function handleProjectSave(req, res, key = null) {
     return sendError(res, 400, "Invalid JSON body.");
   }
 
-  const projects = readJson(PROJECTS_DB, []);
-  const now = new Date().toISOString();
-  const projectId = key || payload.id || safeSegment(payload.title);
-  if (!projectId) return sendError(res, 400, "Project id or title is required.");
-
-  const existing = findProject(projects, projectId);
-  if (existing) {
-    Object.assign(existing, payload, {
-      id: existing.id,
-      slug: payload.slug || existing.slug || existing.id,
-      updatedAt: now
-    });
-    writeJson(PROJECTS_DB, projects);
-    return sendJson(res, 200, publicProject(existing));
+  try {
+    const saved = await saveProjectStore(payload, key);
+    sendJson(res, key ? 200 : 201, publicProject(saved));
+  } catch (error) {
+    sendError(res, 400, error.message);
   }
-
-  const created = {
-    id: safeSegment(payload.id || projectId),
-    slug: safeSegment(payload.slug || payload.id || projectId),
-    category: payload.category || "Plan",
-    metric: payload.metric || "",
-    title: payload.title || projectId,
-    period: payload.period || "",
-    short: payload.short || "",
-    description: payload.description || "",
-    role: payload.role || "",
-    outcome: payload.outcome || "",
-    tags: payload.tags || [],
-    skillTags: payload.skillTags || [],
-    gallery: payload.gallery || [],
-    images: payload.images || [],
-    files: payload.files || [],
-    status: payload.status || "draft",
-    sortOrder: payload.sortOrder || projects.length + 1,
-    createdAt: now,
-    updatedAt: now
-  };
-  projects.push(created);
-  writeJson(PROJECTS_DB, projects);
-  sendJson(res, 201, publicProject(created));
 }
 
 async function handleLogin(req, res) {
@@ -565,7 +828,12 @@ async function router(req, res) {
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
 
   if (req.method === "GET" && pathname === "/api/health") {
-    return sendJson(res, 200, { ok: true, service: "homo-ruens-portfolio", time: new Date().toISOString() });
+    return sendJson(res, 200, {
+      ok: true,
+      service: "homo-ruens-portfolio",
+      storage: supabaseEnabled() ? "supabase" : "local-json",
+      time: new Date().toISOString()
+    });
   }
 
   if (req.method === "GET" && pathname === "/api/admin/security/status") {
@@ -586,7 +854,7 @@ async function router(req, res) {
   }
 
   if (req.method === "GET" && pathname === "/api/projects") {
-    const projects = readJson(PROJECTS_DB, []);
+    const projects = await getProjectsStore();
     const visible = projects
       .filter(project => project.status !== "private")
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
@@ -596,15 +864,14 @@ async function router(req, res) {
 
   const projectDetail = pathname.match(/^\/api\/projects\/([^/]+)$/);
   if (req.method === "GET" && projectDetail) {
-    const projects = readJson(PROJECTS_DB, []);
-    const project = findProject(projects, projectDetail[1]);
+    const project = await getProjectStore(projectDetail[1]);
     if (!project || project.status === "private") return sendError(res, 404, "Project not found.");
     return sendJson(res, 200, publicProject(project));
   }
 
   if (req.method === "GET" && pathname === "/api/admin/projects") {
     if (!requireAdmin(req, res)) return;
-    const projects = readJson(PROJECTS_DB, [])
+    const projects = (await getProjectsStore())
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(adminProject);
     return sendJson(res, 200, projects);
@@ -613,8 +880,7 @@ async function router(req, res) {
   const adminProjectDetail = pathname.match(/^\/api\/admin\/projects\/([^/]+)$/);
   if (req.method === "GET" && adminProjectDetail) {
     if (!requireAdmin(req, res)) return;
-    const projects = readJson(PROJECTS_DB, []);
-    const project = findProject(projects, adminProjectDetail[1]);
+    const project = await getProjectStore(adminProjectDetail[1]);
     if (!project) return sendError(res, 404, "Project not found.");
     return sendJson(res, 200, adminProject(project));
   }
