@@ -248,6 +248,13 @@ async function loadProjects(selectId = selectedProject?.id) {
   projectList.innerHTML = `<div class="asset-empty">프로젝트 목록을 불러오는 중입니다.</div>`;
   try {
     projects = await apiJson("/api/admin/projects");
+    if (!Array.isArray(projects)) projects = [];
+    if (!projects.length) {
+      const publicProjects = await apiJson("/api/projects").catch(() => []);
+      if (Array.isArray(publicProjects) && publicProjects.length) {
+        projects = publicProjects;
+      }
+    }
     const next = projects.find(project => project.id === selectId) || projects[0] || null;
     renderProjectList();
     if (next) {
