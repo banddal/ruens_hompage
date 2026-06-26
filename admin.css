@@ -1,0 +1,305 @@
+:root {
+  --ink: #111;
+  --muted: #666;
+  --line: #dddddd;
+  --panel: rgba(255,255,255,.94);
+  --accent: #af0000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.88)),
+    url("homo_ruens_assets/background/main-background.jpg") center / cover fixed;
+  color: var(--ink);
+  font-family: Pretendard, "Noto Sans KR", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  min-height: 38px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.admin-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 28px auto 60px;
+}
+
+.admin-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding: 34px 38px;
+  background: var(--panel);
+  border: 1px solid rgba(20,20,20,.12);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-hero h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1;
+  letter-spacing: -.075em;
+}
+
+.admin-hero p:last-child {
+  margin: 14px 0 0;
+  color: #444;
+  font-weight: 700;
+}
+
+.site-link {
+  color: #111;
+  text-decoration: none;
+  border-bottom: 1px solid #111;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.project-list-panel,
+.editor-panel {
+  background: var(--panel);
+  border: 1px solid rgba(20,20,20,.12);
+}
+
+.project-list-panel {
+  padding: 18px;
+  align-self: start;
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+}
+
+.editor-panel {
+  padding: 22px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -.05em;
+}
+
+.admin-input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.88);
+  padding: 9px 10px;
+  color: #111;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: #111;
+}
+
+.project-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.project-item {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 11px 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #111;
+  text-align: left;
+}
+
+.project-item:hover,
+.project-item.active {
+  color: #fff;
+  background: #111;
+}
+
+.project-item strong,
+.project-item small {
+  display: block;
+}
+
+.project-item strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.project-item small {
+  margin-top: 3px;
+  color: inherit;
+  opacity: .68;
+  font-size: 11px;
+}
+
+.project-form {
+  display: grid;
+  gap: 14px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: #333;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.form-row {
+  display: grid;
+  gap: 12px;
+}
+
+.form-row.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-row.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+textarea.admin-input {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.status-text {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.upload-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: rgba(250,250,250,.9);
+}
+
+.upload-card h3,
+.asset-panel h3 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -.045em;
+}
+
+.asset-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.asset-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.asset-empty,
+.asset-item {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.asset-item strong,
+.asset-item span {
+  display: block;
+}
+
+.asset-item span {
+  margin-top: 3px;
+  color: #666;
+  word-break: break-all;
+}
+
+@media (max-width: 900px) {
+  .admin-grid,
+  .upload-grid,
+  .asset-panel,
+  .form-row.two,
+  .form-row.three {
+    grid-template-columns: 1fr;
+  }
+
+  .project-list-panel {
+    position: static;
+    max-height: none;
+  }
+
+  .admin-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
