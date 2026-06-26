@@ -8,6 +8,7 @@ const PORT = Number(process.env.PORT || 3000);
 const PROJECTS_DB = path.join(ROOT, "backend-data", "projects.json");
 const MEDIA_DB = path.join(ROOT, "backend-data", "media-assets.json");
 const SECURITY_DB = path.join(ROOT, "backend-data", "security.json");
+const CONTENT_PROJECTS_DB = path.join(ROOT, "content-data", "projects.json");
 const UPLOAD_ROOT = path.join(ROOT, "uploads", "projects");
 const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_BYTES || 50 * 1024 * 1024);
 const SESSION_COOKIE = "homo_ruens_admin";
@@ -270,6 +271,48 @@ function adminProject(project) {
 
 function findProject(projects, key) {
   return projects.find(project => project.id === key || project.slug === key);
+}
+
+function normalizeProject(project, index = 0) {
+  const id = safeSegment(project.id || project.slug || project.title || `project-${index + 1}`);
+  return {
+    id,
+    slug: safeSegment(project.slug || id),
+    category: project.category || "Plan",
+    metric: project.metric || "",
+    title: project.title || id,
+    period: project.period || "",
+    short: project.short || "",
+    description: project.description || "",
+    role: project.role || "",
+    outcome: project.outcome || "",
+    tags: project.tags || [],
+    skillTags: project.skillTags || [],
+    gallery: project.gallery || [],
+    images: project.images || [],
+    files: project.files || [],
+    status: project.status || "published",
+    sortOrder: project.sortOrder || index + 1,
+    createdAt: project.createdAt || project.updatedAt || new Date().toISOString(),
+    updatedAt: project.updatedAt || new Date().toISOString()
+  };
+}
+
+function initializeBackendData() {
+  ensureDir(path.dirname(PROJECTS_DB));
+  ensureDir(UPLOAD_ROOT);
+
+  if (!fs.existsSync(PROJECTS_DB)) {
+    const seedProjects = readJson(CONTENT_PROJECTS_DB, []);
+    const normalized = Array.isArray(seedProjects)
+      ? seedProjects.map(normalizeProject)
+      : [];
+    writeJson(PROJECTS_DB, normalized);
+  }
+
+  if (!fs.existsSync(MEDIA_DB)) {
+    writeJson(MEDIA_DB, []);
+  }
 }
 
 function collectRequestBody(req, maxBytes = MAX_UPLOAD_BYTES) {
@@ -603,8 +646,7 @@ async function router(req, res) {
   sendError(res, 405, "Method not allowed.");
 }
 
-ensureDir(path.dirname(PROJECTS_DB));
-ensureDir(UPLOAD_ROOT);
+initializeBackendData();
 
 http.createServer((req, res) => {
   router(req, res).catch(error => {
