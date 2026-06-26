@@ -760,8 +760,75 @@ $$(".tab[data-tab]").forEach(tab => {
   });
 });
 
-function openProjectModal(projectId) {
-  const p = PROJECTS.find(item => item.id === projectId);
+async function fetchProjectDetail(projectId) {
+  try {
+    const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, { cache: "no-store" });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function renderProjectUploads(project) {
+  const root = $("#projectUploads");
+  if (!root) return;
+  const images = Array.isArray(project?.images) ? project.images : [];
+  const files = Array.isArray(project?.files) ? project.files.filter(file => file.visibility !== "private") : [];
+
+  if (!images.length && !files.length) {
+    root.innerHTML = "";
+    return;
+  }
+
+  const imageHtml = images.length ? `
+    <section class="project-upload-section">
+      <h4>Images</h4>
+      <div class="project-upload-images">
+        ${images.map(image => {
+          const src = image.publicUrl || image.path || "";
+          const caption = image.caption || image.title || image.originalFilename || "Project image";
+          return `
+            <figure>
+              <img src="${escapeHtml(src)}" alt="${escapeHtml(image.alt || caption)}" loading="lazy">
+              <figcaption>${escapeHtml(caption)}</figcaption>
+            </figure>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  ` : "";
+
+  const fileHtml = files.length ? `
+    <section class="project-upload-section">
+      <h4>Files</h4>
+      <div class="project-upload-files">
+        ${files.map(file => {
+          const href = file.publicUrl || file.path || "";
+          const title = file.title || file.originalFilename || "Attached file";
+          const meta = [file.fileType, file.description].filter(Boolean).join(" · ");
+          const publicFile = file.visibility === "public";
+          return `
+            <article class="project-file-card">
+              <div>
+                <strong>${escapeHtml(title)}</strong>
+                <span>${escapeHtml(meta || file.visibility || "")}</span>
+              </div>
+              ${publicFile && href
+                ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">열기</a>`
+                : `<em>요청 시 제공</em>`}
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  ` : "";
+
+  root.innerHTML = imageHtml + fileHtml;
+}
+
+function renderProjectModal(project) {
+  const p = project;
   if (!p) return;
   $("#projectCategory").textContent = p.category;
   $("#projectTitle").textContent = p.title;
@@ -772,11 +839,12 @@ function openProjectModal(projectId) {
   $("#projectOutcome").textContent = p.outcome;
   
   const skillChipHtml = (p.skillTags || []).map(t => `<span class="tag skill-tag">${escapeHtml(SKILLSET_LABELS[t] || t)}</span>`).join("");
-  const tagHtml = p.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+  const tagHtml = (p.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
   $("#projectTags").innerHTML = skillChipHtml + tagHtml;
 
   $("#thumbs").innerHTML = "";
-  p.gallery.forEach((g, i) => {
+  const gallery = Array.isArray(p.gallery) && p.gallery.length ? p.gallery : [["Portfolio", p.title || "Project", p.short || p.description || "등록된 기본 갤러리 항목이 없습니다."]];
+  gallery.forEach((g, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "thumb" + (i === 0 ? " active" : "");
@@ -784,12 +852,24 @@ function openProjectModal(projectId) {
     btn.addEventListener("click", () => renderAsset(g, i));
     $("#thumbs").appendChild(btn);
   });
-  renderAsset(p.gallery[0], 0);
+  renderAsset(gallery[0], 0);
+  renderProjectUploads(p);
+}
+
+async function openProjectModal(projectId) {
+  const p = PROJECTS.find(item => item.id === projectId);
+  if (!p) return;
+  renderProjectModal(p);
 
   $("#projectModal").classList.add("open");
   $("#projectModal").setAttribute("aria-hidden", "false");
   document.body.classList.add("lock");
   activeProject = true;
+
+  const detail = await fetchProjectDetail(projectId);
+  if (detail && activeProject) {
+    renderProjectModal({ ...p, ...detail });
+  }
 }
 
 function renderAsset(g, idx) {
