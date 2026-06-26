@@ -321,6 +321,15 @@ function initializeBackendData() {
   }
 }
 
+function localSeedProjects() {
+  const seedProjects = fs.existsSync(PROJECTS_DB)
+    ? readJson(PROJECTS_DB, [])
+    : readJson(CONTENT_PROJECTS_DB, []);
+  return Array.isArray(seedProjects)
+    ? seedProjects.map(normalizeProject)
+    : [];
+}
+
 function supabaseEnabled() {
   return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -463,11 +472,9 @@ async function supabaseListProjects() {
 }
 
 async function seedSupabaseProjectsFromContent() {
-  const seedProjects = fs.existsSync(PROJECTS_DB)
-    ? readJson(PROJECTS_DB, [])
-    : readJson(CONTENT_PROJECTS_DB, []);
+  const seedProjects = localSeedProjects();
   if (!Array.isArray(seedProjects) || !seedProjects.length) return [];
-  const rows = seedProjects.map((project, index) => projectToDbRow(normalizeProject(project, index)));
+  const rows = seedProjects.map(projectToDbRow);
   return supabaseRequest("/rest/v1/projects?on_conflict=id", {
     method: "POST",
     headers: {
@@ -480,10 +487,15 @@ async function seedSupabaseProjectsFromContent() {
 
 async function getProjectsStore() {
   if (supabaseEnabled()) {
-    const projects = await supabaseListProjects();
-    if (projects.length) return projects;
-    await seedSupabaseProjectsFromContent();
-    return supabaseListProjects();
+    try {
+      const projects = await supabaseListProjects();
+      if (projects.length) return projects;
+      await seedSupabaseProjectsFromContent();
+      return supabaseListProjects();
+    } catch (error) {
+      console.error("Supabase project store failed. Falling back to local seed data:", error);
+      return localSeedProjects();
+    }
   }
   return readJson(PROJECTS_DB, []);
 }
