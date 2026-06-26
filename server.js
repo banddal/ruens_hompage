@@ -559,6 +559,52 @@ async function saveProjectStore(payload, key = null) {
   return created;
 }
 
+async function deleteProjectStore(key) {
+  const project = await getProjectStore(key);
+  if (!project) return false;
+
+  if (supabaseEnabled()) {
+    await supabaseRequest(`/rest/v1/projects?id=eq.${encodeURIComponent(project.id)}`, {
+      method: "DELETE"
+    });
+    return true;
+  }
+
+  const projects = readJson(PROJECTS_DB, []);
+  const nextProjects = projects.filter(item => item.id !== project.id && item.slug !== project.slug);
+  writeJson(PROJECTS_DB, nextProjects);
+
+  const media = readJson(MEDIA_DB, []);
+  writeJson(MEDIA_DB, media.filter(item => item.projectId !== project.id));
+  return true;
+}
+
+async function deleteAssetStore(projectKey, target, assetId) {
+  const project = await getProjectStore(projectKey);
+  if (!project) return false;
+
+  if (supabaseEnabled()) {
+    const table = target === "images" ? "project_images" : "project_files";
+    await supabaseRequest(`/rest/v1/${table}?id=eq.${encodeURIComponent(assetId)}&project_id=eq.${encodeURIComponent(project.id)}`, {
+      method: "DELETE"
+    });
+    return true;
+  }
+
+  const projects = readJson(PROJECTS_DB, []);
+  const storedProject = findProject(projects, project.id);
+  if (!storedProject) return false;
+  const field = target === "images" ? "images" : "files";
+  const before = storedProject[field] || [];
+  storedProject[field] = before.filter(item => item.id !== assetId);
+  storedProject.updatedAt = new Date().toISOString();
+  writeJson(PROJECTS_DB, projects);
+
+  const media = readJson(MEDIA_DB, []);
+  writeJson(MEDIA_DB, media.filter(item => item.id !== assetId));
+  return before.length !== storedProject[field].length;
+}
+
 async function uploadToSupabaseStorage(storagePath, file) {
   const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${storagePath}`, {
     method: "POST",
@@ -908,6 +954,13 @@ async function router(req, res) {
     return handleProjectSave(req, res, projectUpdate[1]);
   }
 
+  if (req.method === "DELETE" && projectUpdate) {
+    if (!requireAdmin(req, res)) return;
+    const deleted = await deleteProjectStore(projectUpdate[1]);
+    if (!deleted) return sendError(res, 404, "Project not found.");
+    return sendJson(res, 200, { ok: true });
+  }
+
   const imageUpload = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/images$/);
   if (req.method === "POST" && imageUpload) {
     if (!requireAdmin(req, res)) return;
@@ -918,6 +971,14 @@ async function router(req, res) {
   if (req.method === "POST" && fileUpload) {
     if (!requireAdmin(req, res)) return;
     return handleUpload(req, res, fileUpload[1], "files");
+  }
+
+  const assetDelete = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/(images|files)\/([^/]+)$/);
+  if (req.method === "DELETE" && assetDelete) {
+    if (!requireAdmin(req, res)) return;
+    const deleted = await deleteAssetStore(assetDelete[1], assetDelete[2], assetDelete[3]);
+    if (!deleted) return sendError(res, 404, "Asset not found.");
+    return sendJson(res, 200, { ok: true });
   }
 
   if (req.method === "GET" || req.method === "HEAD") return serveStatic(req, res);

@@ -202,6 +202,14 @@ button:hover {
   letter-spacing: -.05em;
 }
 
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .admin-input {
   width: 100%;
   min-height: 40px;
@@ -298,6 +306,18 @@ textarea.admin-input {
   border-color: var(--accent);
 }
 
+.danger {
+  background: #fff;
+  border-color: rgba(175,0,0,.35);
+  color: var(--accent);
+}
+
+.danger:hover {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .status-text {
   color: var(--muted);
   font-size: 12px;
@@ -356,6 +376,59 @@ textarea.admin-input {
   margin-top: 3px;
   color: #666;
   word-break: break-all;
+}
+
+.asset-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+
+.asset-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  background: #f4f4f4;
+  color: #333;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.asset-badge.public {
+  color: var(--accent);
+  border-color: rgba(175,0,0,.24);
+}
+
+.asset-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 9px;
+  align-items: center;
+}
+
+.asset-actions a,
+.asset-actions button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.asset-actions a {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  color: #111;
+  background: #fff;
+}
+
+.asset-actions a:hover {
+  color: #fff;
+  background: #111;
 }
 
 .security-panel {

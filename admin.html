@@ -53,7 +53,10 @@
         <section class="editor-panel">
           <div class="panel-head">
             <h2>Project Editor</h2>
-            <button type="button" id="newProject">새 프로젝트</button>
+            <div class="panel-actions">
+              <button type="button" id="newProject">새 프로젝트</button>
+              <button type="button" id="duplicateProject" class="ghost">복제</button>
+            </div>
           </div>
 
           <form id="projectForm" class="project-form">
@@ -136,6 +139,7 @@
 
             <div class="form-actions">
               <button type="submit" class="primary">프로젝트 저장</button>
+              <button type="button" id="deleteProject" class="danger">프로젝트 삭제</button>
               <span id="saveStatus" class="status-text"></span>
             </div>
           </form>
@@ -143,7 +147,7 @@
           <section class="upload-grid">
             <form id="imageUploadForm" class="upload-card">
               <h3>이미지 업로드</h3>
-              <input name="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" required />
+              <input name="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple required />
               <input name="title" class="admin-input" placeholder="이미지 제목" />
               <input name="caption" class="admin-input" placeholder="캡션" />
               <input name="alt" class="admin-input" placeholder="대체 텍스트" />
@@ -152,7 +156,7 @@
 
             <form id="fileUploadForm" class="upload-card">
               <h3>첨부파일 업로드</h3>
-              <input name="file" type="file" accept=".hwp,.hwpx,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx" required />
+              <input name="file" type="file" accept=".hwp,.hwpx,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx" multiple required />
               <input name="title" class="admin-input" placeholder="파일 제목" />
               <input name="description" class="admin-input" placeholder="파일 설명" />
               <select name="visibility" class="admin-input">

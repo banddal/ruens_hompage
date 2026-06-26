@@ -23,6 +23,8 @@ const fileUploadForm = $("#fileUploadForm");
 const imageList = $("#imageList");
 const fileList = $("#fileList");
 const saveStatus = $("#saveStatus");
+const duplicateProjectButton = $("#duplicateProject");
+const deleteProjectButton = $("#deleteProject");
 const securityStatusList = $("#securityStatusList");
 const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
@@ -59,6 +61,24 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function visibilityLabel(value) {
+  if (value === "public") return "공개 다운로드";
+  if (value === "private") return "비공개 보관";
+  return "요청 시 공개";
+}
+
+function fileSizeLabel(value) {
+  const size = Number(value || 0);
+  if (!size) return "";
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)}MB`;
+  if (size >= 1024) return `${Math.round(size / 1024)}KB`;
+  return `${size}B`;
+}
+
+function assetUrl(item) {
+  return item.publicUrl || item.path || "";
 }
 
 async function apiJson(url, options) {
@@ -229,16 +249,33 @@ function renderAssets(project) {
   const files = project?.files || [];
 
   imageList.innerHTML = images.length ? images.map(item => `
-    <div class="asset-item">
+    <div class="asset-item" data-asset-id="${escapeHtml(item.id || "")}">
       <strong>${escapeHtml(item.title || item.originalFilename || "Image")}</strong>
-      <span>${escapeHtml(item.path || "")}</span>
+      <span>${escapeHtml(item.caption || item.alt || "")}</span>
+      <div class="asset-meta">
+        <span class="asset-badge public">이미지</span>
+        <span class="asset-badge">${escapeHtml(fileSizeLabel(item.fileSize))}</span>
+      </div>
+      <div class="asset-actions">
+        ${assetUrl(item) ? `<a href="${escapeHtml(assetUrl(item))}" target="_blank" rel="noopener">열기</a>` : ""}
+        <button type="button" class="danger" data-delete-asset="images" data-asset-id="${escapeHtml(item.id || "")}">삭제</button>
+      </div>
     </div>
   `).join("") : `<div class="asset-empty">등록된 이미지가 없습니다.</div>`;
 
   fileList.innerHTML = files.length ? files.map(item => `
-    <div class="asset-item">
-      <strong>${escapeHtml(item.title || item.originalFilename || "File")} · ${escapeHtml(item.fileType || "")}</strong>
-      <span>${escapeHtml(item.visibility || "request")} / ${escapeHtml(item.path || "")}</span>
+    <div class="asset-item" data-asset-id="${escapeHtml(item.id || "")}">
+      <strong>${escapeHtml(item.title || item.originalFilename || "File")}</strong>
+      <span>${escapeHtml(item.description || item.originalFilename || "")}</span>
+      <div class="asset-meta">
+        <span class="asset-badge ${item.visibility === "public" ? "public" : ""}">${escapeHtml(visibilityLabel(item.visibility))}</span>
+        <span class="asset-badge">${escapeHtml(item.fileType || "file")}</span>
+        <span class="asset-badge">${escapeHtml(fileSizeLabel(item.fileSize))}</span>
+      </div>
+      <div class="asset-actions">
+        ${assetUrl(item) ? `<a href="${escapeHtml(assetUrl(item))}" target="_blank" rel="noopener">확인</a>` : ""}
+        <button type="button" class="danger" data-delete-asset="files" data-asset-id="${escapeHtml(item.id || "")}">삭제</button>
+      </div>
     </div>
   `).join("") : `<div class="asset-empty">등록된 첨부파일이 없습니다.</div>`;
 }
@@ -294,6 +331,26 @@ function newProject() {
   fillForm(empty);
 }
 
+function duplicateProject() {
+  if (!selectedProject?.id) {
+    setStatus(saveStatus, "복제할 프로젝트를 먼저 선택해주세요.");
+    return;
+  }
+  const copy = {
+    ...selectedProject,
+    id: "",
+    slug: "",
+    title: `${selectedProject.title || "Project"} copy`,
+    status: "draft",
+    gallery: [...(selectedProject.gallery || [])],
+    images: [],
+    files: [],
+    sortOrder: projects.length + 1
+  };
+  fillForm(copy);
+  setStatus(saveStatus, "복제 초안이 만들어졌습니다. ID를 입력한 뒤 저장해주세요.");
+}
+
 async function saveProject(event) {
   event.preventDefault();
   const payload = readForm();
@@ -322,14 +379,57 @@ async function uploadAsset(event, type) {
   }
 
   const form = event.currentTarget;
-  const data = new FormData(form);
+  const fileInput = form.elements.file;
+  const files = Array.from(fileInput.files || []);
+  if (!files.length) {
+    setStatus(saveStatus, "업로드할 파일을 선택해주세요.");
+    return;
+  }
+
   const endpoint = type === "images" ? "images" : "files";
-  await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${endpoint}`, {
-    method: "POST",
-    body: data
-  });
+  const titleBase = form.elements.title?.value.trim() || "";
+  for (const [index, file] of files.entries()) {
+    const data = new FormData();
+    data.append("file", file);
+    if (titleBase) data.append("title", files.length > 1 ? `${titleBase} ${index + 1}` : titleBase);
+    if (type === "images") {
+      data.append("caption", form.elements.caption?.value.trim() || "");
+      data.append("alt", form.elements.alt?.value.trim() || "");
+      data.append("visibility", "public");
+    } else {
+      data.append("description", form.elements.description?.value.trim() || "");
+      data.append("visibility", form.elements.visibility?.value || "request");
+    }
+    data.append("sortOrder", String((selectedProject[type]?.length || 0) + index + 1));
+    setStatus(saveStatus, `${index + 1}/${files.length} 업로드 중입니다.`);
+    await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${endpoint}`, {
+      method: "POST",
+      body: data
+    });
+  }
   form.reset();
-  setStatus(saveStatus, type === "images" ? "이미지가 추가되었습니다." : "첨부파일이 추가되었습니다.");
+  setStatus(saveStatus, type === "images" ? `${files.length}개 이미지가 추가되었습니다.` : `${files.length}개 첨부파일이 추가되었습니다.`);
+  await loadProjects(selectedProject.id);
+}
+
+async function deleteProject() {
+  if (!selectedProject?.id) {
+    setStatus(saveStatus, "삭제할 프로젝트를 먼저 선택해주세요.");
+    return;
+  }
+  const ok = window.confirm(`"${selectedProject.title || selectedProject.id}" 프로젝트를 삭제할까요?`);
+  if (!ok) return;
+  await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}`, { method: "DELETE" });
+  setStatus(saveStatus, "프로젝트가 삭제되었습니다.");
+  await loadProjects();
+}
+
+async function deleteAsset(type, assetId) {
+  if (!selectedProject?.id || !assetId) return;
+  const ok = window.confirm("이 파일 기록을 삭제할까요?");
+  if (!ok) return;
+  await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${type}/${encodeURIComponent(assetId)}`, { method: "DELETE" });
+  setStatus(saveStatus, "파일 기록이 삭제되었습니다.");
   await loadProjects(selectedProject.id);
 }
 
@@ -375,9 +475,21 @@ projectList.addEventListener("click", async event => {
 projectSearch.addEventListener("input", renderProjectList);
 $("#reloadProjects").addEventListener("click", () => loadProjects());
 $("#newProject").addEventListener("click", newProject);
+duplicateProjectButton.addEventListener("click", duplicateProject);
+deleteProjectButton.addEventListener("click", deleteProject);
 projectForm.addEventListener("submit", saveProject);
 imageUploadForm.addEventListener("submit", event => uploadAsset(event, "images"));
 fileUploadForm.addEventListener("submit", event => uploadAsset(event, "files"));
+imageList.addEventListener("click", event => {
+  const button = event.target.closest("[data-delete-asset]");
+  if (!button) return;
+  deleteAsset(button.dataset.deleteAsset, button.dataset.assetId);
+});
+fileList.addEventListener("click", event => {
+  const button = event.target.closest("[data-delete-asset]");
+  if (!button) return;
+  deleteAsset(button.dataset.deleteAsset, button.dataset.assetId);
+});
 authForm.addEventListener("submit", submitAuth);
 logoutButton.addEventListener("click", logout);
 passwordForm.addEventListener("submit", savePassword);

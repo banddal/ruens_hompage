@@ -6542,6 +6542,14 @@ footer .footer-desc {
   display: grid;
   gap: 8px;
 }
+.project-file-empty {
+  background: rgba(255,255,255,.46);
+  border: 1px dashed rgba(20,20,20,.16);
+  color: #666;
+  padding: 12px 11px;
+  font-size: 12px;
+  font-weight: 750;
+}
 .project-file-card {
   display: flex;
   align-items: center;
