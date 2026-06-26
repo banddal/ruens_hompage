@@ -3378,7 +3378,9 @@ body::before {
   gap: 42px;
   margin-bottom: 34px;
   padding: 48px 54px 44px;
-  background: linear-gradient(135deg, rgba(175,0,0,.98) 0%, rgba(128,0,0,.96) 100%);
+  background: linear-gradient(135deg, rgba(165,8,8,.86) 0%, rgba(120,0,0,.90) 55%, rgba(74,0,0,.94) 100%);
+  -webkit-backdrop-filter: blur(2px) saturate(1.1);
+  backdrop-filter: blur(2px) saturate(1.1);
   border: 1px solid rgba(255,255,255,.30);
   box-shadow: 0 24px 58px rgba(0,0,0,.20);
 }.portfolio-intro-kicker {
@@ -3395,6 +3397,7 @@ body::before {
   font-weight: 950;
   justify-self: end;
   text-align: center;
+  transform: translate(8px, 8px);
 }.portfolio-intro-name .kr {
   display: block;
   font-size: clamp(42px, 4.5vw, 62px);
@@ -3439,13 +3442,13 @@ body::before {
 }.portfolio-intro p {
   max-width: 940px;
   margin: 18px 0 0;
-  color: rgba(255,255,255,.74);
+  color: rgba(255,255,255,.62);
   font-size: clamp(16px, 1.45vw, 21px);
   line-height: 1.42;
   font-weight: 620;
   letter-spacing: -.035em;
 }.portfolio-intro p strong {
-  color: #f3f3f3;
+  color: rgba(243,243,243,.90);
   font-weight: 850;
 }.portfolio-intro-copy {
   justify-self: start;
@@ -6913,25 +6916,31 @@ body::before {
   padding: 0;
   margin-bottom: 0;
   overflow: hidden;
+  background: linear-gradient(180deg, #f4f1ec 0%, #ebe7e0 100%);
 }.arch-end {
   text-align: center;
   padding: 48px 24px 32px;
-  border-top: 2px solid var(--ink, #111);
 }.arch-end-copy {
-  font-size: 19px;
+  font-size: clamp(26px, 3.2vw, 36px);
   font-weight: 800;
   color: var(--ink, #111);
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   letter-spacing: -.01em;
 }.arch-end-sign {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--red, #af0000);
   margin: 0 0 32px;
   letter-spacing: .04em;
+  line-height: 1.7;
+}.arch-end-byline {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b0b0b0;
+  letter-spacing: .03em;
 }.arch-end-meta {
   max-width: 620px;
-  margin: 0 auto;
+  margin: 0;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -6944,9 +6953,9 @@ body::before {
   line-height: 1.5;
 }.arch-end-meta-key {
   font-weight: 800;
-  color: var(--muted, #888);
+  color: var(--muted, #aaa);
 }.arch-end-meta-val {
-  color: var(--muted, #999);
+  color: var(--muted, #b3b3b3);
 }.arch-end-meta-val a { color: var(--red, #af0000); text-decoration: none; }
 
 @media (max-width: 760px) {.arch-pf-head { display: none; }.arch-pf-rowitem {
@@ -7058,6 +7067,21 @@ body::before {
 .arch-end-copy {
   color: #111 !important;
 }
+.arch-end-sign {
+  color: #8a8a8a !important;
+}
+.arch-end-byline {
+  color: #b3b3b3 !important;
+}
+.arch-end-meta-key {
+  color: #a8a8a8 !important;
+}
+.arch-end-meta-val {
+  color: #b0b0b0 !important;
+}
+.arch-end-meta-val a {
+  color: var(--red, #af0000) !important;
+}
 
 .axis p,
 .phase small,
@@ -7096,11 +7120,7 @@ body::before {
 .arch-pf-to,
 .arch-pf-metric,
 .arch-essay-tag,
-.arch-essay-desc,
-.arch-end-sign,
-.arch-end-meta-key,
-.arch-end-meta-val,
-.arch-end-meta-val a {
+.arch-essay-desc {
   color: #666 !important;
 }
 
@@ -7847,7 +7867,7 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
 <section class="portfolio-intro" id="portfolioIntro" aria-label="Portfolio intro copy">
   <div class="portfolio-intro-copy">
     <h2>Aut inveniam viam aut faciam</h2>
-    <p>소방수에서 전위대, 에이전트 부터 야전 사령관까지<br>공공 정책에서 민간 전략으로, 기획부터 운영까지 <strong>Hybrid Full scale Planner</strong></p>
+    <p>소방수에서 전위대, 에이전트 부터 야전 사령관까지 공공 정책에서 민간 전략으로, 기획부터 운영까지<br><strong>Hybrid Full scale Planner</strong></p>
   </div>
   <div class="portfolio-intro-name">
     <span class="kr">김성원</span>
@@ -10025,8 +10045,8 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
       <!-- BLOCK 4: End -->
       <section class="arch-block arch-block-end" id="archEnd" aria-label="End">
         <div class="arch-end">
-          <p class="arch-end-copy">기록은 흔적이고, 흔적은 다시 길이 된다.</p>
-          <p class="arch-end-sign">Homo Ruens · 질주하는 인간</p>
+          <p class="arch-end-copy" style="font-style:italic;letter-spacing:.005em;">Aut inveniam viam aut faciam</p>
+          <p class="arch-end-sign">길을 찾는다, 없다면 내가 만들겠다.<br><span class="arch-end-byline">by Hannibal Barca</span></p>
           <div class="arch-end-meta">
             <div class="arch-end-meta-item">
               <span class="arch-end-meta-key">저작권</span>
