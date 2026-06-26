@@ -82,7 +82,7 @@
   display: grid;
   justify-items: center;
   gap: 8px;
-  color: #111;
+  color: #fff;
 }.year-cell:has(.grid-event:nth-child(3)) .grid-event {
   width: 31%;
   min-width: 46px;
@@ -778,7 +778,7 @@ html {
   font-size: 16px;
   line-height: 1;
   font-weight: 950;
-  letter-spacing: -.04em;
+  letter-spacing: .10em;
 }.naver-mark {
   color:#18a94b;
 }.brunch-mark {
@@ -2702,7 +2702,7 @@ html, body {
   padding: 22px;
 }.recent-content h4 {
   margin: 0 0 12px;
-  color: #111;
+  color: transparent;
   font-size: 25px;
   line-height: 1.08;
   letter-spacing: -.08em;
@@ -2842,7 +2842,7 @@ html, body {
   width: 100%;
   border: 1px solid rgba(20,20,20,.065);
   background: rgba(255,255,255,.78);
-  color: #333;
+  color: rgba(255,255,255,.76);
   font-family: inherit;
   font-size: 12px;
   font-weight: 300;
@@ -3373,89 +3373,98 @@ body::before {
 }.portfolio-intro {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(220px, .30fr) minmax(0, 1fr) minmax(120px, .18fr);
-  align-items: end;
-  gap: 34px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .28fr);
+  align-items: center;
+  gap: 42px;
   margin-bottom: 34px;
-  padding: 40px 46px 36px;
-  background: rgba(255,255,255,.96);
-  border: 1px solid rgba(20,20,20,.10);
-  box-shadow: 0 18px 44px rgba(0,0,0,.08);
+  padding: 48px 54px 44px;
+  background: linear-gradient(135deg, rgba(175,0,0,.98) 0%, rgba(128,0,0,.96) 100%);
+  border: 1px solid rgba(255,255,255,.30);
+  box-shadow: 0 24px 58px rgba(0,0,0,.20);
 }.portfolio-intro-kicker {
   display: block;
   margin-bottom: 16px;
-  color: var(--red, #af0000);
+  color: #fff;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: .06em;
 }.portfolio-intro-name {
   margin: 0;
-  color: #111;
-  line-height: .94;
+  color: #242424;
+  line-height: 1;
   font-weight: 950;
+  justify-self: end;
+  text-align: center;
 }.portfolio-intro-name .kr {
   display: block;
-  font-size: clamp(40px, 4.7vw, 64px);
-  letter-spacing: .12em;
+  font-size: clamp(42px, 4.5vw, 62px);
+  letter-spacing: .18em;
   font-weight: 950;
   white-space: nowrap;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-stroke: 0 transparent;
+  text-shadow: none;
 }.portfolio-intro-name .en {
   display: block;
-  margin-top: 9px;
-  color: #333;
-  font-size: clamp(22px, 2.58vw, 35px);
-  line-height: 1;
-  font-weight: 850;
-  letter-spacing: -.055em;
+  margin-top: 8px;
+  color: #b9b9b9;
+  font-size: clamp(18px, 1.9vw, 26px);
+  line-height: 1.05;
+  font-weight: 520;
+  letter-spacing: .015em;
   white-space: nowrap;
+  width: auto;
+  text-align: center;
+  text-align-last: auto;
 }.portfolio-intro h2 {
   margin: 0;
   max-width: 920px;
-  color: var(--red, #af0000);
-  font-size: clamp(21px, 2vw, 29px);
+  color: transparent;
+  background-image: var(--bg-image);
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 150% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: .45px #fff;
+  font-size: clamp(34px, 4.3vw, 58px);
   line-height: 1.2;
-  letter-spacing: -.045em;
-  font-weight: 520;
+  letter-spacing: -.03em;
+  font-weight: 760;
 }.portfolio-intro p {
   max-width: 940px;
-  margin: 10px 0 0;
-  color: #777;
-  font-size: clamp(13px, 1.18vw, 16px);
-  line-height: 1.36;
+  margin: 18px 0 0;
+  color: rgba(255,255,255,.74);
+  font-size: clamp(16px, 1.45vw, 21px);
+  line-height: 1.42;
   font-weight: 620;
   letter-spacing: -.035em;
 }.portfolio-intro p strong {
-  color: #555;
+  color: #f3f3f3;
   font-weight: 850;
 }.portfolio-intro-copy {
   justify-self: start;
   text-align: left;
-  align-self: end;
-  padding-left: 18px;
-}.portfolio-intro-hanja {
-  justify-self: end;
   align-self: center;
-  color: rgba(175,0,0,.13);
-  font-size: clamp(58px, 7.2vw, 104px);
-  line-height: .86;
-  font-weight: 950;
-  letter-spacing: -.12em;
-  pointer-events: none;
-  user-select: none;
+  padding-left: 0;
 }
 
 @media(max-width:700px) {.portfolio-intro {
     padding: 30px 24px 28px;
     grid-template-columns: 1fr;
     gap: 18px;
+  }.portfolio-intro-name {
+    justify-self: start;
+    text-align: left;
   }.portfolio-intro-copy {
     justify-self: start;
     text-align: left;
     padding-left: 0;
-  }.portfolio-intro-hanja {
-    justify-self: start;
-    font-size: 56px;
-    margin-top: 2px;
   }
 }.section-jump {
   display: none;
@@ -7350,6 +7359,407 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
   text-align: right !important;
 }
 
+/* Final topbar layout: search / tabs / contact-links in one row */
+.topbar {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 430px) minmax(360px, 1fr) max-content !important;
+  align-items: center !important;
+  gap: 18px !important;
+  min-height: 82px !important;
+  padding: 16px 24px !important;
+}
+
+.topbar-head-row {
+  display: none !important;
+}
+
+.brand {
+  width: 34px !important;
+  min-width: 34px !important;
+  gap: 0 !important;
+}
+
+.brand > span:not(.mark),
+.brand b,
+.brand span span {
+  display: none !important;
+}
+
+.site-search {
+  display: grid !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.site-search-toggle {
+  display: none !important;
+}
+
+.topbar-right-stack {
+  display: contents !important;
+}
+
+.topbar-section-nav {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  transform: none !important;
+  background: transparent !important;
+}
+
+.topbar-section-nav::after {
+  display: none !important;
+}
+
+.topbar-section-tab,
+.topbar-section-tab.tab,
+.topbar-section-nav .tab {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+}
+
+.topbar-right-stack .inline-access {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  width: max-content !important;
+  max-width: none !important;
+  margin: 0 !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+.topbar-right-stack .access-divider {
+  display: none !important;
+}
+
+.topbar-right-stack .access-group {
+  display: grid !important;
+  grid-template-columns: 74px repeat(3, 30px) !important;
+  align-items: center !important;
+  justify-content: start !important;
+  gap: 7px !important;
+}
+
+.topbar-right-stack .access-group:last-child {
+  grid-template-columns: 74px repeat(2, 30px) !important;
+}
+
+.topbar-right-stack .access-label {
+  display: inline-flex !important;
+  min-width: 68px !important;
+  margin: 0 !important;
+  color: #333 !important;
+  font-size: 10px !important;
+  letter-spacing: .08em !important;
+}
+
+@media(max-width:1100px) {
+  .topbar {
+    grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr) max-content !important;
+    align-items: start !important;
+    gap: 10px !important;
+  }
+  .topbar-right-stack {
+    display: contents !important;
+  }
+  .topbar-section-nav {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    padding: 0 !important;
+  }
+  .topbar-right-stack .inline-access {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: max-content !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    overflow: visible !important;
+  }
+  .topbar-right-stack .access-label {
+    display: inline-flex !important;
+    min-width: 68px !important;
+    margin: 0 !important;
+    color: #333 !important;
+    font-size: 10px !important;
+    letter-spacing: .08em !important;
+  }
+  .topbar-right-stack .access-divider {
+    display: none !important;
+  }
+  .topbar-right-stack .access-group {
+    display: grid !important;
+    grid-template-columns: 74px repeat(3, 30px) !important;
+    align-items: center !important;
+    justify-content: start !important;
+    gap: 7px !important;
+  }
+  .topbar-right-stack .access-group:last-child {
+    grid-template-columns: 74px repeat(2, 30px) !important;
+  }
+}
+
+@media(max-width:700px) {
+  .topbar {
+    grid-template-columns: 1fr !important;
+    gap: 7px !important;
+    min-height: 0 !important;
+    padding: 10px 14px !important;
+  }
+  .site-search {
+    grid-column: 1 / -1 !important;
+    grid-template-columns: 1fr 30px !important;
+  }
+  .site-search input,
+  .site-search button {
+    min-height: 30px !important;
+  }
+  .site-search-tags {
+    display: none !important;
+  }
+  .topbar-right-stack {
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+  .topbar-section-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .topbar-section-tab,
+  .topbar-section-tab.tab,
+  .topbar-section-nav .tab {
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 4px !important;
+    font-size: 10.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .topbar-right-stack .inline-access {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+    gap: 3px !important;
+    overflow: visible !important;
+  }
+  .inline-access .access-label {
+    display: inline-flex !important;
+    min-width: 62px !important;
+    margin: 0 !important;
+    color: #333 !important;
+    font-size: 10px !important;
+    letter-spacing: .08em !important;
+  }
+  .inline-access .access-divider {
+    display: none !important;
+  }
+  .access-group {
+    display: grid !important;
+    grid-template-columns: 68px repeat(3, 28px) !important;
+    align-items: center !important;
+    justify-content: start !important;
+    gap: 6px !important;
+  }
+  .access-group:last-child {
+    grid-template-columns: 68px repeat(2, 28px) !important;
+  }
+  .access-link,
+  .access-copy {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+  }
+  .access-icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}
+
+/* Header composition: search at left, tabs/contact-links stacked at right */
+.topbar {
+  display: grid !important;
+  grid-template-columns: minmax(320px, 430px) minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 22px !important;
+  min-height: 84px !important;
+  padding: 16px 24px !important;
+}
+
+.site-search {
+  display: grid !important;
+  grid-template-columns: 1fr 30px !important;
+  align-self: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.site-search-tags {
+  display: flex !important;
+}
+
+.topbar-right-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.topbar-section-nav {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 7px !important;
+  border-bottom: 1px dotted rgba(20,20,20,.20) !important;
+  transform: none !important;
+  background: transparent !important;
+}
+
+.topbar-section-nav::after {
+  display: none !important;
+}
+
+.topbar-section-tab,
+.topbar-section-tab.tab,
+.topbar-section-nav .tab {
+  height: 27px !important;
+  min-height: 27px !important;
+  padding: 0 8px !important;
+  white-space: nowrap !important;
+}
+
+.topbar-right-stack .inline-access {
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  flex-wrap: nowrap !important;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+.topbar-right-stack .access-divider {
+  display: inline-flex !important;
+  justify-self: center !important;
+}
+
+.topbar-right-stack .access-group {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(14px, 2.2vw, 28px) !important;
+}
+
+.topbar-right-stack .access-group:last-child {
+  gap: clamp(18px, 3vw, 40px) !important;
+}
+
+.topbar-right-stack .access-group:last-child .access-label {
+  margin-right: clamp(-8px, -0.6vw, -2px) !important;
+}
+
+.topbar-right-stack .access-label {
+  display: inline-flex !important;
+  min-width: auto !important;
+  margin: 0 4px 0 0 !important;
+  color: #333 !important;
+  font-size: 10.5px !important;
+  letter-spacing: .10em !important;
+}
+
+@media(max-width:760px) {
+  .topbar {
+    grid-template-columns: minmax(168px, .92fr) minmax(210px, 1fr) !important;
+    gap: 10px !important;
+    min-height: 0 !important;
+    padding: 10px 12px !important;
+  }
+  .site-search {
+    grid-template-columns: 1fr 28px !important;
+  }
+  .site-search input,
+  .site-search button {
+    min-height: 28px !important;
+  }
+  .site-search-tags {
+    display: flex !important;
+    gap: 4px !important;
+    padding-top: 4px !important;
+  }
+  .site-search-tags button {
+    min-height: 19px !important;
+    padding: 0 5px !important;
+    font-size: 9.5px !important;
+  }
+  .topbar-right-stack {
+    gap: 4px !important;
+  }
+  .topbar-section-nav {
+    padding-bottom: 5px !important;
+  }
+  .topbar-section-tab,
+  .topbar-section-tab.tab,
+  .topbar-section-nav .tab {
+    height: 22px !important;
+    min-height: 22px !important;
+    padding: 0 3px !important;
+    font-size: 10px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .topbar-right-stack .inline-access {
+    justify-content: flex-end !important;
+    gap: 9px !important;
+  }
+  .topbar-right-stack .access-label {
+    display: none !important;
+  }
+  .topbar-right-stack .access-divider {
+    display: inline-flex !important;
+    height: 18px !important;
+  }
+  .topbar-right-stack .access-group {
+    gap: 5px !important;
+  }
+  .access-link,
+  .access-copy {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+  }
+  .access-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -7357,11 +7767,6 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
 <section class="intro-spacer" aria-label="Opening painting view"></section>
 
 <header class="topbar">
-  <div class="topbar-head-row">
-    <a class="brand" href="#"><span class="mark"></span><span><b>Homo Ruens</b><span>질주하는 인간</span></span></a>
-    <button type="button" class="site-search-toggle" id="siteSearchToggle" aria-expanded="false" aria-controls="siteSearchForm" aria-label="검색 열기">⌕</button>
-  </div>
-
   <form class="site-search" id="siteSearchForm" role="search">
     <input id="siteSearchInput" type="search" autocomplete="off" placeholder="Search" aria-label="홈페이지 내용 검색">
     <button type="submit" aria-label="검색">⌕</button>
@@ -7440,15 +7845,14 @@ body.skill-filter-locked #timeline .skill-filter-btn.active {
   </nav>
 
 <section class="portfolio-intro" id="portfolioIntro" aria-label="Portfolio intro copy">
-  <div class="portfolio-intro-name">
-    <span class="kr">김 성 원</span>
-    <span class="en">Kim Sung Won</span>
-  </div>
   <div class="portfolio-intro-copy">
-    <h2>누구도 할 수 없다면 도전할 이유가 됩니다.</h2>
+    <h2>Aut inveniam viam aut faciam</h2>
     <p>소방수에서 전위대, 에이전트 부터 야전 사령관까지<br>공공 정책에서 민간 전략으로, 기획부터 운영까지 <strong>Hybrid Full scale Planner</strong></p>
   </div>
-  <div class="portfolio-intro-hanja" aria-hidden="true">疾走</div>
+  <div class="portfolio-intro-name">
+    <span class="kr">김성원</span>
+    <span class="en">Kim Sung Won</span>
+  </div>
 </section>
 
 <section class="matrix" id="projectsSectionCompetence">
