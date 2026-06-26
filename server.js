@@ -510,7 +510,8 @@ function serveStatic(req, res) {
     if (error || !stat.isFile()) return sendError(res, 404, "Not found.");
     const ext = path.extname(filePath).toLowerCase();
     res.writeHead(200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream"
+      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
+      "Cache-Control": pathname.startsWith("/admin") ? "no-store" : "public, max-age=300"
     });
     fs.createReadStream(filePath).pipe(res);
   });

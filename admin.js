@@ -14,6 +14,7 @@ const authSubmit = $("#authSubmit");
 const authStatus = $("#authStatus");
 const adminContent = $("#adminContent");
 const logoutButton = $("#logoutButton");
+const projectPanelTitle = $(".project-list-panel .panel-head h2");
 const projectList = $("#projectList");
 const projectSearch = $("#projectSearch");
 const projectForm = $("#projectForm");
@@ -169,12 +170,16 @@ function renderProjectList() {
     return !query || haystack.includes(query);
   });
 
-  projectList.innerHTML = filtered.map(project => `
+  projectPanelTitle.textContent = query
+    ? `Projects (${filtered.length}/${projects.length})`
+    : `Projects (${projects.length})`;
+
+  projectList.innerHTML = filtered.length ? filtered.map(project => `
     <button type="button" class="project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${escapeHtml(project.id)}">
       <strong>${escapeHtml(project.title || project.id)}</strong>
       <small>${escapeHtml(projectLabel(project) || project.category || "")}</small>
     </button>
-  `).join("");
+  `).join("") : `<div class="asset-empty">표시할 프로젝트가 없습니다.</div>`;
 }
 
 function fillForm(project) {
@@ -239,15 +244,24 @@ function renderAssets(project) {
 }
 
 async function loadProjects(selectId = selectedProject?.id) {
-  projects = await apiJson("/api/admin/projects");
-  const next = projects.find(project => project.id === selectId) || projects[0] || null;
-  if (next) {
-    const detail = await apiJson(`/api/admin/projects/${encodeURIComponent(next.slug || next.id)}`);
-    fillForm(detail);
-  } else {
-    newProject();
+  projectPanelTitle.textContent = "Projects";
+  projectList.innerHTML = `<div class="asset-empty">프로젝트 목록을 불러오는 중입니다.</div>`;
+  try {
+    projects = await apiJson("/api/admin/projects");
+    const next = projects.find(project => project.id === selectId) || projects[0] || null;
+    renderProjectList();
+    if (next) {
+      const detail = await apiJson(`/api/admin/projects/${encodeURIComponent(next.slug || next.id)}`);
+      fillForm(detail);
+    } else {
+      newProject();
+    }
+    renderProjectList();
+  } catch (error) {
+    projectPanelTitle.textContent = "Projects";
+    projectList.innerHTML = `<div class="asset-empty">프로젝트 목록을 불러오지 못했습니다.<br>${escapeHtml(error.message)}</div>`;
+    throw error;
   }
-  renderProjectList();
 }
 
 function newProject() {
