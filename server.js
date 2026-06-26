@@ -7,7 +7,11 @@ const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 3000);
 const PROJECTS_DB = path.join(ROOT, "backend-data", "projects.json");
 const MEDIA_DB = path.join(ROOT, "backend-data", "media-assets.json");
+const SECURITY_DB = path.join(ROOT, "backend-data", "security.json");
 const UPLOAD_ROOT = path.join(ROOT, "uploads", "projects");
+const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_BYTES || 50 * 1024 * 1024);
+const SESSION_COOKIE = "homo_ruens_admin";
+const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -66,6 +70,159 @@ function sendError(res, status, message) {
   sendJson(res, status, { error: message });
 }
 
+function parseCookies(req) {
+  const header = req.headers.cookie || "";
+  return Object.fromEntries(
+    header
+      .split(";")
+      .map(part => part.trim())
+      .filter(Boolean)
+      .map(part => {
+        const index = part.indexOf("=");
+        if (index === -1) return [part, ""];
+        return [decodeURIComponent(part.slice(0, index)), decodeURIComponent(part.slice(index + 1))];
+      })
+  );
+}
+
+function base64url(input) {
+  return Buffer.from(input)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function sessionSecret() {
+  return process.env.ADMIN_SECRET || process.env.ADMIN_PASSWORD || "local-development-session-secret";
+}
+
+function signSession() {
+  const payload = base64url(JSON.stringify({
+    iat: Date.now(),
+    exp: Date.now() + SESSION_TTL_SECONDS * 1000
+  }));
+  const signature = crypto
+    .createHmac("sha256", sessionSecret())
+    .update(payload)
+    .digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function verifySession(req) {
+  const token = parseCookies(req)[SESSION_COOKIE];
+  if (!token || !token.includes(".")) return false;
+  const [payload, signature] = token.split(".");
+  const expected = crypto
+    .createHmac("sha256", sessionSecret())
+    .update(payload)
+    .digest("base64url");
+  if (signature.length !== expected.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return Number(data.exp || 0) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function secureCookieFlag(req) {
+  const host = req.headers.host || "";
+  return req.headers["x-forwarded-proto"] === "https" || (!host.startsWith("localhost") && !host.startsWith("127.0.0.1"));
+}
+
+function setSessionCookie(req, res) {
+  const flags = [
+    `${SESSION_COOKIE}=${encodeURIComponent(signSession())}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${SESSION_TTL_SECONDS}`
+  ];
+  if (secureCookieFlag(req)) flags.push("Secure");
+  res.setHeader("Set-Cookie", flags.join("; "));
+}
+
+function clearSessionCookie(res) {
+  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+}
+
+function passwordRecord() {
+  const security = readJson(SECURITY_DB, {});
+  if (security.passwordHash?.hash && security.passwordHash?.salt) {
+    return { source: "admin-page", record: security.passwordHash };
+  }
+  if (process.env.ADMIN_PASSWORD) return { source: "render-env", plain: process.env.ADMIN_PASSWORD };
+  return null;
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const iterations = 120000;
+  return {
+    algorithm: "pbkdf2-sha256",
+    iterations,
+    salt,
+    hash: crypto.pbkdf2Sync(password, salt, iterations, 32, "sha256").toString("hex"),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function sameString(a, b) {
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+function verifyPassword(password) {
+  const current = passwordRecord();
+  if (!current) return false;
+  if (current.plain) return sameString(password, current.plain);
+
+  const record = current.record;
+  const hash = crypto
+    .pbkdf2Sync(password, record.salt, Number(record.iterations || 120000), 32, "sha256")
+    .toString("hex");
+  return sameString(hash, record.hash);
+}
+
+function requireAdmin(req, res) {
+  if (!passwordRecord()) {
+    sendError(res, 403, "Admin password is not configured.");
+    return false;
+  }
+  if (!verifySession(req)) {
+    sendError(res, 401, "Admin login is required.");
+    return false;
+  }
+  return true;
+}
+
+function securityStatus(req) {
+  const current = passwordRecord();
+  const authenticated = Boolean(current && verifySession(req));
+  return {
+    authConfigured: Boolean(current),
+    authenticated,
+    passwordSource: current?.source || "not-configured",
+    sessionHours: SESSION_TTL_SECONDS / 3600,
+    adminApiProtected: true,
+    uploads: {
+      maxBytes: MAX_UPLOAD_BYTES,
+      maxMB: Math.round(MAX_UPLOAD_BYTES / 1024 / 1024),
+      allowedExtensions: Array.from(ALLOWED_UPLOAD_EXTS).sort()
+    },
+    storage: {
+      mode: process.env.RENDER ? "render" : "local",
+      note: process.env.RENDER
+        ? "Render 재배포 시 로컬 업로드 파일이 사라질 수 있으므로 Persistent Disk 또는 외부 Storage 연결이 필요합니다."
+        : "현재 로컬 파일 시스템에 저장 중입니다."
+    }
+  };
+}
+
 function safeSegment(value) {
   return String(value || "")
     .trim()
@@ -97,11 +254,25 @@ function publicProject(project) {
   };
 }
 
+function adminProject(project) {
+  return {
+    ...project,
+    slug: project.slug || project.id,
+    tags: project.tags || [],
+    skillTags: project.skillTags || [],
+    gallery: project.gallery || [],
+    images: project.images || [],
+    files: project.files || [],
+    status: project.status || "published",
+    sortOrder: project.sortOrder || 0
+  };
+}
+
 function findProject(projects, key) {
   return projects.find(project => project.id === key || project.slug === key);
 }
 
-function collectRequestBody(req, maxBytes = 50 * 1024 * 1024) {
+function collectRequestBody(req, maxBytes = MAX_UPLOAD_BYTES) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -289,6 +460,44 @@ async function handleProjectSave(req, res, key = null) {
   sendJson(res, 201, publicProject(created));
 }
 
+async function handleLogin(req, res) {
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 64 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "Invalid JSON body.");
+  }
+
+  if (!passwordRecord()) return sendError(res, 403, "Admin password is not configured.");
+  if (!verifyPassword(payload.password || "")) return sendError(res, 401, "Invalid admin password.");
+  setSessionCookie(req, res);
+  sendJson(res, 200, { ...securityStatus(req), authenticated: true });
+}
+
+async function handlePasswordSave(req, res) {
+  const hasPassword = Boolean(passwordRecord());
+  if (hasPassword && !requireAdmin(req, res)) return;
+
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 64 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "Invalid JSON body.");
+  }
+
+  const password = String(payload.password || "");
+  if (password.length < 10) return sendError(res, 400, "Password must be at least 10 characters.");
+
+  writeJson(SECURITY_DB, {
+    passwordHash: hashPassword(password),
+    updatedAt: new Date().toISOString()
+  });
+  setSessionCookie(req, res);
+  sendJson(res, 200, { ...securityStatus(req), authenticated: true });
+}
+
 function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   let pathname = decodeURIComponent(url.pathname);
@@ -315,6 +524,23 @@ async function router(req, res) {
     return sendJson(res, 200, { ok: true, service: "homo-ruens-portfolio", time: new Date().toISOString() });
   }
 
+  if (req.method === "GET" && pathname === "/api/admin/security/status") {
+    return sendJson(res, 200, securityStatus(req));
+  }
+
+  if (req.method === "POST" && pathname === "/api/admin/login") {
+    return handleLogin(req, res);
+  }
+
+  if (req.method === "POST" && pathname === "/api/admin/logout") {
+    clearSessionCookie(res);
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (req.method === "POST" && pathname === "/api/admin/security/password") {
+    return handlePasswordSave(req, res);
+  }
+
   if (req.method === "GET" && pathname === "/api/projects") {
     const projects = readJson(PROJECTS_DB, []);
     const visible = projects
@@ -332,22 +558,43 @@ async function router(req, res) {
     return sendJson(res, 200, publicProject(project));
   }
 
+  if (req.method === "GET" && pathname === "/api/admin/projects") {
+    if (!requireAdmin(req, res)) return;
+    const projects = readJson(PROJECTS_DB, [])
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      .map(adminProject);
+    return sendJson(res, 200, projects);
+  }
+
+  const adminProjectDetail = pathname.match(/^\/api\/admin\/projects\/([^/]+)$/);
+  if (req.method === "GET" && adminProjectDetail) {
+    if (!requireAdmin(req, res)) return;
+    const projects = readJson(PROJECTS_DB, []);
+    const project = findProject(projects, adminProjectDetail[1]);
+    if (!project) return sendError(res, 404, "Project not found.");
+    return sendJson(res, 200, adminProject(project));
+  }
+
   if (req.method === "POST" && pathname === "/api/admin/projects") {
+    if (!requireAdmin(req, res)) return;
     return handleProjectSave(req, res);
   }
 
   const projectUpdate = pathname.match(/^\/api\/admin\/projects\/([^/]+)$/);
   if ((req.method === "PUT" || req.method === "POST") && projectUpdate) {
+    if (!requireAdmin(req, res)) return;
     return handleProjectSave(req, res, projectUpdate[1]);
   }
 
   const imageUpload = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/images$/);
   if (req.method === "POST" && imageUpload) {
+    if (!requireAdmin(req, res)) return;
     return handleUpload(req, res, imageUpload[1], "images");
   }
 
   const fileUpload = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/files$/);
   if (req.method === "POST" && fileUpload) {
+    if (!requireAdmin(req, res)) return;
     return handleUpload(req, res, fileUpload[1], "files");
   }
 

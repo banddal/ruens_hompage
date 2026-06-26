@@ -3,7 +3,17 @@ const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selec
 
 let projects = [];
 let selectedProject = null;
+let securityState = null;
 
+const authPanel = $("#authPanel");
+const authForm = $("#authForm");
+const authPassword = $("#authPassword");
+const authTitle = $("#authTitle");
+const authDescription = $("#authDescription");
+const authSubmit = $("#authSubmit");
+const authStatus = $("#authStatus");
+const adminContent = $("#adminContent");
+const logoutButton = $("#logoutButton");
 const projectList = $("#projectList");
 const projectSearch = $("#projectSearch");
 const projectForm = $("#projectForm");
@@ -12,6 +22,11 @@ const fileUploadForm = $("#fileUploadForm");
 const imageList = $("#imageList");
 const fileList = $("#fileList");
 const saveStatus = $("#saveStatus");
+const securityStatusList = $("#securityStatusList");
+const passwordForm = $("#passwordForm");
+const newPassword = $("#newPassword");
+const confirmPassword = $("#confirmPassword");
+const passwordStatus = $("#passwordStatus");
 
 function splitTags(value) {
   return String(value || "")
@@ -24,25 +39,119 @@ function joinTags(value) {
   return Array.isArray(value) ? value.join(", ") : "";
 }
 
-function setStatus(message) {
-  saveStatus.textContent = message;
-  window.clearTimeout(setStatus.timer);
-  setStatus.timer = window.setTimeout(() => {
-    saveStatus.textContent = "";
-  }, 3200);
+function setStatus(target, message) {
+  target.textContent = message;
+  window.clearTimeout(target._timer);
+  target._timer = window.setTimeout(() => {
+    target.textContent = "";
+  }, 3600);
 }
 
 function projectLabel(project) {
   return [project.metric, project.period].filter(Boolean).join(" · ");
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 async function apiJson(url, options) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      showAuthPanel(data.error || "관리자 로그인이 필요합니다.");
+    }
     throw new Error(data.error || `Request failed: ${response.status}`);
   }
   return data;
+}
+
+function showAuthPanel(message = "") {
+  const setupRequired = securityState && !securityState.authConfigured;
+  authTitle.textContent = setupRequired ? "관리자 비밀번호 설정" : "관리자 로그인";
+  authDescription.textContent = setupRequired
+    ? "아직 관리자 비밀번호가 없습니다. 첫 비밀번호를 설정하면 관리자 API가 보호됩니다."
+    : "관리자 비밀번호를 입력하면 프로젝트 저장과 파일 업로드가 활성화됩니다.";
+  authSubmit.textContent = setupRequired ? "비밀번호 설정" : "로그인";
+  authPassword.value = "";
+  authStatus.textContent = message;
+  authPanel.classList.remove("hidden");
+  adminContent.classList.add("hidden");
+  logoutButton.classList.add("hidden");
+}
+
+function showAdminPanel() {
+  authPanel.classList.add("hidden");
+  adminContent.classList.remove("hidden");
+  logoutButton.classList.remove("hidden");
+}
+
+function renderSecurityStatus(status) {
+  securityState = status;
+  const rows = [
+    ["관리자 인증", status.authConfigured ? "설정됨" : "미설정"],
+    ["현재 세션", status.authenticated ? "로그인됨" : "로그아웃"],
+    ["비밀번호 저장 위치", status.passwordSource],
+    ["관리자 API 보호", status.adminApiProtected ? "활성" : "비활성"],
+    ["세션 유지 시간", `${status.sessionHours}시간`],
+    ["업로드 최대 용량", `${status.uploads?.maxMB || "-"}MB`],
+    ["허용 확장자", (status.uploads?.allowedExtensions || []).join(", ")],
+    ["저장소", status.storage?.mode || "-"],
+    ["저장소 메모", status.storage?.note || "-"]
+  ];
+
+  securityStatusList.innerHTML = rows.map(([label, value]) => `
+    <div class="security-row">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </div>
+  `).join("");
+}
+
+async function loadSecurityStatus() {
+  const status = await apiJson("/api/admin/security/status");
+  renderSecurityStatus(status);
+  if (status.authenticated) {
+    showAdminPanel();
+    await loadProjects();
+  } else {
+    showAuthPanel();
+  }
+}
+
+async function submitAuth(event) {
+  event.preventDefault();
+  const password = authPassword.value;
+  if (!password) return;
+
+  try {
+    const url = securityState && !securityState.authConfigured
+      ? "/api/admin/security/password"
+      : "/api/admin/login";
+    const status = await apiJson(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    renderSecurityStatus(status);
+    showAdminPanel();
+    await loadProjects();
+  } catch (error) {
+    setStatus(authStatus, error.message);
+  }
+}
+
+async function logout() {
+  await apiJson("/api/admin/logout", { method: "POST" }).catch(() => null);
+  selectedProject = null;
+  projects = [];
+  await loadSecurityStatus();
 }
 
 function renderProjectList() {
@@ -61,20 +170,11 @@ function renderProjectList() {
   });
 
   projectList.innerHTML = filtered.map(project => `
-    <button type="button" class="project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${project.id}">
+    <button type="button" class="project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${escapeHtml(project.id)}">
       <strong>${escapeHtml(project.title || project.id)}</strong>
       <small>${escapeHtml(projectLabel(project) || project.category || "")}</small>
     </button>
   `).join("");
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 function fillForm(project) {
@@ -139,10 +239,10 @@ function renderAssets(project) {
 }
 
 async function loadProjects(selectId = selectedProject?.id) {
-  projects = await apiJson("/api/projects");
+  projects = await apiJson("/api/admin/projects");
   const next = projects.find(project => project.id === selectId) || projects[0] || null;
   if (next) {
-    const detail = await apiJson(`/api/projects/${encodeURIComponent(next.slug || next.id)}`);
+    const detail = await apiJson(`/api/admin/projects/${encodeURIComponent(next.slug || next.id)}`);
     fillForm(detail);
   } else {
     newProject();
@@ -177,7 +277,7 @@ async function saveProject(event) {
   event.preventDefault();
   const payload = readForm();
   if (!payload.id || !payload.title) {
-    setStatus("ID와 제목이 필요합니다.");
+    setStatus(saveStatus, "ID와 제목이 필요합니다.");
     return;
   }
 
@@ -189,14 +289,14 @@ async function saveProject(event) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  setStatus("저장되었습니다.");
+  setStatus(saveStatus, "저장되었습니다.");
   await loadProjects(saved.id);
 }
 
 async function uploadAsset(event, type) {
   event.preventDefault();
   if (!selectedProject?.id) {
-    setStatus("먼저 프로젝트를 선택하거나 저장해주세요.");
+    setStatus(saveStatus, "먼저 프로젝트를 선택하거나 저장해주세요.");
     return;
   }
 
@@ -208,8 +308,38 @@ async function uploadAsset(event, type) {
     body: data
   });
   form.reset();
-  setStatus(type === "images" ? "이미지가 추가되었습니다." : "첨부파일이 추가되었습니다.");
+  setStatus(saveStatus, type === "images" ? "이미지가 추가되었습니다." : "첨부파일이 추가되었습니다.");
   await loadProjects(selectedProject.id);
+}
+
+async function savePassword(event) {
+  event.preventDefault();
+  if (newPassword.value !== confirmPassword.value) {
+    setStatus(passwordStatus, "비밀번호 확인이 일치하지 않습니다.");
+    return;
+  }
+
+  try {
+    const status = await apiJson("/api/admin/security/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword.value })
+    });
+    passwordForm.reset();
+    renderSecurityStatus(status);
+    setStatus(passwordStatus, "비밀번호가 저장되었습니다.");
+  } catch (error) {
+    setStatus(passwordStatus, error.message);
+  }
+}
+
+function switchTab(name) {
+  $$(".admin-tab").forEach(button => {
+    button.classList.toggle("active", button.dataset.adminTab === name);
+  });
+  $$(".admin-tab-panel").forEach(panel => {
+    panel.classList.toggle("hidden", panel.id !== `${name}Panel`);
+  });
 }
 
 projectList.addEventListener("click", async event => {
@@ -217,7 +347,7 @@ projectList.addEventListener("click", async event => {
   if (!button) return;
   const project = projects.find(item => item.id === button.dataset.projectId);
   if (!project) return;
-  const detail = await apiJson(`/api/projects/${encodeURIComponent(project.slug || project.id)}`);
+  const detail = await apiJson(`/api/admin/projects/${encodeURIComponent(project.slug || project.id)}`);
   fillForm(detail);
 });
 
@@ -227,7 +357,13 @@ $("#newProject").addEventListener("click", newProject);
 projectForm.addEventListener("submit", saveProject);
 imageUploadForm.addEventListener("submit", event => uploadAsset(event, "images"));
 fileUploadForm.addEventListener("submit", event => uploadAsset(event, "files"));
+authForm.addEventListener("submit", submitAuth);
+logoutButton.addEventListener("click", logout);
+passwordForm.addEventListener("submit", savePassword);
+$$(".admin-tab").forEach(button => {
+  button.addEventListener("click", () => switchTab(button.dataset.adminTab));
+});
 
-loadProjects().catch(error => {
-  projectList.innerHTML = `<div class="asset-empty">API를 불러오지 못했습니다. server.js가 실행 중인지 확인하세요.<br>${escapeHtml(error.message)}</div>`;
+loadSecurityStatus().catch(error => {
+  showAuthPanel(error.message);
 });
