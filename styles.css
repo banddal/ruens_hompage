@@ -7245,6 +7245,10 @@ footer .footer-desc {
   background: transparent !important;
 }
 
+#projectModal .asset-text-panel.is-empty {
+  display: none !important;
+}
+
 #projectModal .asset-text-panel .asset-type,
 #projectModal .asset-text-panel .asset-title {
   background: rgba(245,245,245,.92) !important;
@@ -7260,6 +7264,10 @@ footer .footer-desc {
   background: rgba(255,255,255,.86) !important;
   border: 1px solid rgba(20,20,20,.10) !important;
   border-top: 0 !important;
+}
+
+#projectModal .asset-text-panel.no-desc .asset-desc {
+  display: none;
 }
 
 #projectModal .thumbs {

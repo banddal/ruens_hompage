@@ -49,6 +49,19 @@ function escapeHtml(v) {
   return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
+function looksLikeGeneratedAssetText(value) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  return /\.(png|jpe?g|webp|avif|gif|pdf|pptx?|hwp|hwpx|docx?|xlsx?)$/i.test(text)
+    || /^(화면\s*캡[처쳐]|screenshot|screen\s*shot)/i.test(text)
+    || /^\d{4}[-_.]\d{1,2}[-_.]\d{1,2}[\s_-]?\d{4,6}$/i.test(text);
+}
+
+function cleanAssetText(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return looksLikeGeneratedAssetText(text) ? "" : text;
+}
+
 function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
@@ -886,14 +899,20 @@ function renderProjectModal(project) {
   $("#thumbs").innerHTML = "";
   const uploadedImages = Array.isArray(p.images) ? p.images
     .filter(image => image.publicUrl || image.path)
-    .map((image, imageIndex) => ({
-      kind: "image",
-      type: image.title || `사진`,
-      title: image.title || `사진 ${imageIndex + 1}`,
-      desc: image.caption || image.description || image.alt || "",
-      src: image.publicUrl || image.path,
-      alt: image.alt || image.caption || image.title || p.title || "Project image"
-    })) : [];
+    .map((image, imageIndex) => {
+      const title = cleanAssetText(image.title);
+      const caption = cleanAssetText(image.caption);
+      const description = cleanAssetText(image.description);
+      const alt = cleanAssetText(image.alt);
+      return {
+        kind: "image",
+        type: "사진 설명",
+        title,
+        desc: caption || description || "",
+        src: image.publicUrl || image.path,
+        alt: alt || caption || title || p.title || `Project image ${imageIndex + 1}`
+      };
+    }) : [];
   const textGallery = Array.isArray(p.gallery) && p.gallery.length
     ? p.gallery.map(item => ({
       kind: "text",
@@ -992,9 +1011,18 @@ function renderProjectImageAt(index) {
 }
 
 function renderAssetText(g, idx) {
-  $("#assetType").textContent = g.type;
-  $("#assetTitle").textContent = g.title;
-  $("#assetDesc").textContent = g.desc || "";
+  const panel = $("#assetTextPanel");
+  const isImage = g?.kind === "image";
+  const title = isImage ? cleanAssetText(g.title) : (g.title || "");
+  const desc = isImage ? cleanAssetText(g.desc) : (g.desc || "");
+  const type = isImage ? "사진 설명" : (g.type || "");
+  if (panel) {
+    panel.classList.toggle("is-empty", isImage && !title && !desc);
+    panel.classList.toggle("no-desc", !desc);
+  }
+  $("#assetType").textContent = type;
+  $("#assetTitle").textContent = title || desc || "";
+  $("#assetDesc").textContent = title ? desc : "";
   $$(".thumb").forEach((t, i) => t.classList.toggle("active", i === idx));
 }
 
