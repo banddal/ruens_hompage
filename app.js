@@ -53,13 +53,40 @@ function looksLikeGeneratedAssetText(value) {
   const text = String(value || "").trim();
   if (!text) return false;
   return /\.(png|jpe?g|webp|avif|gif|pdf|pptx?|hwp|hwpx|docx?|xlsx?)$/i.test(text)
+    || /^(다운로드|download|image|file|img|photo|사진|이미지)$/i.test(text)
     || /^(화면\s*캡[처쳐]|screenshot|screen\s*shot)/i.test(text)
+    || /캡[처쳐]\s*\d{4}[-_.]\d{1,2}[-_.]\d{1,2}/i.test(text)
     || /^\d{4}[-_.]\d{1,2}[-_.]\d{1,2}[\s_-]?\d{4,6}$/i.test(text);
 }
 
 function cleanAssetText(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   return looksLikeGeneratedAssetText(text) ? "" : text;
+}
+
+function fileNameFromUrl(url, fallback = "portfolio-file") {
+  try {
+    const parsed = new URL(url, window.location.href);
+    const name = decodeURIComponent(parsed.pathname.split("/").pop() || "").trim();
+    return name && !/[\\/:*?"<>|]/.test(name) ? name : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+async function downloadInBrowser(url, filename = "portfolio-file") {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error("download failed");
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 function apiUrl(path) {
@@ -847,10 +874,11 @@ function renderProjectUploads(project) {
           const href = file.publicUrl || file.path || "";
           const publicFile = file.visibility === "public";
           const visibility = publicFile ? "공개 다운로드" : "요청 시 공개";
+          const filename = cleanAssetText(file.title) || fileNameFromUrl(href, "portfolio-file");
           return `
             <article class="project-file-card">
               ${publicFile && href
-                ? `<a href="${escapeHtml(href)}" download>다운로드</a>`
+                ? `<a class="project-download-link" href="${escapeHtml(href)}" download="${escapeHtml(filename)}" data-download-url="${escapeHtml(href)}" data-download-name="${escapeHtml(filename)}">다운로드</a>`
                 : `<em>${visibility}</em>`}
             </article>
           `;
@@ -860,6 +888,20 @@ function renderProjectUploads(project) {
   `;
 
   if (root) root.innerHTML = fileHtml;
+  root?.querySelectorAll(".project-download-link").forEach(link => {
+    link.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const url = link.dataset.downloadUrl || link.href;
+      const filename = link.dataset.downloadName || fileNameFromUrl(url);
+      try {
+        await downloadInBrowser(url, filename);
+      } catch (error) {
+        console.warn("In-page download failed, using same-window fallback:", error);
+        window.location.href = url;
+      }
+    });
+  });
 
   if (strip) {
     if (!visibleImages.length && !files.length) {
@@ -900,17 +942,16 @@ function renderProjectModal(project) {
   const uploadedImages = Array.isArray(p.images) ? p.images
     .filter(image => image.publicUrl || image.path)
     .map((image, imageIndex) => {
-      const title = cleanAssetText(image.title);
       const caption = cleanAssetText(image.caption);
       const description = cleanAssetText(image.description);
       const alt = cleanAssetText(image.alt);
       return {
         kind: "image",
         type: "사진 설명",
-        title,
+        title: "",
         desc: caption || description || "",
         src: image.publicUrl || image.path,
-        alt: alt || caption || title || p.title || `Project image ${imageIndex + 1}`
+        alt: alt || caption || p.title || `Project image ${imageIndex + 1}`
       };
     }) : [];
   const textGallery = Array.isArray(p.gallery) && p.gallery.length
@@ -992,6 +1033,7 @@ function renderProjectImageAt(index) {
   if (!image?.src) {
     figure.classList.remove("has-image");
     link.removeAttribute("href");
+    link.removeAttribute("target");
     img.removeAttribute("src");
     img.alt = "";
     caption.textContent = "등록된 대표 이미지가 없습니다.";
@@ -1000,7 +1042,10 @@ function renderProjectImageAt(index) {
     return;
   }
   figure.classList.add("has-image");
-  link.href = image.src;
+  link.removeAttribute("href");
+  link.removeAttribute("target");
+  link.setAttribute("aria-disabled", "true");
+  link.setAttribute("tabindex", "-1");
   img.src = image.src;
   img.alt = image.alt || image.title || "Project image";
   caption.textContent = `${safeIndex + 1} / ${total}`;
@@ -1013,7 +1058,7 @@ function renderProjectImageAt(index) {
 function renderAssetText(g, idx) {
   const panel = $("#assetTextPanel");
   const isImage = g?.kind === "image";
-  const title = isImage ? cleanAssetText(g.title) : (g.title || "");
+  const title = isImage ? "" : (g.title || "");
   const desc = isImage ? cleanAssetText(g.desc) : (g.desc || "");
   const type = isImage ? "사진 설명" : (g.type || "");
   if (panel) {
@@ -1035,6 +1080,16 @@ function closeProjectModal() {
 
 $("#projectImagePrev")?.addEventListener("click", () => renderProjectImageAt(projectGalleryIndex - 1));
 $("#projectImageNext")?.addEventListener("click", () => renderProjectImageAt(projectGalleryIndex + 1));
+["#projectImageLink", "#projectImage", "#projectImageFigure"].forEach(selector => {
+  const element = $(selector);
+  if (!element) return;
+  element.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  element.addEventListener("contextmenu", event => event.preventDefault());
+  element.addEventListener("dragstart", event => event.preventDefault());
+});
 (() => {
   const frame = $("#projectImageFrame");
   if (!frame) return;
