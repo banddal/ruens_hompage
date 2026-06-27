@@ -885,16 +885,16 @@ function renderProjectModal(project) {
       title: p.title || "Project",
       desc: p.short || p.description || "등록된 기본 갤러리 항목이 없습니다."
     }];
-  const gallery = uploadedImages.length ? [...uploadedImages, ...textGallery] : textGallery;
-  gallery.forEach((g, i) => {
+  renderProjectImageSlot(uploadedImages);
+  textGallery.forEach((g, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "thumb" + (i === 0 ? " active" : "");
     btn.innerHTML = `<b>${escapeHtml(g.type)}</b><span>${escapeHtml(g.title)}</span>`;
-    btn.addEventListener("click", () => renderAsset(g, i));
+    btn.addEventListener("click", () => renderAssetText(g, i));
     $("#thumbs").appendChild(btn);
   });
-  renderAsset(gallery[0], 0);
+  renderAssetText(textGallery[0], 0);
   renderProjectUploads(p);
 }
 
@@ -914,26 +914,27 @@ async function openProjectModal(projectId) {
   }
 }
 
-function renderAsset(g, idx) {
+function renderProjectImageSlot(images) {
+  const slot = $("#projectImageSlot");
+  if (!slot) return;
+  const image = images?.[0];
+  if (!image?.src) {
+    slot.classList.remove("has-image");
+    slot.innerHTML = "등록된 대표 이미지가 없습니다.";
+    return;
+  }
+  slot.classList.add("has-image");
+  slot.innerHTML = `
+    <a class="asset-preview-link" href="${escapeHtml(image.src)}" target="_blank" rel="noopener">
+      <img class="asset-preview-image" src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || image.title)}" decoding="async" fetchpriority="high">
+    </a>
+  `;
+}
+
+function renderAssetText(g, idx) {
   $("#assetType").textContent = g.type;
   $("#assetTitle").textContent = g.title;
   $("#assetDesc").textContent = g.desc || "";
-  const frame = $(".viewer-main .frame");
-  const placeholder = $(".asset-placeholder");
-  frame?.classList.toggle("image-frame", g.kind === "image" && Boolean(g.src));
-  if (placeholder) {
-    if (g.kind === "image" && g.src) {
-      placeholder.classList.add("has-image");
-      placeholder.innerHTML = `
-        <a class="asset-preview-link" href="${escapeHtml(g.src)}" target="_blank" rel="noopener">
-          <img class="asset-preview-image" src="${escapeHtml(g.src)}" alt="${escapeHtml(g.alt || g.title)}" decoding="async" fetchpriority="high">
-        </a>
-      `;
-    } else {
-      placeholder.classList.remove("has-image");
-      placeholder.textContent = "실제 산출물 파일 또는 이미지가 들어갈 자리";
-    }
-  }
   $$(".thumb").forEach((t, i) => t.classList.toggle("active", i === idx));
 }
 

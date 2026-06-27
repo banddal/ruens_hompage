@@ -11,7 +11,7 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Kim Sung Won" />
 <meta name="twitter:description" content="공공 정책에서 민간 전략까지, 기획부터 운영까지 — Hybrid Full scale Planner" />
-<link rel="stylesheet" href="styles.css?v=20260627-upload-modal-6" />
+<link rel="stylesheet" href="styles.css?v=20260627-modal-structure-1" />
 </head>
 <body>
 <div class="page">
@@ -1756,7 +1756,16 @@
         <div class="gallery-head"><div><h3>작업 결과물 갤러리</h3><p>보고서, 표, 슬라이드, 캡처, 이미지 등을 연결하는 영역</p></div></div>
         <div class="project-uploads" id="projectUploads" aria-live="polite"></div>
         <div class="viewer">
-          <div class="viewer-main"><div class="frame"><div class="asset-type" id="assetType"></div><div class="asset-title" id="assetTitle"></div><p class="asset-desc" id="assetDesc"></p><div class="asset-placeholder">실제 산출물 파일 또는 이미지가 들어갈 자리</div></div></div>
+          <div class="viewer-main">
+            <div class="frame image-frame" id="projectImageFrame">
+              <div class="asset-placeholder" id="projectImageSlot">등록된 대표 이미지가 없습니다.</div>
+            </div>
+          </div>
+          <div class="asset-text-panel" id="assetTextPanel">
+            <div class="asset-type" id="assetType"></div>
+            <div class="asset-title" id="assetTitle"></div>
+            <p class="asset-desc" id="assetDesc"></p>
+          </div>
           <div class="thumbs" id="thumbs"></div>
         </div>
         <div class="modal-note">상단 프로젝트 카드와 타임라인 프로젝트 포인트 모두 이 모달로 바로 연결됩니다.</div>
@@ -1828,7 +1837,7 @@
 </div>
 
 <script src="data.js"></script>
-<script src="app.js?v=20260627-upload-modal-6"></script>
+<script src="app.js?v=20260627-modal-structure-1"></script>
 
 
 </html>
