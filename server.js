@@ -803,6 +803,12 @@ async function handleUpload(req, res, projectKey, target) {
     const record = await saveAssetStore(project, target, file, fields);
     return sendJson(res, 201, record);
   } catch (error) {
+    console.error("Upload failed:", {
+      project: projectKey,
+      target,
+      filename: file.filename,
+      message: error.message
+    });
     return sendError(res, 400, error.message);
   }
 }

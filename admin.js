@@ -388,28 +388,37 @@ async function uploadAsset(event, type) {
 
   const endpoint = type === "images" ? "images" : "files";
   const titleBase = form.elements.title?.value.trim() || "";
-  for (const [index, file] of files.entries()) {
-    const data = new FormData();
-    data.append("file", file);
-    if (titleBase) data.append("title", files.length > 1 ? `${titleBase} ${index + 1}` : titleBase);
-    if (type === "images") {
-      data.append("caption", form.elements.caption?.value.trim() || "");
-      data.append("alt", form.elements.alt?.value.trim() || "");
-      data.append("visibility", "public");
-    } else {
-      data.append("description", form.elements.description?.value.trim() || "");
-      data.append("visibility", form.elements.visibility?.value || "request");
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  try {
+    for (const [index, file] of files.entries()) {
+      const data = new FormData();
+      data.append("file", file, file.name);
+      if (titleBase) data.append("title", files.length > 1 ? `${titleBase} ${index + 1}` : titleBase);
+      if (type === "images") {
+        data.append("caption", form.elements.caption?.value.trim() || "");
+        data.append("alt", form.elements.alt?.value.trim() || "");
+        data.append("visibility", "public");
+      } else {
+        data.append("description", form.elements.description?.value.trim() || "");
+        data.append("visibility", form.elements.visibility?.value || "request");
+      }
+      data.append("sortOrder", String((selectedProject[type]?.length || 0) + index + 1));
+      setStatus(saveStatus, `${index + 1}/${files.length} 업로드 중입니다.`);
+      await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${endpoint}`, {
+        method: "POST",
+        body: data
+      });
     }
-    data.append("sortOrder", String((selectedProject[type]?.length || 0) + index + 1));
-    setStatus(saveStatus, `${index + 1}/${files.length} 업로드 중입니다.`);
-    await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${endpoint}`, {
-      method: "POST",
-      body: data
-    });
+    form.reset();
+    setStatus(saveStatus, type === "images" ? `${files.length}개 이미지가 추가되었습니다.` : `${files.length}개 첨부파일이 추가되었습니다.`);
+    await loadProjects(selectedProject.id);
+  } catch (error) {
+    setStatus(saveStatus, `업로드 실패: ${error.message}`);
+    console.error("Upload failed", error);
+  } finally {
+    submitButton.disabled = false;
   }
-  form.reset();
-  setStatus(saveStatus, type === "images" ? `${files.length}개 이미지가 추가되었습니다.` : `${files.length}개 첨부파일이 추가되었습니다.`);
-  await loadProjects(selectedProject.id);
 }
 
 async function deleteProject() {

@@ -776,11 +776,6 @@ function renderProjectUploads(project) {
   const images = Array.isArray(project?.images) ? project.images : [];
   const files = Array.isArray(project?.files) ? project.files.filter(file => file.visibility !== "private") : [];
 
-  if (!images.length && !files.length) {
-    root.innerHTML = "";
-    return;
-  }
-
   const imageHtml = images.length ? `
     <section class="project-upload-section">
       <h4>Images</h4>
@@ -799,30 +794,31 @@ function renderProjectUploads(project) {
     </section>
   ` : "";
 
-  const fileHtml = files.length ? `
+  const fileHtml = `
     <section class="project-upload-section">
       <h4>Files</h4>
       <div class="project-upload-files">
-        ${files.map(file => {
+        ${files.length ? files.map(file => {
           const href = file.publicUrl || file.path || "";
           const title = file.title || file.originalFilename || "Attached file";
           const meta = [file.fileType, file.description].filter(Boolean).join(" · ");
           const publicFile = file.visibility === "public";
+          const visibility = publicFile ? "공개 다운로드" : "요청 시 공개";
           return `
             <article class="project-file-card">
               <div>
                 <strong>${escapeHtml(title)}</strong>
-                <span>${escapeHtml(meta || file.visibility || "")}</span>
+                <span>${escapeHtml(meta || visibility)}</span>
               </div>
               ${publicFile && href
-                ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">열기</a>`
-                : `<em>요청 시 제공</em>`}
+                ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" download>다운로드</a>`
+                : `<em>${visibility}</em>`}
             </article>
           `;
-        }).join("")}
+        }).join("") : `<div class="project-file-empty">등록된 첨부파일이 없습니다.</div>`}
       </div>
     </section>
-  ` : "";
+  `;
 
   root.innerHTML = imageHtml + fileHtml;
 }
@@ -843,12 +839,35 @@ function renderProjectModal(project) {
   $("#projectTags").innerHTML = skillChipHtml + tagHtml;
 
   $("#thumbs").innerHTML = "";
-  const gallery = Array.isArray(p.gallery) && p.gallery.length ? p.gallery : [["Portfolio", p.title || "Project", p.short || p.description || "등록된 기본 갤러리 항목이 없습니다."]];
+  const uploadedImages = Array.isArray(p.images) ? p.images
+    .filter(image => image.publicUrl || image.path)
+    .map(image => ({
+      kind: "image",
+      type: image.title || "Image",
+      title: image.caption || image.title || image.originalFilename || "Project image",
+      desc: image.description || image.alt || p.short || p.description || "",
+      src: image.publicUrl || image.path,
+      alt: image.alt || image.caption || image.title || p.title || "Project image"
+    })) : [];
+  const textGallery = Array.isArray(p.gallery) && p.gallery.length
+    ? p.gallery.map(item => ({
+      kind: "text",
+      type: item[0],
+      title: item[1],
+      desc: item[2]
+    }))
+    : [{
+      kind: "text",
+      type: "Portfolio",
+      title: p.title || "Project",
+      desc: p.short || p.description || "등록된 기본 갤러리 항목이 없습니다."
+    }];
+  const gallery = uploadedImages.length ? [...uploadedImages, ...textGallery] : textGallery;
   gallery.forEach((g, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "thumb" + (i === 0 ? " active" : "");
-    btn.innerHTML = `<b>${escapeHtml(g[0])}</b><span>${escapeHtml(g[1])}</span>`;
+    btn.innerHTML = `<b>${escapeHtml(g.type)}</b><span>${escapeHtml(g.title)}</span>`;
     btn.addEventListener("click", () => renderAsset(g, i));
     $("#thumbs").appendChild(btn);
   });
@@ -873,9 +892,19 @@ async function openProjectModal(projectId) {
 }
 
 function renderAsset(g, idx) {
-  $("#assetType").textContent = g[0];
-  $("#assetTitle").textContent = g[1];
-  $("#assetDesc").textContent = g[2];
+  $("#assetType").textContent = g.type;
+  $("#assetTitle").textContent = g.title;
+  $("#assetDesc").textContent = g.desc || "";
+  const placeholder = $(".asset-placeholder");
+  if (placeholder) {
+    if (g.kind === "image" && g.src) {
+      placeholder.classList.add("has-image");
+      placeholder.innerHTML = `<img class="asset-preview-image" src="${escapeHtml(g.src)}" alt="${escapeHtml(g.alt || g.title)}" loading="lazy">`;
+    } else {
+      placeholder.classList.remove("has-image");
+      placeholder.textContent = "실제 산출물 파일 또는 이미지가 들어갈 자리";
+    }
+  }
   $$(".thumb").forEach((t, i) => t.classList.toggle("active", i === idx));
 }
 
