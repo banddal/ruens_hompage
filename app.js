@@ -772,9 +772,10 @@ async function fetchProjectDetail(projectId) {
 
 function renderProjectUploads(project) {
   const root = $("#projectUploads");
-  if (!root) return;
+  const strip = $("#projectAttachmentStrip");
   const images = Array.isArray(project?.images) ? project.images : [];
   const files = Array.isArray(project?.files) ? project.files.filter(file => file.visibility !== "private") : [];
+  const visibleImages = images.filter(image => image.publicUrl || image.path);
 
   const fileHtml = `
     <section class="project-upload-section">
@@ -802,7 +803,47 @@ function renderProjectUploads(project) {
     </section>
   `;
 
-  root.innerHTML = fileHtml;
+  if (root) root.innerHTML = fileHtml;
+
+  if (strip) {
+    if (!visibleImages.length && !files.length) {
+      strip.innerHTML = `<span class="project-attachment-empty">등록된 이미지와 첨부파일이 없습니다.</span>`;
+      return;
+    }
+    const imageStrip = visibleImages.slice(0, 3).map(image => {
+      const src = image.publicUrl || image.path || "";
+      const label = image.caption || image.title || image.originalFilename || "Image";
+      return `
+        <a class="attachment-thumb" href="${escapeHtml(src)}" target="_blank" rel="noopener" title="${escapeHtml(label)}">
+          <img src="${escapeHtml(src)}" alt="${escapeHtml(image.alt || label)}" decoding="async" fetchpriority="high">
+          <span>${escapeHtml(label)}</span>
+        </a>
+      `;
+    }).join("");
+    const fileStrip = files.map(file => {
+      const href = file.publicUrl || file.path || "";
+      const title = file.title || file.originalFilename || "Attached file";
+      const publicFile = file.visibility === "public";
+      return `
+        <div class="attachment-file">
+          <strong>${escapeHtml(title)}</strong>
+          ${publicFile && href
+            ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" download>다운로드</a>`
+            : `<em>요청 시 공개</em>`}
+        </div>
+      `;
+    }).join("");
+    strip.innerHTML = `
+      <div class="attachment-group">
+        <b>Images</b>
+        <div class="attachment-items">${imageStrip || `<span class="project-attachment-empty">이미지 없음</span>`}</div>
+      </div>
+      <div class="attachment-group">
+        <b>Files</b>
+        <div class="attachment-items">${fileStrip || `<span class="project-attachment-empty">파일 없음</span>`}</div>
+      </div>
+    `;
+  }
 }
 
 function renderProjectModal(project) {
