@@ -238,6 +238,17 @@ function safeSegment(value) {
     .slice(0, 120);
 }
 
+function safeStorageSegment(value, fallback = "asset") {
+  const segment = String(value || "")
+    .trim()
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+  return segment || fallback;
+}
+
 function publicProject(project) {
   return {
     id: project.id,
@@ -639,7 +650,7 @@ async function saveAssetStore(project, target, file, fields) {
 
   const slug = safeSegment(project.slug || project.id);
   const folder = target === "images" ? "images" : "files";
-  const stem = safeSegment(path.basename(originalName, ext)) || "asset";
+  const stem = safeStorageSegment(path.basename(originalName, ext));
   const storedName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}-${stem}${ext}`;
   const fileType = fileKind(ext);
   const recordBase = {
