@@ -6551,15 +6551,34 @@ footer .footer-desc {
   font-weight: 750;
 }
 .asset-placeholder.has-image {
-  margin-top: 12px;
+  order: -1;
+  margin: 0 0 12px;
   color: inherit;
 }
 .asset-preview-image {
   display: block;
   width: 100%;
-  max-height: 280px;
+  max-height: 360px;
   object-fit: contain;
   background: rgba(255,255,255,.42);
+}
+.frame.image-frame {
+  width: min(100%, 620px);
+  min-height: 0;
+  padding: 14px;
+  gap: 8px;
+}
+.frame.image-frame .asset-type {
+  justify-self: start;
+  font-size: 11px;
+}
+.frame.image-frame .asset-title {
+  font-size: 18px;
+  line-height: 1.25;
+  text-align: left;
+}
+.frame.image-frame .asset-desc {
+  display: none;
 }
 .project-file-card {
   display: flex;
@@ -6606,5 +6625,21 @@ footer .footer-desc {
   .project-file-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media(max-width:1020px) {
+  #projectModal .gallery {
+    order: -1;
+  }
+  #projectModal .info {
+    order: 1;
+  }
+  #projectModal .viewer-main {
+    min-height: 260px;
+    padding: 16px;
+  }
+  #projectModal .asset-preview-image {
+    max-height: 300px;
   }
 }

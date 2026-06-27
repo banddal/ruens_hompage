@@ -890,9 +890,10 @@ function serveStatic(req, res) {
   fs.stat(filePath, (error, stat) => {
     if (error || !stat.isFile()) return sendError(res, 404, "Not found.");
     const ext = path.extname(filePath).toLowerCase();
+    const noStore = pathname.startsWith("/admin") || ext === ".html";
     res.writeHead(200, {
       "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": pathname.startsWith("/admin") ? "no-store" : "public, max-age=300"
+      "Cache-Control": noStore ? "no-store" : "public, max-age=300"
     });
     fs.createReadStream(filePath).pipe(res);
   });

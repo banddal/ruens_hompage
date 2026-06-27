@@ -776,24 +776,6 @@ function renderProjectUploads(project) {
   const images = Array.isArray(project?.images) ? project.images : [];
   const files = Array.isArray(project?.files) ? project.files.filter(file => file.visibility !== "private") : [];
 
-  const imageHtml = images.length ? `
-    <section class="project-upload-section">
-      <h4>Images</h4>
-      <div class="project-upload-images">
-        ${images.map(image => {
-          const src = image.publicUrl || image.path || "";
-          const caption = image.caption || image.title || image.originalFilename || "Project image";
-          return `
-            <figure>
-              <img src="${escapeHtml(src)}" alt="${escapeHtml(image.alt || caption)}" loading="lazy">
-              <figcaption>${escapeHtml(caption)}</figcaption>
-            </figure>
-          `;
-        }).join("")}
-      </div>
-    </section>
-  ` : "";
-
   const fileHtml = `
     <section class="project-upload-section">
       <h4>Files</h4>
@@ -820,7 +802,7 @@ function renderProjectUploads(project) {
     </section>
   `;
 
-  root.innerHTML = imageHtml + fileHtml;
+  root.innerHTML = fileHtml;
 }
 
 function renderProjectModal(project) {
@@ -895,7 +877,9 @@ function renderAsset(g, idx) {
   $("#assetType").textContent = g.type;
   $("#assetTitle").textContent = g.title;
   $("#assetDesc").textContent = g.desc || "";
+  const frame = $(".viewer-main .frame");
   const placeholder = $(".asset-placeholder");
+  frame?.classList.toggle("image-frame", g.kind === "image" && Boolean(g.src));
   if (placeholder) {
     if (g.kind === "image" && g.src) {
       placeholder.classList.add("has-image");
