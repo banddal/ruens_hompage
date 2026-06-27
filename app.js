@@ -883,7 +883,11 @@ function renderAsset(g, idx) {
   if (placeholder) {
     if (g.kind === "image" && g.src) {
       placeholder.classList.add("has-image");
-      placeholder.innerHTML = `<img class="asset-preview-image" src="${escapeHtml(g.src)}" alt="${escapeHtml(g.alt || g.title)}" loading="lazy">`;
+      placeholder.innerHTML = `
+        <a class="asset-preview-link" href="${escapeHtml(g.src)}" target="_blank" rel="noopener">
+          <img class="asset-preview-image" src="${escapeHtml(g.src)}" alt="${escapeHtml(g.alt || g.title)}" decoding="async" fetchpriority="high">
+        </a>
+      `;
     } else {
       placeholder.classList.remove("has-image");
       placeholder.textContent = "실제 산출물 파일 또는 이미지가 들어갈 자리";

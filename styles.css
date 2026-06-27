@@ -6555,6 +6555,10 @@ footer .footer-desc {
   margin: 0 0 12px;
   color: inherit;
 }
+.asset-preview-link {
+  display: block;
+  text-decoration: none;
+}
 .asset-preview-image {
   display: block;
   width: 100%;
