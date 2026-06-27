@@ -7128,3 +7128,223 @@ footer .footer-desc {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Portfolio modal v3: site-tone cleanup ===== */
+#projectModal .modal {
+  background: rgba(255,255,255,.97) !important;
+  border: 0 !important;
+  box-shadow: 0 36px 110px rgba(0,0,0,.34) !important;
+}
+
+#projectModal .project-modal-top,
+#projectModal .project-attachment-strip,
+#projectModal .project-sheet {
+  background: rgba(255,255,255,.96) !important;
+}
+
+#projectModal .project-modal-top {
+  border-bottom: 1px dotted rgba(20,20,20,.18) !important;
+}
+
+#projectModal .modal-kicker,
+#projectModal .project-overview-block b {
+  color: #777 !important;
+}
+
+#projectModal .modal h2 {
+  color: #111 !important;
+}
+
+#projectModal .project-overview-block .lead,
+#projectModal .info-card p,
+#projectModal .asset-text-panel .asset-desc {
+  color: #333 !important;
+}
+
+#projectModal .project-facts {
+  grid-template-columns: 1fr 1.2fr 2.2fr 1.55fr;
+  gap: 12px;
+}
+
+#projectModal .info-card {
+  border: 1px solid rgba(20,20,20,.14) !important;
+  background: rgba(250,250,250,.78) !important;
+  box-shadow: none !important;
+}
+
+#projectModal .info-card h3 {
+  color: #777 !important;
+}
+
+#projectModal .fact-metric {
+  min-width: 0;
+}
+
+#projectModal .compact-tags {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 0;
+}
+
+#projectModal .tag,
+#projectModal .skill-tag,
+#projectModal .team-position-chip {
+  min-height: 25px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245,245,245,.92) !important;
+  border: 1px solid rgba(20,20,20,.10) !important;
+  color: #666 !important;
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+#projectModal .skill-tag {
+  color: var(--red) !important;
+}
+
+#projectModal .fact-tags .tags {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+#projectModal .team-position-chip.active {
+  background: #111 !important;
+  border-color: #111 !important;
+  color: #fff !important;
+}
+
+#projectModal .frame.image-frame {
+  border: 0 !important;
+  background: rgba(246,246,246,.78) !important;
+  box-shadow: inset 0 0 0 1px rgba(20,20,20,.08);
+}
+
+#projectModal .project-image-figure a {
+  background: rgba(255,255,255,.72) !important;
+}
+
+#projectModal .gallery-nav {
+  border: 1px solid rgba(20,20,20,.10);
+  background: rgba(255,255,255,.76);
+  color: #555;
+}
+
+#projectModal .gallery-nav:hover {
+  background: #111;
+  color: #fff;
+}
+
+#projectModal .asset-text-panel {
+  grid-template-columns: 170px 1fr;
+  background: transparent !important;
+}
+
+#projectModal .asset-text-panel .asset-type,
+#projectModal .asset-text-panel .asset-title {
+  background: rgba(245,245,245,.92) !important;
+  color: #333 !important;
+  border: 1px solid rgba(20,20,20,.10) !important;
+}
+
+#projectModal .asset-text-panel .asset-title {
+  border-left: 0 !important;
+}
+
+#projectModal .asset-text-panel .asset-desc {
+  background: rgba(255,255,255,.86) !important;
+  border: 1px solid rgba(20,20,20,.10) !important;
+  border-top: 0 !important;
+}
+
+#projectModal .thumbs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#projectModal .thumb {
+  min-height: 74px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(20,20,20,.12) !important;
+  background: rgba(255,255,255,.76) !important;
+}
+
+#projectModal .thumb-image-wrap,
+#projectModal .thumb-image-wrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#projectModal .thumb-image-wrap img {
+  object-fit: cover;
+}
+
+#projectModal .thumb.active,
+#projectModal .thumb:hover {
+  box-shadow: inset 0 0 0 2px var(--red) !important;
+  background: rgba(255,255,255,.96) !important;
+}
+
+#projectModal .project-upload-section h4 {
+  background: transparent !important;
+  color: #777 !important;
+  border-top: 1px dotted rgba(20,20,20,.18);
+  border-bottom: 1px dotted rgba(20,20,20,.18);
+}
+
+#projectModal .project-upload-files {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+}
+
+#projectModal .project-file-card {
+  min-height: 38px;
+  justify-content: center;
+  background: rgba(250,250,250,.78) !important;
+  border: 1px solid rgba(20,20,20,.10) !important;
+}
+
+#projectModal .project-file-card a,
+#projectModal .project-file-card em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  min-width: 88px;
+  padding: 0 12px;
+  border: 0;
+  background: #111 !important;
+  color: #fff !important;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+  font-style: normal;
+}
+
+#projectModal .project-file-card em {
+  background: rgba(20,20,20,.08) !important;
+  color: #666 !important;
+}
+
+@media(max-width: 900px) {
+  #projectModal .project-facts {
+    grid-template-columns: 1fr;
+  }
+
+  #projectModal .compact-tags,
+  #projectModal .fact-tags .tags {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #projectModal .thumbs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

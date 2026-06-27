@@ -15,6 +15,7 @@ create table if not exists public.projects (
   outcome text default '',
   tags jsonb not null default '[]'::jsonb,
   skill_tags jsonb not null default '[]'::jsonb,
+  team_positions jsonb not null default '[]'::jsonb,
   gallery jsonb not null default '[]'::jsonb,
   status text not null default 'draft',
   sort_order integer not null default 0,
@@ -33,6 +34,7 @@ alter table public.projects add column if not exists role text default '';
 alter table public.projects add column if not exists outcome text default '';
 alter table public.projects add column if not exists tags jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists skill_tags jsonb not null default '[]'::jsonb;
+alter table public.projects add column if not exists team_positions jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists gallery jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists status text not null default 'draft';
 alter table public.projects add column if not exists sort_order integer not null default 0;

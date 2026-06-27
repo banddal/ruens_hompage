@@ -19,6 +19,12 @@ let projectGalleryImages = [];
 let projectGalleryIndex = 0;
 
 const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
+const TEAM_POSITION_LABELS = {
+  director: "Directer",
+  pm: "PM",
+  member: "Member",
+  independent: "Independent"
+};
 const API_BASE = (() => {
   const configured = window.HOMO_RUENS_API_BASE || "";
   if (configured) return configured.replace(/\/+$/, "");
@@ -826,18 +832,12 @@ function renderProjectUploads(project) {
       <div class="project-upload-files">
         ${files.length ? files.map(file => {
           const href = file.publicUrl || file.path || "";
-          const title = file.title || file.originalFilename || "Attached file";
-          const meta = [file.fileType, file.description].filter(Boolean).join(" · ");
           const publicFile = file.visibility === "public";
           const visibility = publicFile ? "공개 다운로드" : "요청 시 공개";
           return `
             <article class="project-file-card">
-              <div>
-                <strong>${escapeHtml(title)}</strong>
-                <span>${escapeHtml(meta || visibility)}</span>
-              </div>
               ${publicFile && href
-                ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" download>다운로드</a>`
+                ? `<a href="${escapeHtml(href)}" download>다운로드</a>`
                 : `<em>${visibility}</em>`}
             </article>
           `;
@@ -871,18 +871,26 @@ function renderProjectModal(project) {
   $("#projectOutcome").textContent = p.outcome;
   
   const skillLabels = (p.skillTags || []).map(t => SKILLSET_LABELS[t] || t);
-  $("#projectMetric").textContent = skillLabels.length ? skillLabels.join(" · ") : (p.metric || p.category || "");
-  const tagHtml = (p.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
-  $("#projectTags").innerHTML = tagHtml || `<span class="tag">${escapeHtml(p.metric || p.category || "Project")}</span>`;
+  $("#projectMetric").innerHTML = (skillLabels.length ? skillLabels : [p.category || "Project"])
+    .slice(0, 4)
+    .map(label => `<span class="tag skill-tag">${escapeHtml(label)}</span>`)
+    .join("");
+  const teamPositions = Array.isArray(p.teamPositions) && p.teamPositions.length
+    ? p.teamPositions
+    : [];
+  $("#projectTags").innerHTML = Object.entries(TEAM_POSITION_LABELS).map(([value, label]) => {
+    const active = teamPositions.includes(value);
+    return `<span class="team-position-chip${active ? " active" : ""}">${escapeHtml(label)}</span>`;
+  }).join("");
 
   $("#thumbs").innerHTML = "";
   const uploadedImages = Array.isArray(p.images) ? p.images
     .filter(image => image.publicUrl || image.path)
-    .map(image => ({
+    .map((image, imageIndex) => ({
       kind: "image",
-      type: image.title || "Image",
-      title: image.caption || image.title || image.originalFilename || "Project image",
-      desc: image.description || image.alt || image.originalFilename || p.short || p.description || "",
+      type: image.title || `사진`,
+      title: image.title || `사진 ${imageIndex + 1}`,
+      desc: image.caption || image.description || image.alt || "",
       src: image.publicUrl || image.path,
       alt: image.alt || image.caption || image.title || p.title || "Project image"
     })) : [];
@@ -906,7 +914,7 @@ function renderProjectModal(project) {
     btn.type = "button";
     btn.className = "thumb" + (i === 0 ? " active" : "");
     if (g.kind === "image") {
-      btn.innerHTML = `<b>사진 ${i + 1}</b><span>${escapeHtml(g.title)}</span>`;
+      btn.innerHTML = `<span class="thumb-image-wrap"><img src="${escapeHtml(g.src)}" alt="${escapeHtml(g.alt || g.title)}" loading="lazy"></span>`;
       btn.addEventListener("click", () => renderProjectImageAt(i));
     } else {
       btn.innerHTML = `<b>${escapeHtml(g.type)}</b><span>${escapeHtml(g.title)}</span>`;
@@ -976,7 +984,7 @@ function renderProjectImageAt(index) {
   link.href = image.src;
   img.src = image.src;
   img.alt = image.alt || image.title || "Project image";
-  caption.textContent = `${safeIndex + 1} / ${total} · ${image.title || image.alt || "Project image"}`;
+  caption.textContent = `${safeIndex + 1} / ${total}`;
   if (prev) prev.disabled = total < 2;
   if (next) next.disabled = total < 2;
   renderAssetText(image, safeIndex);

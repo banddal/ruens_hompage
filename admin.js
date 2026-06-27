@@ -42,6 +42,18 @@ function joinTags(value) {
   return Array.isArray(value) ? value.join(", ") : "";
 }
 
+function readCheckedValues(name) {
+  return Array.from(projectForm.querySelectorAll(`input[name="${name}"]:checked`))
+    .map(input => input.value);
+}
+
+function writeCheckedValues(name, values) {
+  const selected = new Set(Array.isArray(values) ? values : []);
+  projectForm.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+    input.checked = selected.has(input.value);
+  });
+}
+
 function setStatus(target, message) {
   target.textContent = message;
   window.clearTimeout(target._timer);
@@ -217,6 +229,7 @@ function fillForm(project) {
   projectForm.elements.outcome.value = project.outcome || "";
   projectForm.elements.tags.value = joinTags(project.tags);
   projectForm.elements.skillTags.value = joinTags(project.skillTags);
+  writeCheckedValues("teamPositions", project.teamPositions);
   renderAssets(project);
   renderProjectList();
 }
@@ -237,6 +250,7 @@ function readForm() {
     outcome: form.outcome.value.trim(),
     tags: splitTags(form.tags.value),
     skillTags: splitTags(form.skillTags.value),
+    teamPositions: readCheckedValues("teamPositions"),
     gallery: selectedProject?.gallery || [],
     images: selectedProject?.images || [],
     files: selectedProject?.files || [],
@@ -328,6 +342,7 @@ function newProject() {
     outcome: "",
     tags: [],
     skillTags: [],
+    teamPositions: [],
     gallery: [],
     images: [],
     files: [],

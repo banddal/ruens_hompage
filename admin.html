@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css" />
+<link rel="stylesheet" href="admin.css?v=20260627-team-position-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -121,6 +121,14 @@
               <textarea name="role" class="admin-input" rows="3"></textarea>
             </label>
 
+            <fieldset class="admin-fieldset team-position-field">
+              <legend>팀 포지션</legend>
+              <label><input type="checkbox" name="teamPositions" value="director" /> Directer</label>
+              <label><input type="checkbox" name="teamPositions" value="pm" /> PM</label>
+              <label><input type="checkbox" name="teamPositions" value="member" /> Member</label>
+              <label><input type="checkbox" name="teamPositions" value="independent" /> Independent</label>
+            </fieldset>
+
             <label>
               결과
               <textarea name="outcome" class="admin-input" rows="3"></textarea>
@@ -205,6 +213,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js"></script>
+<script src="admin.js?v=20260627-team-position-1"></script>
 </body>
 </html>
