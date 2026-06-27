@@ -835,11 +835,11 @@ function renderProjectUploads(project) {
     }).join("");
     strip.innerHTML = `
       <div class="attachment-group">
-        <b>Images</b>
+        <b>첨부 이미지</b>
         <div class="attachment-items">${imageStrip || `<span class="project-attachment-empty">이미지 없음</span>`}</div>
       </div>
       <div class="attachment-group">
-        <b>Files</b>
+        <b>첨부 파일</b>
         <div class="attachment-items">${fileStrip || `<span class="project-attachment-empty">파일 없음</span>`}</div>
       </div>
     `;

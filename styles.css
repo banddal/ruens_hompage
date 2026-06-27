@@ -6507,23 +6507,29 @@ footer .footer-desc {
 .project-attachment-strip {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  padding: 12px 30px;
-  background: rgba(255,255,255,.86);
+  gap: 14px;
+  padding: 16px 30px;
+  background: rgba(255,255,255,.94);
   border-top: 1px solid rgba(20,20,20,.08);
   border-bottom: 1px solid rgba(20,20,20,.08);
 }
 .attachment-group {
   display: grid;
-  grid-template-columns: 58px 1fr;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: 86px 1fr;
+  align-items: stretch;
+  gap: 12px;
   min-width: 0;
+  padding: 10px;
+  background: rgba(245,245,245,.94);
+  border: 1px solid rgba(20,20,20,.1);
 }
 .attachment-group > b {
   color: var(--red);
   font-size: 12px;
   font-weight: 950;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
 }
 .attachment-items {
   display: flex;
@@ -6539,17 +6545,17 @@ footer .footer-desc {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  max-width: 220px;
-  padding: 5px 8px;
+  min-height: 54px;
+  max-width: 280px;
+  padding: 7px 9px;
   background: #fff;
   border: 1px solid rgba(20,20,20,.12);
   color: #111;
   text-decoration: none;
 }
 .attachment-thumb img {
-  width: 34px;
-  height: 28px;
+  width: 64px;
+  height: 42px;
   object-fit: cover;
   background: #eee;
 }
@@ -6571,6 +6577,12 @@ footer .footer-desc {
   text-decoration: none;
   border-left: 1px solid rgba(20,20,20,.16);
   padding-left: 8px;
+}
+.attachment-file a {
+  color: #fff;
+  background: #111;
+  border-left: 0;
+  padding: 7px 10px;
 }
 .project-attachment-empty {
   color: #777;
