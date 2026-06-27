@@ -16,6 +16,16 @@ const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 let activeProject = false;
 
+const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
+const API_BASE = (() => {
+  const configured = window.HOMO_RUENS_API_BASE || "";
+  if (configured) return configured.replace(/\/+$/, "");
+  const host = window.location.hostname || "";
+  if (host === "ruens-hompage.onrender.com") return "";
+  return DEFAULT_API_ORIGIN;
+})();
+const backendProjectCache = new Map();
+
 let activeEssayId = null;
 let activeReplyPath = null;
 const activeEssayTags = {
@@ -29,6 +39,25 @@ const essayComments = loadEssayComments();
 
 function escapeHtml(v) {
   return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
+
+function cacheProject(project) {
+  if (!project?.id) return project;
+  backendProjectCache.set(project.id, project);
+  if (project.slug) backendProjectCache.set(project.slug, project);
+  return project;
+}
+
+function getStaticProject(projectId) {
+  return PROJECTS.find(item => item.id === projectId || item.slug === projectId);
+}
+
+function getCachedProject(projectId) {
+  return backendProjectCache.get(projectId) || getStaticProject(projectId);
 }
 
 function loadEssayComments() {
@@ -762,11 +791,23 @@ $$(".tab[data-tab]").forEach(tab => {
 
 async function fetchProjectDetail(projectId) {
   try {
-    const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, { cache: "no-store" });
+    const response = await fetch(apiUrl(`/api/projects/${encodeURIComponent(projectId)}`), { cache: "no-store" });
     if (!response.ok) return null;
-    return await response.json();
-  } catch {
+    return cacheProject(await response.json());
+  } catch (error) {
+    console.warn("Project detail API failed:", error);
     return null;
+  }
+}
+
+async function hydrateProjectCache() {
+  try {
+    const response = await fetch(apiUrl("/api/projects"), { cache: "no-store" });
+    if (!response.ok) return;
+    const projects = await response.json();
+    if (Array.isArray(projects)) projects.forEach(cacheProject);
+  } catch (error) {
+    console.warn("Project index API failed:", error);
   }
 }
 
@@ -899,9 +940,12 @@ function renderProjectModal(project) {
 }
 
 async function openProjectModal(projectId) {
-  const p = PROJECTS.find(item => item.id === projectId);
-  if (!p) return;
-  renderProjectModal(p);
+  const fallback = getCachedProject(projectId);
+  if (!fallback) return;
+  renderProjectModal({
+    ...fallback,
+    description: fallback.description || "백엔드 프로젝트 데이터를 불러오는 중입니다."
+  });
 
   $("#projectModal").classList.add("open");
   $("#projectModal").setAttribute("aria-hidden", "false");
@@ -910,25 +954,37 @@ async function openProjectModal(projectId) {
 
   const detail = await fetchProjectDetail(projectId);
   if (detail && activeProject) {
-    renderProjectModal({ ...p, ...detail });
+    renderProjectModal(detail);
+  } else if (activeProject) {
+    const strip = $("#projectAttachmentStrip");
+    if (strip && API_BASE) {
+      strip.insertAdjacentHTML("afterbegin", `<span class="project-attachment-empty">백엔드 상세 데이터를 불러오지 못했습니다. API 주소를 확인해 주세요.</span>`);
+    }
   }
 }
 
+hydrateProjectCache();
+
 function renderProjectImageSlot(images) {
-  const slot = $("#projectImageSlot");
-  if (!slot) return;
+  const figure = $("#projectImageFigure");
+  const link = $("#projectImageLink");
+  const img = $("#projectImage");
+  const caption = $("#projectImageCaption");
+  if (!figure || !link || !img || !caption) return;
   const image = images?.[0];
   if (!image?.src) {
-    slot.classList.remove("has-image");
-    slot.innerHTML = "등록된 대표 이미지가 없습니다.";
+    figure.classList.remove("has-image");
+    link.removeAttribute("href");
+    img.removeAttribute("src");
+    img.alt = "";
+    caption.textContent = "등록된 대표 이미지가 없습니다.";
     return;
   }
-  slot.classList.add("has-image");
-  slot.innerHTML = `
-    <a class="asset-preview-link" href="${escapeHtml(image.src)}" target="_blank" rel="noopener">
-      <img class="asset-preview-image" src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || image.title)}" decoding="async" fetchpriority="high">
-    </a>
-  `;
+  figure.classList.add("has-image");
+  link.href = image.src;
+  img.src = image.src;
+  img.alt = image.alt || image.title || "Project image";
+  caption.textContent = image.title || image.alt || "Project image";
 }
 
 function renderAssetText(g, idx) {
