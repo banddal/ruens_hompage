@@ -616,6 +616,45 @@ async function deleteAssetStore(projectKey, target, assetId) {
   return before.length !== storedProject[field].length;
 }
 
+async function updateAssetStore(projectKey, target, assetId, patch) {
+  const project = await getProjectStore(projectKey);
+  if (!project) return null;
+  const allowedVisibility = new Set(["public", "request", "private"]);
+  const nextVisibility = allowedVisibility.has(patch.visibility) ? patch.visibility : null;
+  if (!nextVisibility) throw new Error("Invalid visibility.");
+
+  if (supabaseEnabled()) {
+    const table = target === "images" ? "project_images" : "project_files";
+    const rows = await supabaseRequest(`/rest/v1/${table}?id=eq.${encodeURIComponent(assetId)}&project_id=eq.${encodeURIComponent(project.id)}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({ visibility: nextVisibility })
+    });
+    return rows?.[0] ? dbAssetToAsset(rows[0]) : null;
+  }
+
+  const projects = readJson(PROJECTS_DB, []);
+  const storedProject = findProject(projects, project.id);
+  if (!storedProject) return null;
+  const field = target === "images" ? "images" : "files";
+  const asset = (storedProject[field] || []).find(item => item.id === assetId);
+  if (!asset) return null;
+  asset.visibility = nextVisibility;
+  storedProject.updatedAt = new Date().toISOString();
+  writeJson(PROJECTS_DB, projects);
+
+  const media = readJson(MEDIA_DB, []);
+  const mediaAsset = media.find(item => item.id === assetId);
+  if (mediaAsset) {
+    mediaAsset.visibility = nextVisibility;
+    writeJson(MEDIA_DB, media);
+  }
+  return asset;
+}
+
 async function uploadToSupabaseStorage(storagePath, file) {
   const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${storagePath}`, {
     method: "POST",
@@ -992,6 +1031,24 @@ async function router(req, res) {
   }
 
   const assetDelete = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/(images|files)\/([^/]+)$/);
+  if (req.method === "PATCH" && assetDelete) {
+    if (!requireAdmin(req, res)) return;
+    let payload;
+    try {
+      const body = await collectRequestBody(req, 64 * 1024);
+      payload = JSON.parse(body.toString("utf8") || "{}");
+    } catch {
+      return sendError(res, 400, "Invalid JSON body.");
+    }
+    try {
+      const updated = await updateAssetStore(assetDelete[1], assetDelete[2], assetDelete[3], payload);
+      if (!updated) return sendError(res, 404, "Asset not found.");
+      return sendJson(res, 200, updated);
+    } catch (error) {
+      return sendError(res, 400, error.message);
+    }
+  }
+
   if (req.method === "DELETE" && assetDelete) {
     if (!requireAdmin(req, res)) return;
     const deleted = await deleteAssetStore(assetDelete[1], assetDelete[2], assetDelete[3]);

@@ -273,6 +273,11 @@ function renderAssets(project) {
         <span class="asset-badge">${escapeHtml(fileSizeLabel(item.fileSize))}</span>
       </div>
       <div class="asset-actions">
+        <select class="asset-visibility-select" data-asset-visibility="files" data-asset-id="${escapeHtml(item.id || "")}">
+          <option value="public"${item.visibility === "public" ? " selected" : ""}>공개 다운로드</option>
+          <option value="request"${item.visibility === "request" || !item.visibility ? " selected" : ""}>요청 시 공개</option>
+          <option value="private"${item.visibility === "private" ? " selected" : ""}>비공개</option>
+        </select>
         ${assetUrl(item) ? `<a href="${escapeHtml(assetUrl(item))}" target="_blank" rel="noopener">확인</a>` : ""}
         <button type="button" class="danger" data-delete-asset="files" data-asset-id="${escapeHtml(item.id || "")}">삭제</button>
       </div>
@@ -442,6 +447,17 @@ async function deleteAsset(type, assetId) {
   await loadProjects(selectedProject.id);
 }
 
+async function updateAssetVisibility(type, assetId, visibility) {
+  if (!selectedProject?.id || !assetId) return;
+  await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${type}/${encodeURIComponent(assetId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ visibility })
+  });
+  setStatus(saveStatus, "공개 상태가 저장되었습니다.");
+  await loadProjects(selectedProject.id);
+}
+
 async function savePassword(event) {
   event.preventDefault();
   if (newPassword.value !== confirmPassword.value) {
@@ -498,6 +514,11 @@ fileList.addEventListener("click", event => {
   const button = event.target.closest("[data-delete-asset]");
   if (!button) return;
   deleteAsset(button.dataset.deleteAsset, button.dataset.assetId);
+});
+fileList.addEventListener("change", event => {
+  const select = event.target.closest("[data-asset-visibility]");
+  if (!select) return;
+  updateAssetVisibility(select.dataset.assetVisibility, select.dataset.assetId, select.value);
 });
 authForm.addEventListener("submit", submitAuth);
 logoutButton.addEventListener("click", logout);
