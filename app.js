@@ -15,6 +15,8 @@
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 let activeProject = false;
+let projectGalleryImages = [];
+let projectGalleryIndex = 0;
 
 const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
 const API_BASE = (() => {
@@ -820,7 +822,7 @@ function renderProjectUploads(project) {
 
   const fileHtml = `
     <section class="project-upload-section">
-      <h4>Files</h4>
+      <h4>첨부파일</h4>
       <div class="project-upload-files">
         ${files.length ? files.map(file => {
           const href = file.publicUrl || file.path || "";
@@ -851,38 +853,8 @@ function renderProjectUploads(project) {
       strip.innerHTML = `<span class="project-attachment-empty">등록된 이미지와 첨부파일이 없습니다.</span>`;
       return;
     }
-    const imageStrip = visibleImages.slice(0, 3).map(image => {
-      const src = image.publicUrl || image.path || "";
-      const label = image.caption || image.title || image.originalFilename || "Image";
-      return `
-        <a class="attachment-thumb" href="${escapeHtml(src)}" target="_blank" rel="noopener" title="${escapeHtml(label)}">
-          <img src="${escapeHtml(src)}" alt="${escapeHtml(image.alt || label)}" decoding="async" fetchpriority="high">
-          <span>${escapeHtml(label)}</span>
-        </a>
-      `;
-    }).join("");
-    const fileStrip = files.map(file => {
-      const href = file.publicUrl || file.path || "";
-      const title = file.title || file.originalFilename || "Attached file";
-      const publicFile = file.visibility === "public";
-      return `
-        <div class="attachment-file">
-          <strong>${escapeHtml(title)}</strong>
-          ${publicFile && href
-            ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" download>다운로드</a>`
-            : `<em>요청 시 공개</em>`}
-        </div>
-      `;
-    }).join("");
     strip.innerHTML = `
-      <div class="attachment-group">
-        <b>첨부 이미지</b>
-        <div class="attachment-items">${imageStrip || `<span class="project-attachment-empty">이미지 없음</span>`}</div>
-      </div>
-      <div class="attachment-group">
-        <b>첨부 파일</b>
-        <div class="attachment-items">${fileStrip || `<span class="project-attachment-empty">파일 없음</span>`}</div>
-      </div>
+      <span class="project-attachment-empty">이미지 ${visibleImages.length}개 · 첨부파일 ${files.length}개</span>
     `;
   }
 }
@@ -892,15 +864,16 @@ function renderProjectModal(project) {
   if (!p) return;
   $("#projectCategory").textContent = p.category;
   $("#projectTitle").textContent = p.title;
-  $("#projectMetric").textContent = p.metric;
   $("#projectDescription").textContent = p.description;
   $("#projectPeriod").textContent = p.period;
+  $("#projectShort").textContent = p.short || p.description || "";
   $("#projectRole").textContent = p.role;
   $("#projectOutcome").textContent = p.outcome;
   
-  const skillChipHtml = (p.skillTags || []).map(t => `<span class="tag skill-tag">${escapeHtml(SKILLSET_LABELS[t] || t)}</span>`).join("");
+  const skillLabels = (p.skillTags || []).map(t => SKILLSET_LABELS[t] || t);
+  $("#projectMetric").textContent = skillLabels.length ? skillLabels.join(" · ") : (p.metric || p.category || "");
   const tagHtml = (p.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
-  $("#projectTags").innerHTML = skillChipHtml + tagHtml;
+  $("#projectTags").innerHTML = tagHtml || `<span class="tag">${escapeHtml(p.metric || p.category || "Project")}</span>`;
 
   $("#thumbs").innerHTML = "";
   const uploadedImages = Array.isArray(p.images) ? p.images
@@ -909,7 +882,7 @@ function renderProjectModal(project) {
       kind: "image",
       type: image.title || "Image",
       title: image.caption || image.title || image.originalFilename || "Project image",
-      desc: image.description || image.alt || p.short || p.description || "",
+      desc: image.description || image.alt || image.originalFilename || p.short || p.description || "",
       src: image.publicUrl || image.path,
       alt: image.alt || image.caption || image.title || p.title || "Project image"
     })) : [];
@@ -927,15 +900,21 @@ function renderProjectModal(project) {
       desc: p.short || p.description || "등록된 기본 갤러리 항목이 없습니다."
     }];
   renderProjectImageSlot(uploadedImages);
-  textGallery.forEach((g, i) => {
+  const thumbItems = uploadedImages.length ? uploadedImages : textGallery;
+  thumbItems.forEach((g, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "thumb" + (i === 0 ? " active" : "");
-    btn.innerHTML = `<b>${escapeHtml(g.type)}</b><span>${escapeHtml(g.title)}</span>`;
-    btn.addEventListener("click", () => renderAssetText(g, i));
+    if (g.kind === "image") {
+      btn.innerHTML = `<b>사진 ${i + 1}</b><span>${escapeHtml(g.title)}</span>`;
+      btn.addEventListener("click", () => renderProjectImageAt(i));
+    } else {
+      btn.innerHTML = `<b>${escapeHtml(g.type)}</b><span>${escapeHtml(g.title)}</span>`;
+      btn.addEventListener("click", () => renderAssetText(g, i));
+    }
     $("#thumbs").appendChild(btn);
   });
-  renderAssetText(textGallery[0], 0);
+  renderAssetText(thumbItems[0] || textGallery[0], 0);
   renderProjectUploads(p);
 }
 
@@ -966,25 +945,42 @@ async function openProjectModal(projectId) {
 hydrateProjectCache();
 
 function renderProjectImageSlot(images) {
+  projectGalleryImages = Array.isArray(images) ? images : [];
+  projectGalleryIndex = 0;
+  renderProjectImageAt(0);
+}
+
+function renderProjectImageAt(index) {
   const figure = $("#projectImageFigure");
   const link = $("#projectImageLink");
   const img = $("#projectImage");
   const caption = $("#projectImageCaption");
+  const prev = $("#projectImagePrev");
+  const next = $("#projectImageNext");
   if (!figure || !link || !img || !caption) return;
-  const image = images?.[0];
+  const total = projectGalleryImages.length;
+  const safeIndex = total ? (index + total) % total : 0;
+  projectGalleryIndex = safeIndex;
+  const image = projectGalleryImages[safeIndex];
   if (!image?.src) {
     figure.classList.remove("has-image");
     link.removeAttribute("href");
     img.removeAttribute("src");
     img.alt = "";
     caption.textContent = "등록된 대표 이미지가 없습니다.";
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
     return;
   }
   figure.classList.add("has-image");
   link.href = image.src;
   img.src = image.src;
   img.alt = image.alt || image.title || "Project image";
-  caption.textContent = image.title || image.alt || "Project image";
+  caption.textContent = `${safeIndex + 1} / ${total} · ${image.title || image.alt || "Project image"}`;
+  if (prev) prev.disabled = total < 2;
+  if (next) next.disabled = total < 2;
+  renderAssetText(image, safeIndex);
+  $$("#thumbs .thumb").forEach((t, i) => t.classList.toggle("active", i === safeIndex));
 }
 
 function renderAssetText(g, idx) {
@@ -1001,6 +997,29 @@ function closeProjectModal() {
   activeProject = false;
 }
 
+$("#projectImagePrev")?.addEventListener("click", () => renderProjectImageAt(projectGalleryIndex - 1));
+$("#projectImageNext")?.addEventListener("click", () => renderProjectImageAt(projectGalleryIndex + 1));
+(() => {
+  const frame = $("#projectImageFrame");
+  if (!frame) return;
+  let startX = 0;
+  let isDragging = false;
+  frame.addEventListener("pointerdown", event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    startX = event.clientX;
+    isDragging = true;
+  });
+  frame.addEventListener("pointerup", event => {
+    if (!isDragging) return;
+    isDragging = false;
+    const delta = event.clientX - startX;
+    if (Math.abs(delta) < 48 || projectGalleryImages.length < 2) return;
+    renderProjectImageAt(projectGalleryIndex + (delta < 0 ? 1 : -1));
+  });
+  frame.addEventListener("pointercancel", () => {
+    isDragging = false;
+  });
+})();
 $$(".js-open-project").forEach(btn => btn.addEventListener("click", () => openProjectModal(btn.dataset.project)));
 
 /* timeline skillset filter */

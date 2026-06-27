@@ -346,6 +346,14 @@ textarea.admin-input {
   letter-spacing: -.045em;
 }
 
+.upload-help {
+  margin: -2px 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 750;
+}
+
 .asset-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

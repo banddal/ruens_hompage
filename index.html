@@ -11,7 +11,7 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Kim Sung Won" />
 <meta name="twitter:description" content="공공 정책에서 민간 전략까지, 기획부터 운영까지 — Hybrid Full scale Planner" />
-<link rel="stylesheet" href="styles.css?v=20260627-backend-source-1" />
+<link rel="stylesheet" href="styles.css?v=20260627-portfolio-modal-sheet-1" />
 </head>
 <body>
 <div class="page">
@@ -1737,32 +1737,40 @@
 <div class="modal-root" id="projectModal" aria-hidden="true">
   <div class="backdrop" data-close-project></div>
   <section class="modal" role="dialog" aria-modal="true" aria-labelledby="projectTitle">
-    <div class="modal-top">
-      <div><div class="modal-kicker" id="projectCategory"></div><h2 id="projectTitle"></h2><div class="modal-pill" id="projectMetric"></div></div>
+    <div class="modal-top project-modal-top">
+      <div class="project-title-block">
+        <div class="modal-kicker" id="projectCategory"></div>
+        <h2 id="projectTitle"></h2>
+      </div>
+      <div class="project-overview-block">
+        <b>프로젝트 개요</b>
+        <p class="lead" id="projectDescription"></p>
+      </div>
       <button class="close" data-close-project>×</button>
     </div>
     <div class="project-attachment-strip" id="projectAttachmentStrip" aria-live="polite"></div>
-    <div class="project-body">
-      <aside class="info">
-        <p class="lead" id="projectDescription"></p>
-        <div class="info-grid">
-          <article class="info-card"><h3>기간</h3><p id="projectPeriod"></p></article>
-          <article class="info-card"><h3>나의 역할</h3><p id="projectRole"></p></article>
-          <article class="info-card"><h3>결과</h3><p id="projectOutcome"></p></article>
-          <article class="info-card"><h3>관련 역량</h3><div class="tags" id="projectTags"></div></article>
-        </div>
-      </aside>
-      <section class="gallery">
-        <div class="gallery-head"><div><h3>작업 결과물 갤러리</h3><p>보고서, 표, 슬라이드, 캡처, 이미지 등을 연결하는 영역</p></div></div>
+    <div class="project-body project-sheet">
+      <section class="info project-facts" aria-label="프로젝트 핵심 정보">
+        <article class="info-card fact-period"><h3>프로젝트 기간</h3><p id="projectPeriod"></p></article>
+        <article class="info-card fact-metric"><h3>주요 역량</h3><p id="projectMetric"></p></article>
+        <article class="info-card fact-role"><h3>나의 역할</h3><p id="projectRole"></p></article>
+        <article class="info-card fact-tags"><h3>팀 포지션</h3><div class="tags" id="projectTags"></div></article>
+        <article class="info-card fact-short"><h3>프로젝트 주요 내용</h3><p id="projectShort"></p></article>
+        <article class="info-card fact-outcome"><h3>결과 및 성과</h3><p id="projectOutcome"></p></article>
+      </section>
+      <section class="gallery project-gallery-sheet">
+        <div class="gallery-head"><div><h3>포트폴리오 이미지</h3><p>이미지를 넘겨 보면서 프로젝트 산출물을 확인할 수 있습니다.</p></div></div>
         <div class="viewer">
           <div class="viewer-main">
             <div class="frame image-frame" id="projectImageFrame">
+              <button type="button" class="gallery-nav prev" id="projectImagePrev" aria-label="이전 이미지">‹</button>
               <figure class="project-image-figure" id="projectImageFigure">
                 <a id="projectImageLink" href="#" target="_blank" rel="noopener">
                   <img id="projectImage" alt="" decoding="async" fetchpriority="high" />
                 </a>
                 <figcaption id="projectImageCaption">등록된 대표 이미지가 없습니다.</figcaption>
               </figure>
+              <button type="button" class="gallery-nav next" id="projectImageNext" aria-label="다음 이미지">›</button>
             </div>
           </div>
           <div class="asset-text-panel" id="assetTextPanel">
@@ -1772,7 +1780,7 @@
           </div>
           <div class="thumbs" id="thumbs"></div>
         </div>
-        <div class="modal-note">상단 프로젝트 카드와 타임라인 프로젝트 포인트 모두 이 모달로 바로 연결됩니다.</div>
+        <div class="project-uploads-panel" id="projectUploads"></div>
       </section>
     </div>
   </section>
@@ -1841,7 +1849,7 @@
 </div>
 
 <script src="data.js"></script>
-<script src="app.js?v=20260627-backend-source-1"></script>
+<script src="app.js?v=20260627-portfolio-modal-sheet-1"></script>
 
 
 </html>
