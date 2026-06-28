@@ -642,3 +642,29 @@ textarea.admin-input {
 }
 .memo-admin-actions { display: flex; gap: 8px; }
 .memo-admin-actions button { min-height: 30px; font-size: 11px; padding: 0 10px; }
+
+/* ===== 에세이 에디터 (Claude 추가) ===== */
+.essay-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.essay-link-row .admin-input { flex: 1; }
+.essay-link-row button { white-space: nowrap; }
+.essay-body-input {
+  font-family: var(--font-mono, monospace);
+  line-height: 1.6;
+  resize: vertical;
+}
+.essay-body-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -6px;
+}
+.essay-bulk {
+  margin-top: 22px;
+  display: grid;
+  gap: 10px;
+}
+.essay-bulk textarea { font-family: var(--font-mono, monospace); }

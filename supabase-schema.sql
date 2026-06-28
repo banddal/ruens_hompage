@@ -193,3 +193,36 @@ on public.project_memos for insert
 to anon, authenticated
 with check (true);
 -- SELECT/UPDATE/DELETE 정책은 일부러 만들지 않음 → service_role만 가능.
+
+-- =========================================================
+-- essays: 에세이 (5개 카테고리, 링크 메타데이터 + 본문 전문)
+-- =========================================================
+create table if not exists public.essays (
+  id text primary key,
+  category text not null default 'news',   -- news / publicBusiness / worldOutside / others / thinkingEmotion
+  label text default '',                   -- 카드에 표시되는 카테고리 라벨(예: "公과 Business")
+  title text not null,
+  summary text default '',                 -- 카드 요약
+  body text default '',                    -- 본문 전문(비어있으면 링크 카드로 동작)
+  source_url text default '',              -- 원본 링크(브런치/네이버)
+  cover_image text default '',             -- og:image 대표 이미지
+  tags jsonb not null default '[]'::jsonb,
+  published_at text default '',            -- 원본 작성일(메타데이터)
+  status text not null default 'published',-- published / draft / private
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists essays_category_idx on public.essays (category, sort_order);
+create index if not exists essays_created_idx on public.essays (created_at desc);
+
+alter table public.essays enable row level security;
+
+-- 공개 글은 누구나 읽기 가능(SELECT), 쓰기는 service_role(관리자)만.
+drop policy if exists "public read essays" on public.essays;
+create policy "public read essays"
+on public.essays for select
+to anon, authenticated
+using (status = 'published');
+-- INSERT/UPDATE/DELETE 정책 없음 → service_role(관리자 백엔드)만 가능.

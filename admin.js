@@ -511,6 +511,178 @@ function switchTab(name) {
     panel.classList.toggle("hidden", panel.id !== `${name}Panel`);
   });
   if (name === "memos") loadMemos();
+  if (name === "essays") loadEssays();
+}
+
+// ===== 에세이 관리 (관리자 전용) =====
+const ESSAY_CATEGORY_LABELS = {
+  news: "News",
+  publicBusiness: "公과 Business",
+  worldOutside: "세계 : The outside world",
+  others: "好不好 , Like & Others",
+  thinkingEmotion: "私와 思"
+};
+let essayCache = [];
+
+async function loadEssays() {
+  const list = $("#essayList");
+  if (!list) return;
+  list.innerHTML = `<p class="memo-admin-empty">불러오는 중…</p>`;
+  const essays = await apiJson("/api/essays").catch(() => null);
+  if (!Array.isArray(essays)) {
+    list.innerHTML = `<p class="memo-admin-empty">에세이를 불러오지 못했습니다.</p>`;
+    return;
+  }
+  essayCache = essays;
+  renderEssayAdminList();
+}
+
+function renderEssayAdminList() {
+  const list = $("#essayList");
+  if (!list) return;
+  const cat = $("#essayFilterCategory")?.value || "";
+  const q = ($("#essaySearch")?.value || "").trim().toLowerCase();
+  let items = essayCache.slice();
+  if (cat) items = items.filter(e => e.category === cat);
+  if (q) items = items.filter(e =>
+    (e.title || "").toLowerCase().includes(q) || (e.summary || "").toLowerCase().includes(q)
+  );
+  if (!items.length) {
+    list.innerHTML = `<p class="memo-admin-empty">에세이가 없습니다.</p>`;
+    return;
+  }
+  list.innerHTML = items.map(e => {
+    const hasBody = e.body && e.body.trim().length > 0;
+    return `
+      <button type="button" class="project-item" data-essay-id="${escapeMemo(e.id)}">
+        <strong>${escapeMemo(e.title || e.id)}</strong>
+        <small>${escapeMemo(ESSAY_CATEGORY_LABELS[e.category] || e.category)} · ${hasBody ? "본문 있음" : "링크만"}</small>
+      </button>`;
+  }).join("");
+}
+
+function fillEssayForm(essay) {
+  const form = $("#essayForm");
+  if (!form) return;
+  form.elements.id.value = essay?.id || "";
+  form.elements.sourceUrl.value = essay?.sourceUrl || "";
+  form.elements.title.value = essay?.title || "";
+  form.elements.category.value = essay?.category || "news";
+  form.elements.label.value = essay?.label || "";
+  form.elements.status.value = essay?.status || "published";
+  form.elements.summary.value = essay?.summary || "";
+  form.elements.body.value = essay?.body || "";
+  form.elements.tags.value = Array.isArray(essay?.tags) ? essay.tags.join(", ") : "";
+  updateBodyCharCount();
+}
+
+function collectEssayForm() {
+  const form = $("#essayForm");
+  const tags = (form.elements.tags.value || "")
+    .split(",").map(t => t.trim()).filter(Boolean);
+  return {
+    id: form.elements.id.value || "",
+    sourceUrl: form.elements.sourceUrl.value.trim(),
+    title: form.elements.title.value.trim(),
+    category: form.elements.category.value,
+    label: form.elements.label.value.trim() || ESSAY_CATEGORY_LABELS[form.elements.category.value] || "",
+    status: form.elements.status.value,
+    summary: form.elements.summary.value.trim(),
+    body: form.elements.body.value,
+    tags
+  };
+}
+
+function updateBodyCharCount() {
+  const el = $("#bodyCharCount");
+  const body = $("#essayBody")?.value || "";
+  if (el) el.textContent = body.length ? `${body.length.toLocaleString()}자` : "";
+}
+
+async function fetchEssayMeta() {
+  const url = $("#essayForm").elements.sourceUrl.value.trim();
+  const status = $("#metaStatus");
+  if (!/^https?:\/\//i.test(url)) {
+    if (status) status.textContent = "올바른 링크를 입력해 주세요.";
+    return;
+  }
+  if (status) status.textContent = "가져오는 중…";
+  const meta = await apiJson("/api/admin/essays/fetch-meta", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url })
+  }).catch(() => null);
+  if (!meta || (!meta.title && !meta.summary)) {
+    if (status) status.textContent = "자동 추출이 안 됐습니다. 제목·요약을 직접 입력해 주세요.";
+    return;
+  }
+  const form = $("#essayForm");
+  if (meta.title && !form.elements.title.value) form.elements.title.value = meta.title;
+  if (meta.summary && !form.elements.summary.value) form.elements.summary.value = meta.summary;
+  if (status) status.textContent = "가져왔습니다. 본문은 직접 붙여넣어 주세요.";
+}
+
+function cleanEssayBody() {
+  const ta = $("#essayBody");
+  if (!ta) return;
+  ta.value = ta.value
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+  updateBodyCharCount();
+}
+
+async function saveEssay(event) {
+  event.preventDefault();
+  const data = collectEssayForm();
+  if (!data.title) {
+    $("#essaySaveStatus").textContent = "제목을 입력해 주세요.";
+    return;
+  }
+  $("#essaySaveStatus").textContent = "저장 중…";
+  const saved = await apiJson("/api/admin/essays", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  }).catch(() => null);
+  if (saved) {
+    $("#essaySaveStatus").textContent = "저장되었습니다.";
+    loadEssays();
+  } else {
+    $("#essaySaveStatus").textContent = "저장에 실패했습니다.";
+  }
+}
+
+async function deleteEssayCurrent() {
+  const id = $("#essayForm").elements.id.value;
+  if (!id) { $("#essaySaveStatus").textContent = "저장된 에세이만 삭제할 수 있습니다."; return; }
+  if (!window.confirm("이 에세이를 삭제할까요?")) return;
+  await apiJson(`/api/admin/essays/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);
+  fillEssayForm(null);
+  loadEssays();
+}
+
+async function bulkRegisterEssays() {
+  const urls = ($("#bulkUrls")?.value || "")
+    .split("\n").map(u => u.trim()).filter(u => /^https?:\/\//i.test(u));
+  const category = $("#bulkCategory")?.value || "news";
+  const status = $("#bulkStatus");
+  if (!urls.length) { if (status) status.textContent = "링크를 한 개 이상 입력해 주세요."; return; }
+  if (status) status.textContent = `${urls.length}개 처리 중… (시간이 걸릴 수 있습니다)`;
+  const result = await apiJson("/api/admin/essays/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ urls, category })
+  }).catch(() => null);
+  if (result) {
+    if (status) status.textContent = `${result.count}개 등록 완료.`;
+    $("#bulkUrls").value = "";
+    loadEssays();
+  } else {
+    if (status) status.textContent = "일괄 등록에 실패했습니다.";
+  }
 }
 
 // ===== 메모 관리 (관리자 전용) =====
@@ -614,6 +786,24 @@ $$(".admin-tab").forEach(button => {
   button.addEventListener("click", () => switchTab(button.dataset.adminTab));
 });
 $("#reloadMemos")?.addEventListener("click", () => loadMemos());
+
+// 에세이 이벤트 연결
+$("#reloadEssays")?.addEventListener("click", () => loadEssays());
+$("#essayFilterCategory")?.addEventListener("change", renderEssayAdminList);
+$("#essaySearch")?.addEventListener("input", renderEssayAdminList);
+$("#newEssay")?.addEventListener("click", () => { fillEssayForm(null); $("#essaySaveStatus").textContent = ""; });
+$("#fetchMetaBtn")?.addEventListener("click", fetchEssayMeta);
+$("#cleanBodyBtn")?.addEventListener("click", cleanEssayBody);
+$("#essayBody")?.addEventListener("input", updateBodyCharCount);
+$("#essayForm")?.addEventListener("submit", saveEssay);
+$("#deleteEssay")?.addEventListener("click", deleteEssayCurrent);
+$("#bulkSubmitBtn")?.addEventListener("click", bulkRegisterEssays);
+$("#essayList")?.addEventListener("click", event => {
+  const btn = event.target.closest("[data-essay-id]");
+  if (!btn) return;
+  const essay = essayCache.find(e => e.id === btn.dataset.essayId);
+  if (essay) { fillEssayForm(essay); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});
 $("#memoList")?.addEventListener("click", event => {
   const readBtn = event.target.closest("[data-memo-read]");
   if (readBtn) {

@@ -1028,6 +1028,224 @@ async function handleMemoDelete(req, res, memoId) {
   }
 }
 
+// =========================================================
+// 에세이(essays): 메타데이터 자동 추출 + CRUD
+// =========================================================
+
+// 외부 링크에서 Open Graph 메타데이터 추출(제목·요약·이미지·날짜).
+// 본문은 추출하지 않음(브런치/네이버가 차단 + 약관 존중).
+async function fetchEssayMetadata(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; HomoRuensBot/1.0)" }
+    });
+    const html = await res.text();
+    const pick = (props) => {
+      for (const p of props) {
+        const re = new RegExp(
+          `<meta[^>]+(?:property|name)=["']${p}["'][^>]+content=["']([^"']*)["']`,
+          "i"
+        );
+        const m = html.match(re);
+        if (m && m[1]) return m[1].trim();
+        // content가 property보다 먼저 오는 경우도 대응
+        const re2 = new RegExp(
+          `<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${p}["']`,
+          "i"
+        );
+        const m2 = html.match(re2);
+        if (m2 && m2[1]) return m2[1].trim();
+      }
+      return "";
+    };
+    const decode = (s) => s
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    return {
+      title: decode(pick(["og:title", "twitter:title"])),
+      summary: decode(pick(["og:description", "twitter:description", "description"])),
+      coverImage: pick(["og:image", "twitter:image"]),
+      publishedAt: pick(["article:published_time", "og:regDate"])
+    };
+  } catch (error) {
+    return { title: "", summary: "", coverImage: "", publishedAt: "", error: String(error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 관리자: 링크에서 메타데이터 미리보기 (POST /api/admin/essays/fetch-meta)
+async function handleEssayFetchMeta(req, res) {
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 8 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+  const url = String(payload.url || "").trim();
+  if (!/^https?:\/\//i.test(url)) {
+    return sendError(res, 400, "올바른 링크(http/https)를 입력해 주세요.");
+  }
+  const meta = await fetchEssayMetadata(url);
+  return sendJson(res, 200, meta);
+}
+
+function dbRowToEssay(row) {
+  return {
+    id: row.id,
+    category: row.category,
+    label: row.label || "",
+    title: row.title,
+    summary: row.summary || "",
+    body: row.body || "",
+    sourceUrl: row.source_url || "",
+    coverImage: row.cover_image || "",
+    tags: row.tags || [],
+    publishedAt: row.published_at || "",
+    status: row.status || "published",
+    sortOrder: row.sort_order || 0,
+    updatedAt: row.updated_at
+  };
+}
+
+function essayToDbRow(essay) {
+  const id = String(essay.id || "").trim() || `essay-${Date.now()}`;
+  return {
+    id,
+    category: String(essay.category || "news"),
+    label: String(essay.label || ""),
+    title: String(essay.title || "").trim(),
+    summary: String(essay.summary || ""),
+    body: String(essay.body || ""),
+    source_url: String(essay.sourceUrl || ""),
+    cover_image: String(essay.coverImage || ""),
+    tags: Array.isArray(essay.tags) ? essay.tags : [],
+    published_at: String(essay.publishedAt || ""),
+    status: String(essay.status || "published"),
+    sort_order: Number(essay.sortOrder || 0),
+    updated_at: new Date().toISOString()
+  };
+}
+
+// 공개: 에세이 목록 (GET /api/essays)
+async function handleEssayList(req, res) {
+  if (!supabaseEnabled()) return sendJson(res, 200, []);
+  try {
+    const rows = await supabaseRequest(
+      "/rest/v1/essays?select=*&order=category.asc,sort_order.asc,created_at.desc"
+    );
+    return sendJson(res, 200, Array.isArray(rows) ? rows.map(dbRowToEssay) : []);
+  } catch (error) {
+    console.error("Essay list failed:", error);
+    return sendError(res, 502, "에세이를 불러오지 못했습니다.");
+  }
+}
+
+// 공개: 에세이 본문 1건 (GET /api/essays/:id)
+async function handleEssayDetail(req, res, id) {
+  if (!supabaseEnabled()) return sendError(res, 404, "Not found.");
+  try {
+    const rows = await supabaseRequest(
+      `/rest/v1/essays?id=eq.${encodeURIComponent(id)}&select=*`
+    );
+    const row = rows?.[0];
+    if (!row || row.status === "private") return sendError(res, 404, "Not found.");
+    return sendJson(res, 200, dbRowToEssay(row));
+  } catch (error) {
+    console.error("Essay detail failed:", error);
+    return sendError(res, 502, "에세이를 불러오지 못했습니다.");
+  }
+}
+
+// 관리자: 에세이 저장(생성/수정) (POST /api/admin/essays)
+async function handleEssaySave(req, res) {
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 1024 * 1024); // 본문 큰 경우 대비 1MB
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+  if (!String(payload.title || "").trim()) {
+    return sendError(res, 400, "제목을 입력해 주세요.");
+  }
+  try {
+    const row = essayToDbRow(payload);
+    const saved = await supabaseRequest("/rest/v1/essays?on_conflict=id", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation"
+      },
+      body: JSON.stringify(row)
+    });
+    return sendJson(res, 200, dbRowToEssay(saved?.[0] || row));
+  } catch (error) {
+    console.error("Essay save failed:", error);
+    return sendError(res, 502, "에세이 저장에 실패했습니다.");
+  }
+}
+
+// 관리자: 일괄 등록 (POST /api/admin/essays/bulk) — 링크 목록을 받아 메타데이터 채워 저장
+async function handleEssayBulk(req, res) {
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 64 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+  const urls = Array.isArray(payload.urls) ? payload.urls.slice(0, 30) : [];
+  const category = String(payload.category || "news");
+  if (!urls.length) return sendError(res, 400, "링크를 한 개 이상 입력해 주세요.");
+
+  const results = [];
+  for (const rawUrl of urls) {
+    const url = String(rawUrl || "").trim();
+    if (!/^https?:\/\//i.test(url)) continue;
+    const meta = await fetchEssayMetadata(url);
+    const row = essayToDbRow({
+      id: `essay-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      category,
+      title: meta.title || url,
+      summary: meta.summary || "",
+      sourceUrl: url,
+      coverImage: meta.coverImage || "",
+      publishedAt: meta.publishedAt || "",
+      status: "published"
+    });
+    try {
+      await supabaseRequest("/rest/v1/essays?on_conflict=id", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify(row)
+      });
+      results.push({ url, title: row.title, ok: true });
+    } catch {
+      results.push({ url, ok: false });
+    }
+  }
+  return sendJson(res, 200, { count: results.filter(r => r.ok).length, results });
+}
+
+// 관리자: 에세이 삭제 (DELETE /api/admin/essays/:id)
+async function handleEssayDelete(req, res, id) {
+  try {
+    await supabaseRequest(`/rest/v1/essays?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+    return sendJson(res, 200, { ok: true });
+  } catch (error) {
+    console.error("Essay delete failed:", error);
+    return sendError(res, 502, "에세이 삭제에 실패했습니다.");
+  }
+}
+
 async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -1082,6 +1300,34 @@ async function router(req, res) {
   // 방문자: 메모 작성 (공개 경로, 인증 불필요, 스팸 방어 포함)
   if (req.method === "POST" && pathname === "/api/memos") {
     return handleMemoCreate(req, res);
+  }
+
+  // 공개: 에세이 목록 / 본문
+  if (req.method === "GET" && pathname === "/api/essays") {
+    return handleEssayList(req, res);
+  }
+  const essayDetail = pathname.match(/^\/api\/essays\/([^/]+)$/);
+  if (req.method === "GET" && essayDetail) {
+    return handleEssayDetail(req, res, essayDetail[1]);
+  }
+
+  // 관리자: 에세이 메타데이터 추출 / 저장 / 일괄등록 / 삭제 (인증 필요)
+  if (req.method === "POST" && pathname === "/api/admin/essays/fetch-meta") {
+    if (!requireAdmin(req, res)) return;
+    return handleEssayFetchMeta(req, res);
+  }
+  if (req.method === "POST" && pathname === "/api/admin/essays/bulk") {
+    if (!requireAdmin(req, res)) return;
+    return handleEssayBulk(req, res);
+  }
+  if (req.method === "POST" && pathname === "/api/admin/essays") {
+    if (!requireAdmin(req, res)) return;
+    return handleEssaySave(req, res);
+  }
+  const adminEssayDetail = pathname.match(/^\/api\/admin\/essays\/([^/]+)$/);
+  if (req.method === "DELETE" && adminEssayDetail) {
+    if (!requireAdmin(req, res)) return;
+    return handleEssayDelete(req, res, adminEssayDetail[1]);
   }
 
   // 관리자: 메모 목록 / 읽음 / 삭제 (인증 필요)

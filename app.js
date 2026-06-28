@@ -860,6 +860,13 @@ function openEssayModal(card) {
     })
     .join("");
   $("#essayModalBody").innerHTML = imageHtml + bodyHtml;
+  // 본문이 비어 있고 원본 링크가 있으면 "원문 보기" 안내
+  if (!rawBody.trim()) {
+    const srcUrl = ESSAY_SOURCE_URLS[activeEssayId];
+    $("#essayModalBody").innerHTML = srcUrl
+      ? `<p class="essay-source-link">이 글의 본문은 아직 옮겨지지 않았습니다.<br><a href="${escapeHtml(srcUrl)}" target="_blank" rel="noopener">원문 보기 →</a></p>`
+      : `<p class="essay-source-link">본문이 아직 등록되지 않았습니다.</p>`;
+  }
   renderEssayComments();
   $("#essayModal").classList.add("open");
   $("#essayModal").setAttribute("aria-hidden", "false");
@@ -874,7 +881,37 @@ function closeEssayModal() {
   activeReplyPath = null;
 }
 
+// Supabase에 저장된 에세이를 기존 ESSAYS/ESSAY_FULL_TEXTS에 병합한다.
+// (Supabase에 글이 있으면 우선 사용, 없으면 data.js 하드코딩 유지 → 안전)
+const ESSAY_SOURCE_URLS = {};
+async function hydrateEssaysFromSupabase() {
+  try {
+    const essays = await fetch(apiUrl("/api/essays")).then(r => r.ok ? r.json() : null);
+    if (!Array.isArray(essays) || !essays.length) return;
+    const validGroups = Object.keys(ESSAYS);
+    const grouped = {};
+    essays.forEach(e => {
+      const group = validGroups.includes(e.category) ? e.category : "news";
+      if (!grouped[group]) grouped[group] = [];
+      grouped[group].push([
+        e.id,
+        e.label || e.category,
+        e.title || "",
+        e.summary || "",
+        Array.isArray(e.tags) ? e.tags : []
+      ]);
+      if (e.body && e.body.trim()) ESSAY_FULL_TEXTS[e.id] = e.body;
+      if (e.sourceUrl) ESSAY_SOURCE_URLS[e.id] = e.sourceUrl;
+    });
+    Object.entries(grouped).forEach(([group, items]) => { ESSAYS[group] = items; });
+    renderEssayCards();
+  } catch (error) {
+    console.warn("essay hydrate skipped:", error);
+  }
+}
+
 renderEssayCards();
+hydrateEssaysFromSupabase();
 enableDragSwipe($("#essayNewsTrack"));
 Object.values(ESSAY_FRAME_CONFIGS).forEach(config => {
   enableDragSwipe($(config.grid));
