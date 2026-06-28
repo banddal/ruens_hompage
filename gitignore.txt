@@ -1,0 +1,25 @@
+# ── 환경변수 / 비밀값 (절대 커밋 금지) ──────────────────────────
+# SUPABASE_SERVICE_ROLE_KEY 등이 들어가는 파일. 노출 시 DB 전체가 뚫립니다.
+.env
+.env.*
+!.env.example
+
+# ── 의존성 / 빌드 산출물 ────────────────────────────────────────
+node_modules/
+.vercel/
+.cache/
+
+# ── 레거시 로컬 저장소 (서버리스에선 사용 안 함) ────────────────
+# 로컬에서 server.js를 돌렸을 때 생기는 런타임 데이터.
+# 운영 데이터는 Supabase에 있으므로 깃에 넣지 않습니다.
+uploads/
+backend-data/projects.json
+backend-data/media-assets.json
+backend-data/security.json
+
+# ── OS / 에디터 ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

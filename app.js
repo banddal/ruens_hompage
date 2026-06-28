@@ -18,20 +18,18 @@ let activeProject = false;
 let projectGalleryImages = [];
 let projectGalleryIndex = 0;
 
-const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
+// Vercel 통합 배포: 프론트와 API가 같은 도메인이므로 기본값은 상대경로("").
+// 로컬에서 별도 백엔드를 띄워 붙이고 싶을 때만 window.HOMO_RUENS_API_BASE 로 override.
+const API_BASE = (() => {
+  const configured = window.HOMO_RUENS_API_BASE || "";
+  return configured.replace(/\/+$/, "");
+})();
 const TEAM_POSITION_LABELS = {
   director: "Directer",
   pm: "PM",
   member: "Member",
   independent: "Independent"
 };
-const API_BASE = (() => {
-  const configured = window.HOMO_RUENS_API_BASE || "";
-  if (configured) return configured.replace(/\/+$/, "");
-  const host = window.location.hostname || "";
-  if (host === "ruens-hompage.onrender.com") return "";
-  return DEFAULT_API_ORIGIN;
-})();
 const backendProjectCache = new Map();
 
 let activeEssayId = null;
