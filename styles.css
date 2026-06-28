@@ -8253,8 +8253,8 @@ body::before {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  opacity: .18;
-  filter: grayscale(1) contrast(.9);
+  opacity: .34;
+  filter: grayscale(.82) contrast(.92);
   transform: scale(1.02);
   transition: opacity .22s ease, filter .22s ease, transform .22s ease;
   pointer-events: none;
@@ -8265,16 +8265,16 @@ body::before {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.62);
   pointer-events: none;
 }
 
 #projects .project-card.has-project-thumb:hover .project-card-thumb {
-  opacity: .26;
-  filter: grayscale(.7) contrast(.95);
+  opacity: .52;
+  filter: grayscale(.32) contrast(1.02) saturate(1.08);
   transform: scale(1.05);
 }
 
 #projects .project-card.has-project-thumb:hover::after {
-  background: rgba(244,244,244,.72);
+  background: rgba(244,244,244,.44);
 }
