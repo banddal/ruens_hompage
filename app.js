@@ -18,6 +18,7 @@ let activeProject = false;
 let projectGalleryImages = [];
 let projectGalleryIndex = 0;
 let projectImageZoomed = false;
+let projectImageZoomLevel = 1;
 
 const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
 const TEAM_POSITION_LABELS = {
@@ -1102,6 +1103,7 @@ function renderProjectImageAt(index) {
   link.setAttribute("tabindex", "-1");
   img.src = image.src;
   img.alt = image.alt || image.title || "Project image";
+  img.style.setProperty("--project-image-zoom", projectImageZoomLevel);
   caption.textContent = `${safeIndex + 1} / ${total}`;
   if (prev) prev.disabled = total < 2;
   if (next) next.disabled = total < 2;
@@ -1111,12 +1113,20 @@ function renderProjectImageAt(index) {
 
 function setProjectImageZoom(zoomed) {
   projectImageZoomed = Boolean(zoomed && projectGalleryImages.length);
+  if (projectImageZoomed) projectImageZoomLevel = Math.max(projectImageZoomLevel, 1.08);
+  else projectImageZoomLevel = 1;
   $("#projectModal")?.classList.toggle("image-zoomed", projectImageZoomed);
+  $("#projectImage")?.style.setProperty("--project-image-zoom", projectImageZoomLevel);
 }
 
 function toggleProjectImageZoom() {
   if (!projectGalleryImages.length) return;
   setProjectImageZoom(!projectImageZoomed);
+}
+
+function setProjectImageZoomLevel(nextLevel) {
+  projectImageZoomLevel = Math.min(2.2, Math.max(1, nextLevel));
+  $("#projectImage")?.style.setProperty("--project-image-zoom", projectImageZoomLevel);
 }
 
 function renderAssetText(g, idx) {
@@ -1176,6 +1186,13 @@ $("#projectImageNext")?.addEventListener("click", () => renderProjectImageAt(pro
   frame.addEventListener("pointercancel", () => {
     isDragging = false;
   });
+  frame.addEventListener("wheel", event => {
+    if (!projectImageZoomed || !projectGalleryImages.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const step = event.deltaY < 0 ? 0.12 : -0.12;
+    setProjectImageZoomLevel(projectImageZoomLevel + step);
+  }, { passive: false });
 })();
 $$(".js-open-project").forEach(btn => btn.addEventListener("click", () => openProjectModal(btn.dataset.project)));
 
