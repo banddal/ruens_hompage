@@ -8403,6 +8403,29 @@ body::before {
   text-overflow: ellipsis !important;
 }
 
+#projectModal .fact-short p {
+  display: block !important;
+  min-height: 62px !important;
+  max-height: 62px !important;
+  padding: 7px 8px !important;
+  white-space: normal !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  text-overflow: clip !important;
+  line-height: 1.42 !important;
+  word-break: keep-all !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20,20,20,.22) transparent;
+}
+
+#projectModal .fact-short p::-webkit-scrollbar {
+  width: 5px;
+}
+
+#projectModal .fact-short p::-webkit-scrollbar-thumb {
+  background: rgba(20,20,20,.22);
+}
+
 #projectModal .compact-tags,
 #projectModal .fact-tags .tags {
   align-items: center !important;
