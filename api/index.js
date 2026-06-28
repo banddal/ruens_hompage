@@ -1034,27 +1034,65 @@ async function handleMemoDelete(req, res, memoId) {
 
 // 외부 링크에서 Open Graph 메타데이터 추출(제목·요약·이미지·날짜).
 // 본문은 추출하지 않음(브런치/네이버가 차단 + 약관 존중).
-async function fetchEssayMetadata(url) {
+// 네이버 블로그는 iframe 구조라, 더 잘 열리는 주소 형태로 변환해 후보 목록을 만든다.
+function buildUrlCandidates(rawUrl) {
+  const url = String(rawUrl || "").trim();
+  const candidates = [url];
+  try {
+    const u = new URL(url);
+    const host = u.hostname;
+    // 네이버 블로그: blog.naver.com/{id}/{logNo}
+    if (host.includes("blog.naver.com")) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      let blogId = "";
+      let logNo = "";
+      if (parts.length >= 2) {
+        blogId = parts[0];
+        logNo = parts[1];
+      }
+      // 쿼리스트링 형태(PostView)도 대응
+      if (u.searchParams.get("blogId")) blogId = u.searchParams.get("blogId");
+      if (u.searchParams.get("logNo")) logNo = u.searchParams.get("logNo");
+
+      if (blogId && logNo) {
+        // 모바일 주소가 가장 잘 열림 → 우선
+        candidates.unshift(`https://m.blog.naver.com/${blogId}/${logNo}`);
+        // PostView 내부 주소
+        candidates.push(`https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}`);
+        candidates.push(`https://m.blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}`);
+      }
+    }
+  } catch {
+    // URL 파싱 실패 시 원본만 사용
+  }
+  // 중복 제거
+  return [...new Set(candidates)];
+}
+
+async function fetchMetaFromUrl(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; HomoRuensBot/1.0)" }
+      headers: {
+        // 모바일 UA가 네이버 모바일 페이지를 더 잘 반환함
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9"
+      }
     });
     const html = await res.text();
+    if (!html || html.length < 200) return null;
     const pick = (props) => {
       for (const p of props) {
         const re = new RegExp(
-          `<meta[^>]+(?:property|name)=["']${p}["'][^>]+content=["']([^"']*)["']`,
-          "i"
+          `<meta[^>]+(?:property|name)=["']${p}["'][^>]+content=["']([^"']*)["']`, "i"
         );
         const m = html.match(re);
         if (m && m[1]) return m[1].trim();
-        // content가 property보다 먼저 오는 경우도 대응
         const re2 = new RegExp(
-          `<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${p}["']`,
-          "i"
+          `<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${p}["']`, "i"
         );
         const m2 = html.match(re2);
         if (m2 && m2[1]) return m2[1].trim();
@@ -1064,17 +1102,32 @@ async function fetchEssayMetadata(url) {
     const decode = (s) => s
       .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
       .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-    return {
-      title: decode(pick(["og:title", "twitter:title"])),
-      summary: decode(pick(["og:description", "twitter:description", "description"])),
-      coverImage: pick(["og:image", "twitter:image"]),
-      publishedAt: pick(["article:published_time", "og:regDate"])
-    };
-  } catch (error) {
-    return { title: "", summary: "", coverImage: "", publishedAt: "", error: String(error) };
+    // 네이버는 og 태그가 없을 때 <title>이나 본문 첫 부분을 쓰기도 함
+    let title = decode(pick(["og:title", "twitter:title"]));
+    if (!title) {
+      const tm = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (tm) title = decode(tm[1].replace(/\s*:\s*네이버 블로그\s*$/, "").trim());
+    }
+    const summary = decode(pick(["og:description", "twitter:description", "description"]));
+    const coverImage = pick(["og:image", "twitter:image"]);
+    const publishedAt = pick(["article:published_time", "og:regDate"]);
+    if (!title && !summary) return null;
+    return { title, summary, coverImage, publishedAt };
+  } catch {
+    return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchEssayMetadata(url) {
+  // 여러 주소 후보를 순서대로 시도, 첫 성공을 반환
+  const candidates = buildUrlCandidates(url);
+  for (const candidate of candidates) {
+    const meta = await fetchMetaFromUrl(candidate);
+    if (meta && (meta.title || meta.summary)) return meta;
+  }
+  return { title: "", summary: "", coverImage: "", publishedAt: "" };
 }
 
 // 관리자: 링크에서 메타데이터 미리보기 (POST /api/admin/essays/fetch-meta)
