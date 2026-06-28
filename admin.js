@@ -570,14 +570,28 @@ function fillEssayForm(essay) {
   form.elements.category.value = essay?.category || "news";
   form.elements.label.value = essay?.label || "";
   form.elements.status.value = essay?.status || "published";
+  if (form.elements.publishedAt) form.elements.publishedAt.value = essay?.publishedAt || "";
+  if (form.elements.coverImage) form.elements.coverImage.value = essay?.coverImage || "";
   form.elements.summary.value = essay?.summary || "";
-  form.elements.body.value = essay?.body || "";
+  // 본문: HTML이면 그대로, 평문이면 줄바꿈을 <p>로 변환해 에디터에 표시
+  const editor = $("#essayEditor");
+  const body = essay?.body || "";
+  if (editor) {
+    const looksHtml = /<(p|h2|h3|strong|em|b|i|u|blockquote|ul|ol|li|hr|img|br)\b/i.test(body);
+    editor.innerHTML = looksHtml
+      ? body
+      : body.split(/\n{2,}/).map(p => p.trim() ? `<p>${p.replace(/\n/g, "<br>")}</p>` : "").join("");
+  }
+  form.elements.body.value = body;
   form.elements.tags.value = Array.isArray(essay?.tags) ? essay.tags.join(", ") : "";
   updateBodyCharCount();
 }
 
 function collectEssayForm() {
   const form = $("#essayForm");
+  // 에디터 HTML을 hidden body에 동기화
+  const editor = $("#essayEditor");
+  if (editor) form.elements.body.value = syncEditorBody();
   const tags = (form.elements.tags.value || "")
     .split(",").map(t => t.trim()).filter(Boolean);
   return {
@@ -587,16 +601,29 @@ function collectEssayForm() {
     category: form.elements.category.value,
     label: form.elements.label.value.trim() || ESSAY_CATEGORY_LABELS[form.elements.category.value] || "",
     status: form.elements.status.value,
+    publishedAt: form.elements.publishedAt ? form.elements.publishedAt.value.trim() : "",
+    coverImage: form.elements.coverImage ? form.elements.coverImage.value.trim() : "",
     summary: form.elements.summary.value.trim(),
     body: form.elements.body.value,
     tags
   };
 }
 
+// 에디터 내용을 정리해서 반환(빈 에디터면 빈 문자열)
+function syncEditorBody() {
+  const editor = $("#essayEditor");
+  if (!editor) return "";
+  const html = editor.innerHTML.trim();
+  // 빈 상태(브라우저가 넣는 <br>, 빈 p 등) 정리
+  if (!editor.textContent.trim() && !/<(img|hr)/i.test(html)) return "";
+  return html;
+}
+
 function updateBodyCharCount() {
   const el = $("#bodyCharCount");
-  const body = $("#essayBody")?.value || "";
-  if (el) el.textContent = body.length ? `${body.length.toLocaleString()}자` : "";
+  const editor = $("#essayEditor");
+  const len = editor ? editor.textContent.length : 0;
+  if (el) el.textContent = len ? `${len.toLocaleString()}자` : "";
 }
 
 async function fetchEssayMeta() {
@@ -619,18 +646,54 @@ async function fetchEssayMeta() {
   const form = $("#essayForm");
   if (meta.title && !form.elements.title.value) form.elements.title.value = meta.title;
   if (meta.summary && !form.elements.summary.value) form.elements.summary.value = meta.summary;
+  if (meta.publishedAt && form.elements.publishedAt && !form.elements.publishedAt.value) {
+    // ISO 날짜를 보기 좋게 변환 (2020-05-04T00:05:37+09:00 → 2020-05-04)
+    form.elements.publishedAt.value = String(meta.publishedAt).slice(0, 10);
+  }
+  if (meta.coverImage && form.elements.coverImage && !form.elements.coverImage.value) {
+    form.elements.coverImage.value = meta.coverImage;
+  }
   if (status) status.textContent = "가져왔습니다. 본문은 직접 붙여넣어 주세요.";
 }
 
 function cleanEssayBody() {
-  const ta = $("#essayBody");
-  if (!ta) return;
-  ta.value = ta.value
+  const editor = $("#essayEditor");
+  if (!editor) return;
+  const text = editor.textContent
     .replace(/\r\n/g, "\n")
-    .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+  editor.innerHTML = text.split(/\n{2,}/)
+    .map(p => p.trim() ? `<p>${p.replace(/\n/g, "<br>")}</p>` : "")
+    .join("");
+  updateBodyCharCount();
+}
+
+// 서식 에디터 툴바 명령 처리
+function runEditorCommand(cmd) {
+  const editor = $("#essayEditor");
+  if (!editor) return;
+  editor.focus();
+  switch (cmd) {
+    case "bold": document.execCommand("bold"); break;
+    case "italic": document.execCommand("italic"); break;
+    case "underline": document.execCommand("underline"); break;
+    case "h2": document.execCommand("formatBlock", false, "H2"); break;
+    case "h3": document.execCommand("formatBlock", false, "H3"); break;
+    case "quote": document.execCommand("formatBlock", false, "BLOCKQUOTE"); break;
+    case "ul": document.execCommand("insertUnorderedList"); break;
+    case "hr": document.execCommand("insertHorizontalRule"); break;
+    case "clear":
+      document.execCommand("removeFormat");
+      document.execCommand("formatBlock", false, "P");
+      break;
+    case "image": {
+      const url = window.prompt("이미지 주소(URL)를 입력하세요:");
+      if (url && /^https?:\/\//i.test(url)) document.execCommand("insertImage", false, url);
+      break;
+    }
+  }
   updateBodyCharCount();
 }
 
@@ -795,6 +858,11 @@ $("#newEssay")?.addEventListener("click", () => { fillEssayForm(null); $("#essay
 $("#fetchMetaBtn")?.addEventListener("click", fetchEssayMeta);
 $("#cleanBodyBtn")?.addEventListener("click", cleanEssayBody);
 $("#essayBody")?.addEventListener("input", updateBodyCharCount);
+$("#essayEditor")?.addEventListener("input", updateBodyCharCount);
+$("#essayToolbar")?.addEventListener("click", event => {
+  const btn = event.target.closest("[data-cmd]");
+  if (btn) { event.preventDefault(); runEditorCommand(btn.dataset.cmd); }
+});
 $("#essayForm")?.addEventListener("submit", saveEssay);
 $("#deleteEssay")?.addEventListener("click", deleteEssayCurrent);
 $("#bulkSubmitBtn")?.addEventListener("click", bulkRegisterEssays);

@@ -56,6 +56,57 @@ function escapeHtml(v) {
   return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
+// 에세이 본문 HTML 새니타이저: 허용된 태그·속성만 통과시켜 XSS를 차단한다.
+// 서식 에디터가 저장한 HTML을 안전하게 표시하기 위함.
+function sanitizeEssayHtml(html) {
+  const allowedTags = new Set([
+    "P","BR","HR","STRONG","B","EM","I","U","S","DEL",
+    "H2","H3","H4","BLOCKQUOTE","UL","OL","LI","A","IMG","FIGURE","FIGCAPTION","SPAN"
+  ]);
+  const template = document.createElement("template");
+  template.innerHTML = String(html || "");
+
+  const walk = (node) => {
+    const children = Array.from(node.childNodes);
+    for (const child of children) {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName;
+        if (!allowedTags.has(tag)) {
+          // 허용 안 된 태그는 제거하되, 내부 텍스트는 살림
+          const text = document.createTextNode(child.textContent || "");
+          child.replaceWith(text);
+          continue;
+        }
+        // 속성 정리: 허용된 것만 남김
+        const keepAttrs = tag === "A" ? ["href"]
+          : tag === "IMG" ? ["src", "alt"]
+          : [];
+        Array.from(child.attributes).forEach(attr => {
+          if (!keepAttrs.includes(attr.name.toLowerCase())) {
+            child.removeAttribute(attr.name);
+          }
+        });
+        // href/src에서 javascript: 등 위험 스킴 차단
+        ["href", "src"].forEach(a => {
+          const val = child.getAttribute(a);
+          if (val && /^\s*(javascript|data|vbscript):/i.test(val)) child.removeAttribute(a);
+        });
+        if (tag === "A") {
+          child.setAttribute("target", "_blank");
+          child.setAttribute("rel", "noopener");
+        }
+        if (tag === "IMG") child.setAttribute("loading", "lazy");
+        walk(child);
+      } else if (child.nodeType !== Node.TEXT_NODE) {
+        // 주석 등 기타 노드 제거
+        child.remove();
+      }
+    }
+  };
+  walk(template.content);
+  return template.innerHTML;
+}
+
 function looksLikeGeneratedAssetText(value) {
   const text = String(value || "").trim();
   if (!text) return false;
@@ -387,9 +438,21 @@ function createEssayCard(item, isNews=false) {
   btn.dataset.title = essay.title;
   btn.dataset.summary = essay.summary;
   btn.dataset.tags = essay.tags.join(",");
-  btn.dataset.date = essay.date;
+  // Supabase에서 받은 실제 작성일이 있으면 우선 사용
+  const realDate = (typeof ESSAY_PUBLISHED_DATES !== "undefined" && ESSAY_PUBLISHED_DATES[essay.id])
+    ? String(ESSAY_PUBLISHED_DATES[essay.id]).slice(0, 10)
+    : essay.date;
+  btn.dataset.date = realDate;
   btn.dataset.lead = essay.lead;
   btn.dataset.body = essay.body.join("\n\n");
+
+  // 대표 이미지(og:image)가 있으면 카드 배경으로 사용 → 제목이 그 위에 얹힘
+  const cover = (typeof ESSAY_COVER_IMAGES !== "undefined") ? ESSAY_COVER_IMAGES[essay.id] : "";
+  if (cover) {
+    btn.classList.add("has-cover");
+    btn.style.setProperty("--essay-cover", `url("${cover.replace(/"/g, "%22")}")`);
+  }
+
   const tagHtml = essay.tags.length
     ? `<span class="essay-card-tags">${essay.tags.map(tag => `<small>${escapeHtml(tag)}</small>`).join("")}</span>`
     : "";
@@ -397,7 +460,7 @@ function createEssayCard(item, isNews=false) {
     <span class="front">
       <strong>${escapeHtml(essay.title)}</strong>
       ${tagHtml || `<span class="essay-card-tags" aria-hidden="true"></span>`}
-      <em>${escapeHtml(essay.date)}</em>
+      <em>${escapeHtml(realDate)}</em>
     </span>
     <span class="hover">
       <em>${escapeHtml(essay.lead)}</em>
@@ -847,18 +910,25 @@ function openEssayModal(card) {
           <figcaption>${escapeHtml(caption)}</figcaption>
         </figure>`).join("")}</div>`
     : "";
-  const bodyHtml = rawBody
-    .split(/\n{2,}/)
-    .map(p => {
-      const imageMatch = p.match(/^\[\[IMAGE:([^|]+)\|(.+)\]\]$/);
-      if (imageMatch) {
-        const src = imageMatch[1];
-        const caption = imageMatch[2];
-        return `<figure class="essay-inline-image"><img src="${escapeHtml(src)}" alt="${escapeHtml(caption)}" loading="lazy"><figcaption>${escapeHtml(caption)}</figcaption></figure>`;
-      }
-      return `<p>${escapeHtml(p)}</p>`;
-    })
-    .join("");
+  // 본문 렌더: HTML 서식이 있으면 새니타이즈 후 렌더, 평문이면 기존 방식(문단 분리).
+  const looksLikeHtml = /<(p|h2|h3|strong|em|b|i|u|blockquote|ul|ol|li|hr|img|br)\b/i.test(rawBody);
+  let bodyHtml;
+  if (looksLikeHtml) {
+    bodyHtml = sanitizeEssayHtml(rawBody);
+  } else {
+    bodyHtml = rawBody
+      .split(/\n{2,}/)
+      .map(p => {
+        const imageMatch = p.match(/^\[\[IMAGE:([^|]+)\|(.+)\]\]$/);
+        if (imageMatch) {
+          const src = imageMatch[1];
+          const caption = imageMatch[2];
+          return `<figure class="essay-inline-image"><img src="${escapeHtml(src)}" alt="${escapeHtml(caption)}" loading="lazy"><figcaption>${escapeHtml(caption)}</figcaption></figure>`;
+        }
+        return `<p>${escapeHtml(p)}</p>`;
+      })
+      .join("");
+  }
   $("#essayModalBody").innerHTML = imageHtml + bodyHtml;
   // 본문이 비어 있고 원본 링크가 있으면 "원문 보기" 안내
   if (!rawBody.trim()) {
@@ -884,6 +954,8 @@ function closeEssayModal() {
 // Supabase에 저장된 에세이를 기존 ESSAYS/ESSAY_FULL_TEXTS에 병합한다.
 // (Supabase에 글이 있으면 우선 사용, 없으면 data.js 하드코딩 유지 → 안전)
 const ESSAY_SOURCE_URLS = {};
+const ESSAY_COVER_IMAGES = {};
+const ESSAY_PUBLISHED_DATES = {};
 async function hydrateEssaysFromSupabase() {
   try {
     const essays = await fetch(apiUrl("/api/essays")).then(r => r.ok ? r.json() : null);
@@ -902,6 +974,8 @@ async function hydrateEssaysFromSupabase() {
       ]);
       if (e.body && e.body.trim()) ESSAY_FULL_TEXTS[e.id] = e.body;
       if (e.sourceUrl) ESSAY_SOURCE_URLS[e.id] = e.sourceUrl;
+      if (e.coverImage) ESSAY_COVER_IMAGES[e.id] = e.coverImage;
+      if (e.publishedAt) ESSAY_PUBLISHED_DATES[e.id] = e.publishedAt;
     });
     Object.entries(grouped).forEach(([group, items]) => { ESSAYS[group] = items; });
     renderEssayCards();

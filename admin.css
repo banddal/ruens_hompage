@@ -668,3 +668,58 @@ textarea.admin-input {
   gap: 10px;
 }
 .essay-bulk textarea { font-family: var(--font-mono, monospace); }
+
+/* ===== 에세이 서식 에디터 (Claude 추가) ===== */
+.essay-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  background: #fafafa;
+}
+.essay-editor-toolbar button {
+  min-height: 32px;
+  min-width: 34px;
+  padding: 0 9px;
+  background: #fff;
+  color: #222;
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+.essay-editor-toolbar button:hover { background: #111; color: #fff; border-color: #111; }
+.essay-editor-toolbar .tb-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+  margin: 0 4px;
+}
+.essay-editor {
+  min-height: 320px;
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.92);
+  padding: 16px 18px;
+  line-height: 1.7;
+  font-size: 15px;
+  outline: none;
+}
+.essay-editor:focus { border-color: #111; }
+.essay-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+}
+.essay-editor h2 { font-size: 22px; margin: 18px 0 8px; letter-spacing: -.03em; }
+.essay-editor h3 { font-size: 18px; margin: 16px 0 6px; letter-spacing: -.02em; }
+.essay-editor blockquote {
+  margin: 12px 0;
+  padding: 6px 16px;
+  border-left: 3px solid var(--accent);
+  color: #555;
+}
+.essay-editor img { max-width: 100%; height: auto; margin: 10px 0; }
+.essay-editor hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
