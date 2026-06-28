@@ -406,7 +406,8 @@ function initSectionJump() {
     positionSectionJump();
   });
 
-  initSectionWheelSnap();
+  // Wheel scrolling should stay native. Section-jump buttons still move to
+  // blocks, but the mouse wheel no longer snaps or reverses at block edges.
 }
 
 function getActiveSectionTargets() {
@@ -418,52 +419,7 @@ function getActiveSectionTargets() {
 }
 
 function initSectionWheelSnap() {
-  const EDGE_THRESHOLD = 24;
-  const COOLDOWN_MS = 900;
-  let snapping = false;
-  let cooldownTimer = null;
-
-  function setSnapping(value) {
-    snapping = value;
-    if (cooldownTimer) clearTimeout(cooldownTimer);
-    if (value) {
-      cooldownTimer = setTimeout(() => { snapping = false; }, COOLDOWN_MS);
-    }
-  }
-
-  window.addEventListener("wheel", e => {
-    if (window.innerWidth < 1024) return;
-    if (snapping) return;
-
-    const targets = getActiveSectionTargets();
-    if (targets.length < 2) return;
-
-    const viewportH = window.innerHeight;
-
-    let currentIndex = 0;
-    for (let i = 0; i < targets.length; i++) {
-      if (targets[i].getBoundingClientRect().top <= EDGE_THRESHOLD) currentIndex = i;
-    }
-
-    const rect = targets[currentIndex].getBoundingClientRect();
-
-    if (e.deltaY > 0) {
-      const next = targets[currentIndex + 1];
-      const reachedBottom = rect.bottom - viewportH <= EDGE_THRESHOLD;
-      const sectionFillsViewport = rect.top <= EDGE_THRESHOLD;
-      if (next && reachedBottom && sectionFillsViewport) {
-        setSnapping(true);
-        scrollToTargetWithTopbar(next, "smooth");
-      }
-    } else if (e.deltaY < 0) {
-      const prev = targets[currentIndex - 1];
-      const reachedTop = rect.top >= -EDGE_THRESHOLD && rect.top <= EDGE_THRESHOLD;
-      if (prev && reachedTop) {
-        setSnapping(true);
-        scrollToTargetWithTopbar(prev, "smooth");
-      }
-    }
-  }, { passive: true });
+  // Disabled: native wheel scrolling feels steadier than section-edge snapping.
 }
 
 function positionSectionJump() {
@@ -1842,9 +1798,6 @@ initStoryV6();
     board.addEventListener("pointerup", endDrag);
     board.addEventListener("pointercancel", endDrag);
     board.addEventListener("pointerleave", endDrag);
-    board.addEventListener("wheel", e => {
-      if (board.scrollHeight > board.clientHeight) e.preventDefault();
-    }, { passive: false });
     board.addEventListener("click", e => {
       if (board.dataset.suppressClick === "true") {
         e.preventDefault();
@@ -1969,17 +1922,23 @@ initStoryV6();
   const scroll = document.getElementById("trialsHScroll");
   if (!scroll) return;
 
-  const Y0 = 1995, Y1 = 2024;
+  const Y0 = 1995, Y1 = 2026;
   const PLAY_DURATION = 21000;
   const EVENT_BOX_DELAY = 160;
-  const EVENT_TEXT_DELAY = 620;
-  const SAME_YEAR_STAGGER = 520;
+  const EVENT_TEXT_DELAY = 340;
+  const EVENT_STEP_DELAY = 120;
   const SCROLL_HOLD = 3800;
 
   // 시련 셀: data-year 기준으로 연도별 그룹화
   const trialCells = Array.from(scroll.querySelectorAll(".trials-h-cell[data-year]"))
     .filter(c => c.textContent.trim().length > 0)
-    .map(c => ({ el: c, year: +c.dataset.year }));
+    .map((c, index) => ({
+      el: c,
+      year: +c.dataset.year,
+      lane: Array.from(scroll.querySelectorAll(".trials-h-lane")).indexOf(c.closest(".trials-h-lane")),
+      index
+    }))
+    .sort((a, b) => (a.year - b.year) || (a.lane - b.lane) || (a.index - b.index));
 
   // life 막대: from~to 범위
   const lifeBars = Array.from(scroll.querySelectorAll(".trials-h-lifebar[data-from]"))
@@ -2021,9 +1980,10 @@ initStoryV6();
         el.style.setProperty("--fill", "0");
         return;
       }
-      const span = Math.max(1, to - from);
-      const ratio = currentYear >= to ? 1 : Math.max(0, Math.min(1, (currentYear - from) / span));
-      const labelThreshold = el.classList.contains("lifebar-work") ? .45 : .3;
+      const endYear = to + 1;
+      const span = Math.max(1, endYear - from);
+      const ratio = currentYear >= endYear ? 1 : Math.max(0, Math.min(1, (currentYear - from) / span));
+      const labelThreshold = .92;
       el.classList.add("revealed");
       el.classList.toggle("label-visible", ratio >= labelThreshold);
       el.style.setProperty("--fill", ratio.toFixed(3));
@@ -2033,16 +1993,19 @@ initStoryV6();
   function queueEvents(offset = 0) {
     playTimers.forEach(timer => clearTimeout(timer));
     playTimers = [];
-    const yearCounts = new Map();
+    const usableDuration = PLAY_DURATION - EVENT_BOX_DELAY - EVENT_TEXT_DELAY - 720;
+    let nextAvailable = EVENT_BOX_DELAY;
     trialCells.forEach(({ el, year }) => {
-      const order = yearCounts.get(year) || 0;
-      yearCounts.set(year, order + 1);
-      const eventTime = progressForYear(year) * PLAY_DURATION + EVENT_BOX_DELAY + order * SAME_YEAR_STAGGER;
+      const naturalTime = EVENT_BOX_DELAY + progressForYear(year) * usableDuration;
+      const eventTime = Math.max(naturalTime, nextAvailable);
       const textTime = eventTime + EVENT_TEXT_DELAY;
+      nextAvailable = textTime + EVENT_STEP_DELAY;
       if (offset >= eventTime) {
         el.classList.add("is-box-visible");
       } else {
-        const boxTimer = setTimeout(() => el.classList.add("is-box-visible"), eventTime - offset);
+        const boxTimer = setTimeout(() => {
+          el.classList.add("is-box-visible");
+        }, eventTime - offset);
         playTimers.push(boxTimer);
       }
       if (offset >= textTime) {
@@ -2059,21 +2022,20 @@ initStoryV6();
     function step(now) {
       const elapsed = Math.min(PLAY_DURATION, playElapsed + now - playStartedAt);
       const progress = Math.min(1, elapsed / PLAY_DURATION);
+      const currentYear = Y0 + (Y1 - Y0 + 1) * progress;
       const scrollProgress = Math.max(0, Math.min(1, (elapsed - SCROLL_HOLD) / (PLAY_DURATION - SCROLL_HOLD)));
-      const currentYear = Y0 + (Y1 - Y0) * progress;
       setLifeProgress(currentYear);
       scroll.scrollLeft = playMaxLeft * scrollProgress;
 
       if (progress < 1) {
         playFrame = requestAnimationFrame(step);
       } else {
-        setLifeProgress(Y1);
         playFrame = null;
         playTimers.push(setTimeout(() => {
           playing = false;
           paused = false;
           playElapsed = 0;
-        }, EVENT_TEXT_DELAY + SAME_YEAR_STAGGER));
+        }, EVENT_TEXT_DELAY + EVENT_STEP_DELAY));
       }
     }
 
