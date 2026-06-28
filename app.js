@@ -20,7 +20,6 @@ let projectGalleryIndex = 0;
 let projectImageZoomed = false;
 let projectImageZoomLevel = 1;
 
-const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
 const TEAM_POSITION_LABELS = {
   director: "Directer",
   pm: "PM",
@@ -33,12 +32,11 @@ const SKILL_CHIP_LABELS = {
   operation: "O",
   "communication-negotiation": "C&N"
 };
+// Vercel 통합 배포: 프론트와 API가 같은 도메인이므로 기본값은 상대경로("").
+// 로컬에서 별도 백엔드를 붙일 때만 window.HOMO_RUENS_API_BASE 로 override.
 const API_BASE = (() => {
   const configured = window.HOMO_RUENS_API_BASE || "";
-  if (configured) return configured.replace(/\/+$/, "");
-  const host = window.location.hostname || "";
-  if (window.location.protocol === "http:" || window.location.protocol === "https:") return "";
-  return DEFAULT_API_ORIGIN;
+  return configured.replace(/\/+$/, "");
 })();
 const backendProjectCache = new Map();
 const DASHBOARD_RECENT_TAG = "__dashboard_recent";
@@ -159,36 +157,65 @@ function dashboardNatureLabels(project) {
   return labels.slice(0, 5);
 }
 
+// dashboard "최근 완료한 프로젝트": admin에서 dashboardFeatured로 체크한
+// 프로젝트를 기간(period) 최신순으로 최대 3개까지 카드로 렌더한다.
+const DASHBOARD_RECENT_MAX = 3;
+
+function dashboardRecentSortKey(project) {
+  // period가 "2026", "2024–2026", "2025.03" 등 다양하므로 마지막 연도를 추출해 정렬.
+  const text = String(project?.period || "");
+  const years = text.match(/\d{4}/g);
+  if (years && years.length) return Number(years[years.length - 1]);
+  // period가 없으면 updatedAt 보조 사용
+  const ts = Date.parse(project?.updatedAt || project?.updated_at || 0);
+  return Number.isNaN(ts) ? 0 : ts / 1e10; // 연도 스케일과 섞이지 않게 축소
+}
+
 function renderDashboardRecent(projects = []) {
-  const title = $("#dashboardRecentTitle");
-  const description = $("#dashboardRecentDescription");
-  const period = $("#dashboardRecentPeriod");
-  const tags = $("#dashboardRecentTags");
-  const outcome = $("#dashboardRecentOutcome");
-  const open = $("#dashboardRecentOpen");
-  if (!title || !description || !period || !tags || !outcome || !open) return;
+  const container = $("#dashboardRecentList");
+  if (!container) return;
 
   const list = Array.isArray(projects) && projects.length
     ? projects.map(project => cacheProject(project))
     : (typeof PROJECTS !== "undefined" ? PROJECTS : []);
+
   const featured = list
     .filter(isDashboardFeaturedProject)
-    .sort((a, b) => Date.parse(b.updatedAt || b.updated_at || 0) - Date.parse(a.updatedAt || a.updated_at || 0));
-  const project = featured[0]
-    || getCachedProject("business-plan")
-    || list.find(item => item?.status !== "private")
-    || list[0];
-  if (!project) return;
+    .filter(p => p && p.status !== "private")
+    .sort((a, b) => dashboardRecentSortKey(b) - dashboardRecentSortKey(a))
+    .slice(0, DASHBOARD_RECENT_MAX);
 
-  title.textContent = project.title || project.id || "프로젝트";
-  description.textContent = project.short || project.description || "프로젝트 개요가 아직 입력되지 않았습니다.";
-  period.textContent = project.period || "-";
-  const labels = dashboardNatureLabels(project);
-  tags.innerHTML = labels.length
-    ? labels.map(label => `<span class="recent-tag">${escapeHtml(label)}</span>`).join("")
-    : `<span class="recent-tag muted">태그 미정</span>`;
-  outcome.textContent = project.outcome || "-";
-  open.dataset.project = project.slug || project.id;
+  if (!featured.length) {
+    container.innerHTML =
+      `<p class="recent-empty">아직 표시할 프로젝트가 없습니다. 관리자에서 "Dashboard 최근 완료"로 체크하면 여기에 나타납니다.</p>`;
+    return;
+  }
+
+  container.innerHTML = featured.map(project => {
+    const labels = dashboardNatureLabels(project);
+    const labelHtml = labels.length
+      ? labels.map(label => `<span class="recent-tag">${escapeHtml(label)}</span>`).join("")
+      : `<span class="recent-tag muted">태그 미정</span>`;
+    const target = escapeHtml(project.slug || project.id);
+    return `
+      <div class="recent-item">
+        <h4>${escapeHtml(project.title || project.id || "프로젝트")}${
+          project.metric ? ` <em>${escapeHtml(project.metric)}</em>` : ""
+        }</h4>
+        <p>${escapeHtml(truncateText(project.short || project.description || "프로젝트 개요가 아직 입력되지 않았습니다.", 120))}</p>
+        <dl class="recent-meta">
+          <div><dt>기간</dt><dd>${escapeHtml(project.period || "-")}</dd></div>
+          <div><dt>성격</dt><dd>${labelHtml}</dd></div>
+          <div><dt>결과</dt><dd>${escapeHtml(truncateText(project.outcome || "-", 80))}</dd></div>
+        </dl>
+        <button class="board-open js-open-project" type="button" data-project="${target}">포트폴리오 보기</button>
+      </div>`;
+  }).join("");
+
+  // 새로 생성된 "포트폴리오 보기" 버튼에 모달 열기 연결
+  container.querySelectorAll(".js-open-project").forEach(btn => {
+    btn.addEventListener("click", () => openProjectModal(btn.dataset.project));
+  });
 }
 
 function truncateText(value, max = 92) {

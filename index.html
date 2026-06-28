@@ -11,7 +11,7 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Kim Sung Won" />
 <meta name="twitter:description" content="공공 정책에서 민간 전략까지, 기획부터 운영까지 — Hybrid Full scale Planner" />
-<link rel="stylesheet" href="styles.css?v=20260628-dashboard-featured-1" />
+<link rel="stylesheet" href="styles.css?v=20260628-scroll-fix-2" />
 </head>
 <body>
 <div class="page">
@@ -655,15 +655,8 @@
         <div class="board-card-top">
           <h3>최근 완료한 프로젝트</h3>
         </div>
-        <div class="board-content recent-content">
-          <h4 id="dashboardRecentTitle">사업계획 수립</h4>
-          <p id="dashboardRecentDescription">10년간 스타트업 보육사업의 운영 구조, 예산계획, 실행계획을 하나의 사업계획으로 묶은 최근 완료 프로젝트.</p>
-          <dl class="recent-meta">
-            <div><dt>기간</dt><dd id="dashboardRecentPeriod">2026</dd></div>
-            <div><dt>성격</dt><dd id="dashboardRecentTags">Business Plan · Strategy</dd></div>
-            <div><dt>결과</dt><dd id="dashboardRecentOutcome">10년 170.4억 규모 계획 수립</dd></div>
-          </dl>
-          <button class="board-open js-open-project" id="dashboardRecentOpen" type="button" data-project="business-plan">포트폴리오 보기</button>
+        <div class="board-content recent-content" id="dashboardRecentList" aria-live="polite">
+          <!-- admin에서 'Dashboard 최근 완료'로 체크한 프로젝트가 최대 3개까지 자동 표시됩니다. -->
         </div>
       </article>
 
@@ -1632,6 +1625,10 @@
         <div class="modal-kicker" id="projectCategory"></div>
         <h2 id="projectTitle"></h2>
       </div>
+      <div class="project-overview-block">
+        <b>프로젝트 개요</b>
+        <p class="lead" id="projectDescription"></p>
+      </div>
       <button class="close" data-close-project>×</button>
     </div>
     <div class="project-attachment-strip" id="projectAttachmentStrip" aria-live="polite"></div>
@@ -1641,8 +1638,7 @@
         <article class="info-card fact-metric"><h3>핵심 역량</h3><div class="tags compact-tags" id="projectMetric"></div></article>
         <article class="info-card fact-role"><h3>나의 역할</h3><p id="projectRole"></p></article>
         <article class="info-card fact-tags"><h3>팀 포지션</h3><div class="tags" id="projectTags"></div></article>
-        <article class="info-card fact-lead"><h3>프로젝트 개요</h3><p id="projectDescription"></p></article>
-        <article class="info-card fact-short"><h3>프로젝트<br>주요내용</h3><p id="projectShort"></p></article>
+        <article class="info-card fact-short"><h3>프로젝트 주요 내용</h3><p id="projectShort"></p></article>
         <article class="info-card fact-outcome"><h3>결과 및 성과</h3><p id="projectOutcome"></p></article>
       </section>
       <section class="gallery project-gallery-sheet">
@@ -1736,7 +1732,7 @@
 </div>
 
 <script src="data.js"></script>
-<script src="app.js?v=20260628-dashboard-featured-1"></script>
+<script src="app.js?v=20260628-scroll-fix-2"></script>
 
 
 </html>
