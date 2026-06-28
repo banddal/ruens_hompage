@@ -8158,20 +8158,48 @@ body::before {
   padding: 24px 82px !important;
   background: rgba(250,250,250,.98) !important;
   box-shadow: 0 28px 95px rgba(0,0,0,.38), inset 0 0 0 1px rgba(20,20,20,.08) !important;
+  overflow: auto !important;
+  align-items: start !important;
 }
 
 #projectModal.image-zoomed .project-image-figure {
-  max-width: min(1040px, calc(100vw - 280px)) !important;
+  max-width: none !important;
+  width: max-content !important;
+  min-width: 100% !important;
 }
 
 #projectModal.image-zoomed .project-image-figure a {
-  min-height: calc(100vh - 190px) !important;
+  display: block !important;
+  width: max-content !important;
+  min-width: 100% !important;
+  min-height: 0 !important;
   cursor: zoom-out !important;
+  overflow: visible !important;
 }
 
 #projectModal.image-zoomed .project-image-figure img {
-  max-height: calc(100vh - 210px) !important;
-  max-width: 100% !important;
+  width: min(1500px, 132vw) !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+#projectModal.image-zoomed .gallery-nav {
+  position: fixed !important;
+  top: 50% !important;
+  z-index: 170 !important;
+  background: rgba(255,255,255,.92) !important;
+  color: #111 !important;
+}
+
+#projectModal.image-zoomed .gallery-nav.prev {
+  left: 28px !important;
+}
+
+#projectModal.image-zoomed .gallery-nav.next {
+  right: 28px !important;
 }
 
 #projectModal.image-zoomed .close {
@@ -8204,4 +8232,49 @@ body::before {
     inset: 18px !important;
     padding: 18px 42px !important;
   }
+}
+
+/* ===== Portfolio cards: backend-synced thumbnail layer ===== */
+#projects .project-card {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+#projects .project-card .front,
+#projects .project-card .hover {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+#projects .project-card-thumb {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: .18;
+  filter: grayscale(1) contrast(.9);
+  transform: scale(1.02);
+  transition: opacity .22s ease, filter .22s ease, transform .22s ease;
+  pointer-events: none;
+}
+
+#projects .project-card.has-project-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(255,255,255,.78);
+  pointer-events: none;
+}
+
+#projects .project-card.has-project-thumb:hover .project-card-thumb {
+  opacity: .26;
+  filter: grayscale(.7) contrast(.95);
+  transform: scale(1.05);
+}
+
+#projects .project-card.has-project-thumb:hover::after {
+  background: rgba(244,244,244,.72);
 }

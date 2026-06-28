@@ -136,6 +136,79 @@ function getCachedProject(projectId) {
   return backendProjectCache.get(projectId) || getStaticProject(projectId);
 }
 
+function truncateText(value, max = 92) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function projectUploadedImages(project) {
+  return Array.isArray(project?.images) ? project.images
+    .filter(image => getAssetUrl(image))
+    .map((image, imageIndex) => {
+      const caption = cleanAssetText(image.caption);
+      const description = cleanAssetText(image.description);
+      const alt = cleanAssetText(image.alt);
+      const src = getAssetUrl(image);
+      return {
+        kind: "image",
+        type: "사진 설명",
+        title: "",
+        desc: caption || description || "",
+        src,
+        alt: alt || caption || project.title || `Project image ${imageIndex + 1}`
+      };
+    }) : [];
+}
+
+function syncProjectCards(project) {
+  if (!project?.id) return;
+  const cards = $$(".project-card.js-open-project")
+    .filter(card => card.dataset.project === project.id || card.dataset.project === project.slug);
+  if (!cards.length) return;
+
+  const images = projectUploadedImages(project);
+  const thumbnail = images[0]?.src || "";
+  cards.forEach(card => {
+    const front = $(".front", card);
+    const hover = $(".hover", card);
+    if (front) {
+      const metric = $("strong", front);
+      const title = $("b", front);
+      const short = $("em", front);
+      if (metric) metric.textContent = project.metric || project.category || "";
+      if (title) title.textContent = project.title || "";
+      if (short) short.textContent = truncateText(project.short || project.description || "", 56);
+    }
+    if (hover) {
+      const title = $("b", hover);
+      const desc = $("em", hover);
+      if (title) title.textContent = project.title || "";
+      if (desc) desc.textContent = truncateText(project.description || project.short || "", 112);
+    }
+    let thumb = $(".project-card-thumb", card);
+    if (thumbnail) {
+      if (!thumb) {
+        thumb = document.createElement("span");
+        thumb.className = "project-card-thumb";
+        thumb.setAttribute("aria-hidden", "true");
+        card.prepend(thumb);
+      }
+      thumb.style.backgroundImage = `url("${thumbnail.replaceAll('"', "%22")}")`;
+      card.classList.add("has-project-thumb");
+    } else {
+      thumb?.remove();
+      card.classList.remove("has-project-thumb");
+    }
+  });
+}
+
+function syncAllProjectCards() {
+  $$(".project-card.js-open-project").forEach(card => {
+    const project = getCachedProject(card.dataset.project);
+    if (project) syncProjectCards(project);
+  });
+}
+
 function loadEssayComments() {
   try {
     return JSON.parse(localStorage.getItem(ESSAY_COMMENT_STORAGE_KEY) || "{}");
@@ -837,7 +910,13 @@ async function hydrateProjectCache() {
     const response = await fetch(apiUrl("/api/projects"), { cache: "no-store" });
     if (!response.ok) return;
     const projects = await response.json();
-    if (Array.isArray(projects)) projects.forEach(cacheProject);
+    if (Array.isArray(projects)) {
+      projects.forEach(project => {
+        const cached = cacheProject(project);
+        syncProjectCards(cached);
+      });
+      syncAllProjectCards();
+    }
   } catch (error) {
     console.warn("Project index API failed:", error);
   }
@@ -926,22 +1005,7 @@ function renderProjectModal(project) {
   }).join("");
 
   $("#thumbs").innerHTML = "";
-  const uploadedImages = Array.isArray(p.images) ? p.images
-    .filter(image => getAssetUrl(image))
-    .map((image, imageIndex) => {
-      const caption = cleanAssetText(image.caption);
-      const description = cleanAssetText(image.description);
-      const alt = cleanAssetText(image.alt);
-      const src = getAssetUrl(image);
-      return {
-        kind: "image",
-        type: "사진 설명",
-        title: "",
-        desc: caption || description || "",
-        src,
-        alt: alt || caption || p.title || `Project image ${imageIndex + 1}`
-      };
-    }) : [];
+  const uploadedImages = projectUploadedImages(p);
   const textGallery = Array.isArray(p.gallery) && p.gallery.length
     ? p.gallery.map(item => ({
       kind: "text",
@@ -990,6 +1054,7 @@ async function openProjectModal(projectId) {
   const detail = await fetchProjectDetail(projectId);
   if (detail && activeProject) {
     renderProjectModal(detail);
+    syncProjectCards(detail);
   } else if (activeProject) {
     const strip = $("#projectAttachmentStrip");
     if (strip && API_BASE) {
