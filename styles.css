@@ -8503,3 +8503,20 @@ body::before {
   line-height: 1.7;
   letter-spacing: -.03em;
 }
+
+/* 메모 허니팟: 사람 눈에 안 보이게(봇만 채움) — Claude 추가 */
+.memo-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.memo-status {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #2a7d2a;
+  letter-spacing: -.02em;
+}
+.memo-status.is-error { color: #b5121b; }

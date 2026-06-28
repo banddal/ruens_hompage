@@ -1485,30 +1485,54 @@ $("#essayCommentList")?.addEventListener("submit", e => {
   renderEssayComments();
 });
 
-/* project board memo mailto */
+/* project board memo → Supabase 저장 (비공개 의견함) */
 (function() {
   const form = document.querySelector("#projectMemoForm");
   if (!form) return;
+  const statusEl = document.querySelector("#memoStatus");
 
-  form.addEventListener("submit", e => {
+  function setStatus(msg, isError) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.classList.toggle("is-error", Boolean(isError));
+  }
+
+  form.addEventListener("submit", async e => {
     e.preventDefault();
 
     const writer = document.querySelector("#memoWriter")?.value.trim() || "익명";
-    const title = document.querySelector("#memoTitle")?.value.trim() || "프로젝트 메모";
+    const title = document.querySelector("#memoTitle")?.value.trim() || "";
     const body = document.querySelector("#memoBody")?.value.trim() || "";
+    const company = document.querySelector("#memoCompany")?.value || ""; // 허니팟
 
-    const subject = `[Homo Ruens Memo] ${title}`;
-    const mailBody = [
-      `작성자: ${writer}`,
-      `제목: ${title}`,
-      "",
-      "내용:",
-      body,
-      "",
-      "※ 메시지 보내기 버튼을 누르면 입력 정보의 수집·이용에 동의한 것으로 간주한다는 안내 문구를 확인했습니다."
-    ].join("\n");
+    if (!title || !body) {
+      setStatus("제목과 내용을 입력해 주세요.", true);
+      return;
+    }
 
-    window.location.href = `mailto:band17dal@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(mailBody)}`;
+    const submitBtn = form.querySelector(".memo-submit");
+    if (submitBtn) submitBtn.disabled = true;
+    setStatus("전송 중…", false);
+
+    try {
+      const response = await fetch(apiUrl("/api/memos"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ writer, title, body, company })
+      });
+      if (response.ok) {
+        form.reset();
+        setStatus("메모가 전달되었습니다. 감사합니다.", false);
+      } else if (response.status === 429) {
+        setStatus("잠시 후 다시 시도해 주세요.", true);
+      } else {
+        setStatus("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.", true);
+      }
+    } catch {
+      setStatus("네트워크 오류로 전송하지 못했습니다.", true);
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
   });
 })();
 

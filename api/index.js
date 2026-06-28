@@ -892,6 +892,142 @@ async function handlePasswordSave(req, res) {
   );
 }
 
+// =========================================================
+// 메모(project_memos): 방문자 작성(비공개) + 관리자 열람/관리
+// =========================================================
+const MEMO_MAX_TITLE = 100;
+const MEMO_MAX_BODY = 2000;
+const MEMO_MAX_WRITER = 40;
+const MEMO_RATE_WINDOW_MS = 60 * 1000; // 1분
+const MEMO_RATE_MAX = 3;               // 1분당 최대 3개(같은 IP)
+
+function clientIp(req) {
+  const xf = req.headers["x-forwarded-for"];
+  if (typeof xf === "string" && xf.length) return xf.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
+
+// 방문자: 메모 작성 (POST /api/memos)
+async function handleMemoCreate(req, res) {
+  if (!supabaseEnabled()) {
+    return sendError(res, 503, "메모 저장소가 아직 설정되지 않았습니다.");
+  }
+
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 32 * 1024); // 32KB 상한
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+
+  // 스팸 방어 ③ 허니팟: 사람에겐 안 보이는 필드. 채워져 있으면 봇으로 간주.
+  if (payload.company || payload.website || payload.url) {
+    // 봇에게는 성공한 척(200) 응답해 재시도를 유도하지 않음.
+    return sendJson(res, 200, { ok: true });
+  }
+
+  // 스팸 방어 ① 입력 제한
+  const writer = String(payload.writer || "익명").trim().slice(0, MEMO_MAX_WRITER) || "익명";
+  const title = String(payload.title || "").trim();
+  const memoBody = String(payload.body || "").trim();
+
+  if (!title || !memoBody) {
+    return sendError(res, 400, "제목과 내용을 입력해 주세요.");
+  }
+  if (title.length > MEMO_MAX_TITLE) {
+    return sendError(res, 400, `제목은 ${MEMO_MAX_TITLE}자 이내로 입력해 주세요.`);
+  }
+  if (memoBody.length > MEMO_MAX_BODY) {
+    return sendError(res, 400, `내용은 ${MEMO_MAX_BODY}자 이내로 입력해 주세요.`);
+  }
+  // 링크 도배 차단: 본문에 URL이 5개 이상이면 거부
+  const linkCount = (memoBody.match(/https?:\/\//gi) || []).length;
+  if (linkCount >= 5) {
+    return sendError(res, 400, "링크가 너무 많습니다.");
+  }
+
+  // 스팸 방어 ② 속도 제한: 같은 IP가 최근 1분 내 작성한 메모 수 확인(DB 기반).
+  const ip = clientIp(req);
+  try {
+    const since = new Date(Date.now() - MEMO_RATE_WINDOW_MS).toISOString();
+    const recent = await supabaseRequest(
+      `/rest/v1/project_memos?select=id&source_ip=eq.${encodeURIComponent(ip)}&created_at=gte.${encodeURIComponent(since)}`
+    );
+    if (Array.isArray(recent) && recent.length >= MEMO_RATE_MAX) {
+      return sendError(res, 429, "잠시 후 다시 시도해 주세요.");
+    }
+  } catch {
+    // 속도 검사 실패는 작성 자체를 막지 않음(가용성 우선).
+  }
+
+  try {
+    const rows = await supabaseRequest("/rest/v1/project_memos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({ writer, title, body: memoBody, source_ip: ip })
+    });
+    const saved = rows?.[0];
+    // 작성자에게는 내용을 그대로 돌려주지 않음(비공개 의견함).
+    return sendJson(res, 201, { ok: true, id: saved?.id || null });
+  } catch (error) {
+    console.error("Memo create failed:", error);
+    return sendError(res, 502, "메모 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+}
+
+// 관리자: 메모 목록 (GET /api/admin/memos)
+async function handleMemoList(req, res) {
+  if (!supabaseEnabled()) return sendJson(res, 200, []);
+  try {
+    const rows = await supabaseRequest(
+      "/rest/v1/project_memos?select=*&order=created_at.desc"
+    );
+    return sendJson(res, 200, Array.isArray(rows) ? rows : []);
+  } catch (error) {
+    console.error("Memo list failed:", error);
+    return sendError(res, 502, "메모를 불러오지 못했습니다.");
+  }
+}
+
+// 관리자: 읽음 처리 (PATCH /api/admin/memos/:id)
+async function handleMemoUpdate(req, res, memoId) {
+  try {
+    const body = await collectRequestBody(req, 8 * 1024);
+    const payload = JSON.parse(body.toString("utf8") || "{}");
+    const isRead = Boolean(payload.isRead);
+    await supabaseRequest(
+      `/rest/v1/project_memos?id=eq.${encodeURIComponent(memoId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_read: isRead })
+      }
+    );
+    return sendJson(res, 200, { ok: true });
+  } catch (error) {
+    console.error("Memo update failed:", error);
+    return sendError(res, 502, "메모 상태 변경에 실패했습니다.");
+  }
+}
+
+// 관리자: 삭제 (DELETE /api/admin/memos/:id)
+async function handleMemoDelete(req, res, memoId) {
+  try {
+    await supabaseRequest(
+      `/rest/v1/project_memos?id=eq.${encodeURIComponent(memoId)}`,
+      { method: "DELETE" }
+    );
+    return sendJson(res, 200, { ok: true });
+  } catch (error) {
+    console.error("Memo delete failed:", error);
+    return sendError(res, 502, "메모 삭제에 실패했습니다.");
+  }
+}
+
 async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -941,6 +1077,26 @@ async function router(req, res) {
     const project = await getProjectStore(projectDetail[1]);
     if (!project || project.status === "private") return sendError(res, 404, "Project not found.");
     return sendJson(res, 200, publicProject(project));
+  }
+
+  // 방문자: 메모 작성 (공개 경로, 인증 불필요, 스팸 방어 포함)
+  if (req.method === "POST" && pathname === "/api/memos") {
+    return handleMemoCreate(req, res);
+  }
+
+  // 관리자: 메모 목록 / 읽음 / 삭제 (인증 필요)
+  if (req.method === "GET" && pathname === "/api/admin/memos") {
+    if (!requireAdmin(req, res)) return;
+    return handleMemoList(req, res);
+  }
+  const memoDetail = pathname.match(/^\/api\/admin\/memos\/([^/]+)$/);
+  if (req.method === "PATCH" && memoDetail) {
+    if (!requireAdmin(req, res)) return;
+    return handleMemoUpdate(req, res, memoDetail[1]);
+  }
+  if (req.method === "DELETE" && memoDetail) {
+    if (!requireAdmin(req, res)) return;
+    return handleMemoDelete(req, res, memoDetail[1]);
   }
 
   if (req.method === "GET" && pathname === "/api/admin/projects") {

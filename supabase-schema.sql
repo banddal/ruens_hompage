@@ -18,6 +18,7 @@ create table if not exists public.projects (
   team_positions jsonb not null default '[]'::jsonb,
   gallery jsonb not null default '[]'::jsonb,
   status text not null default 'draft',
+  dashboard_featured boolean not null default false,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -35,6 +36,7 @@ alter table public.projects add column if not exists outcome text default '';
 alter table public.projects add column if not exists tags jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists skill_tags jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists team_positions jsonb not null default '[]'::jsonb;
+alter table public.projects add column if not exists dashboard_featured boolean not null default false;
 alter table public.projects add column if not exists gallery jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists status text not null default 'draft';
 alter table public.projects add column if not exists sort_order integer not null default 0;
@@ -162,3 +164,32 @@ using (
     and projects.status <> 'private'
   )
 );
+
+-- =========================================================
+-- project_memos: 방문자 메모(비공개 의견함, 관리자 전용 열람)
+-- =========================================================
+create table if not exists public.project_memos (
+  id uuid primary key default gen_random_uuid(),
+  writer text not null default '익명',
+  title text not null,
+  body text not null,
+  source_ip text default '',
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists project_memos_created_idx
+  on public.project_memos (created_at desc);
+
+alter table public.project_memos enable row level security;
+
+-- 보안 핵심:
+--  - 방문자(anon)는 INSERT(작성)만 가능. SELECT/UPDATE/DELETE 불가.
+--  - 따라서 방문자는 자기 메모조차 다시 못 읽고, 목록도 못 봄(게시판 아님).
+--  - 관리자 백엔드는 service_role 키로 접근하므로 RLS를 우회해 전체 열람/관리 가능.
+drop policy if exists "anon insert memo" on public.project_memos;
+create policy "anon insert memo"
+on public.project_memos for insert
+to anon, authenticated
+with check (true);
+-- SELECT/UPDATE/DELETE 정책은 일부러 만들지 않음 → service_role만 가능.

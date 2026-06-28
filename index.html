@@ -11,7 +11,7 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Kim Sung Won" />
 <meta name="twitter:description" content="공공 정책에서 민간 전략까지, 기획부터 운영까지 — Hybrid Full scale Planner" />
-<link rel="stylesheet" href="styles.css?v=20260628-dashboard-featured-1" />
+<link rel="stylesheet" href="styles.css?v=20260628-memo-1" />
 </head>
 <body>
 <div class="page">
@@ -721,8 +721,12 @@
               <span>내용</span>
               <textarea id="memoBody" name="body" placeholder="프로젝트 및 관련사항에 대해 자유롭게 남겨주시기 바랍니다." required></textarea>
             </label>
+            <div class="memo-hp" aria-hidden="true">
+              <label>Company<input id="memoCompany" name="company" type="text" tabindex="-1" autocomplete="off"></label>
+            </div>
             <p class="privacy-note">메시지 보내기 버튼을 누르면 입력한 정보의 수집·이용에 동의한 것으로 간주합니다. 수집 항목은 작성자, 제목, 내용이며 답변 및 연락 목적 외에는 사용하지 않습니다.</p>
             <button class="memo-submit" type="submit">메시지 보내기</button>
+            <span id="memoStatus" class="memo-status" aria-live="polite"></span>
           </form>
         </div>
       </article>
@@ -1729,7 +1733,7 @@
 </div>
 
 <script src="data.js"></script>
-<script src="app.js?v=20260628-dashboard-featured-1"></script>
+<script src="app.js?v=20260628-memo-1"></script>
 
 
 </html>

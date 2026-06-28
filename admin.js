@@ -510,6 +510,69 @@ function switchTab(name) {
   $$(".admin-tab-panel").forEach(panel => {
     panel.classList.toggle("hidden", panel.id !== `${name}Panel`);
   });
+  if (name === "memos") loadMemos();
+}
+
+// ===== 메모 관리 (관리자 전용) =====
+function escapeMemo(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+function formatMemoDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function loadMemos() {
+  const list = $("#memoList");
+  const countEl = $("#memoCount");
+  if (!list) return;
+  list.innerHTML = `<p class="memo-admin-empty">불러오는 중…</p>`;
+  const memos = await apiJson("/api/admin/memos").catch(() => null);
+  if (!Array.isArray(memos)) {
+    list.innerHTML = `<p class="memo-admin-empty">메모를 불러오지 못했습니다.</p>`;
+    return;
+  }
+  const unread = memos.filter(m => !m.is_read).length;
+  if (countEl) countEl.textContent = memos.length ? `(${unread} / ${memos.length})` : "";
+  if (!memos.length) {
+    list.innerHTML = `<p class="memo-admin-empty">아직 받은 메모가 없습니다.</p>`;
+    return;
+  }
+  list.innerHTML = memos.map(m => `
+    <article class="memo-admin-item ${m.is_read ? "is-read" : "is-unread"}" data-memo-id="${escapeMemo(m.id)}">
+      <div class="memo-admin-head">
+        <strong>${escapeMemo(m.title)}</strong>
+        <span class="memo-admin-meta">${escapeMemo(m.writer || "익명")} · ${escapeMemo(formatMemoDate(m.created_at))}</span>
+      </div>
+      <p class="memo-admin-body">${escapeMemo(m.body)}</p>
+      <div class="memo-admin-actions">
+        <button type="button" class="ghost" data-memo-read="${escapeMemo(m.id)}" data-read="${m.is_read ? "1" : "0"}">
+          ${m.is_read ? "안읽음으로" : "읽음으로"}
+        </button>
+        <button type="button" class="danger" data-memo-delete="${escapeMemo(m.id)}">삭제</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+async function setMemoRead(id, isRead) {
+  await apiJson(`/api/admin/memos/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ isRead })
+  }).catch(() => null);
+  loadMemos();
+}
+
+async function deleteMemo(id) {
+  if (!window.confirm("이 메모를 삭제할까요? 되돌릴 수 없습니다.")) return;
+  await apiJson(`/api/admin/memos/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);
+  loadMemos();
 }
 
 projectList.addEventListener("click", async event => {
@@ -549,6 +612,16 @@ logoutButton.addEventListener("click", logout);
 passwordForm.addEventListener("submit", savePassword);
 $$(".admin-tab").forEach(button => {
   button.addEventListener("click", () => switchTab(button.dataset.adminTab));
+});
+$("#reloadMemos")?.addEventListener("click", () => loadMemos());
+$("#memoList")?.addEventListener("click", event => {
+  const readBtn = event.target.closest("[data-memo-read]");
+  if (readBtn) {
+    setMemoRead(readBtn.dataset.memoRead, readBtn.dataset.read !== "1");
+    return;
+  }
+  const delBtn = event.target.closest("[data-memo-delete]");
+  if (delBtn) deleteMemo(delBtn.dataset.memoDelete);
 });
 
 loadSecurityStatus().catch(error => {
