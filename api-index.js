@@ -257,6 +257,7 @@ function publicProject(project) {
     images: project.images || [],
     files: (project.files || []).filter(file => file.visibility !== "private"),
     status: project.status || "published",
+    dashboardFeatured: Boolean(project.dashboardFeatured),
     sortOrder: project.sortOrder || 0,
     updatedAt: project.updatedAt
   };
@@ -301,6 +302,7 @@ function normalizeProject(project, index = 0) {
     images: project.images || [],
     files: project.files || [],
     status: project.status || "published",
+    dashboardFeatured: Boolean(project.dashboardFeatured),
     sortOrder: project.sortOrder || index + 1,
     createdAt: project.createdAt || project.updatedAt || new Date().toISOString(),
     updatedAt: project.updatedAt || new Date().toISOString()
@@ -369,6 +371,7 @@ function dbProjectToProject(row, images = [], files = []) {
     images,
     files,
     status: row.status,
+    dashboardFeatured: Boolean(row.dashboard_featured),
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -393,6 +396,7 @@ function projectToDbRow(project) {
     team_positions: normalized.teamPositions,
     gallery: normalized.gallery,
     status: normalized.status,
+    dashboard_featured: normalized.dashboardFeatured,
     sort_order: normalized.sortOrder,
     updated_at: new Date().toISOString()
   };
