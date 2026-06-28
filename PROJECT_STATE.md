@@ -15,26 +15,24 @@
 > 받는 도구는 이걸 먼저 읽으면 무엇을 검증해야 하는지 바로 알 수 있습니다.
 > 새 라운드가 시작되면, 여기 내용은 9번 작업 로그로 내려가고 이 블록은 최신으로 교체합니다.
 
-- **라운드:** 2026-06-28 / 작성: Claude
-- **한 줄:** Vercel 통합을 위한 백엔드 서버리스화 + 배포 설정 + 협업 문서 정비.
-- **바뀐 파일과 이유:**
-  - `api/index.js` (신규) — `server.js`를 Vercel 서버리스 핸들러로 개조.
-    `http.listen()` 제거 → `module.exports=(req,res)=>...`. 로컬 FS 쓰기 차단(Supabase 전용).
-    passwordRecord를 `ADMIN_PASSWORD` 환경변수 전용으로 단순화.
-    getProjectsStore fallback을 content 시드로 변경(연결 끊겨도 빈 화면 방지).
-  - `app.js` — `DEFAULT_API_ORIGIN`(Render 하드코딩) 제거, `API_BASE` 기본값을 상대경로("")로.
-    (`TEAM_POSITION_LABELS` 보존 확인)
-  - `vercel.json` (신규) — `/api/(.*)` → `api/index.js` rewrite, 함수 maxDuration 30s, html no-store.
-  - `.gitignore` (신규) — `.env*`, node_modules, uploads/, backend-data/*.json 제외.
-  - `.env.example` (신규) — 환경변수 양식(실제 키 없음, 커밋 안전).
-  - `DEPLOY_VERCEL.md` (신규) — Vercel 배포 절차/체크리스트.
-  - `PROJECT_STATE.md` — 협업 모델을 교차검증·붙여넣기 방식으로 재정의(역할 고정 제거).
+- **라운드:** 2026-06-28 (저녁) / 작성: Claude
+- **한 줄:** Render 요소 완전 제거 + 대용량/공개정책 호스팅 방향 확정(서버리스 유지).
+- **결정 사항 (사람):**
+  - 호스팅 = **Vercel 서버리스로 확정.** 상시서버/Render는 본인 워크로드(실시간·장시간·
+    고트래픽·특수런타임)에 해당 없음 → 장점 못 쓰고 단점만 떠안음. 1GB+ 이미지여도 CDN이 처리.
+  - 파일 정책 = **크기 무관, 공개여부 기준.** 공개허용=승인없이 다운 / 공개불허=승인 후.
+    → 버킷 분리(public/private)가 곧 정책. (4-6 설계 참조)
+  - 추가 비용은 사용자 부담(Supabase Pro).
+- **바뀐/삭제된 파일:**
+  - 삭제: `server.js`(Render 상시서버), `SUPABASE_DEPLOY.md`(Render 배포문서).
+  - `package.json` — `start:node server.js` 제거 → `dev:vercel dev`, 이름/설명 정리.
+  - `admin.html` — "Render 환경변수" 문구 → "Vercel 환경변수(ADMIN_PASSWORD)".
+  - `api/index.js` — `process.env.RENDER` 분기 제거(storage status 단순화).
+  - `PROJECT_STATE.md` — 4-5 완료, 4-6(대용량/정책 설계) 신설.
 - **검증 포인트(받는 쪽이 봐줄 것):**
-  ① api/index.js의 죽은 로컬 분기에서 ReferenceError 가능성,
-  ② 멀티파트 업로드가 Vercel 실환경에서 동작하는지(미검증),
-  ③ 키 하드코딩 없는지(스캔상 없음),
-  ④ app.js에서 의도치 않게 빠진 상수 없는지.
-- **미반영/주의:** 멀티파트 업로드는 **실배포 검증 전**. 환경변수는 코드 아닌 Vercel 대시보드에 등록 필요.
+  ① 코드·설정에 Render 흔적 0인지(스캔상 0 확인), ② package.json 유효성(확인됨),
+  ③ admin.html이 server.js 삭제 후에도 정상인지(admin.js는 /api 상대경로라 무관).
+- **다음 작업:** 4-6 대용량/공개정책 구현 (Pro 전환 → 버킷분리 → 이미지 파이프라인 → TUS → 승인/서명URL).
 
 ---
 
@@ -51,13 +49,16 @@
 | 항목 | 값 |
 | --- | --- |
 | 통합 호스팅 | **Vercel** (프론트 + API 한 도메인) |
-| 운영 URL | https://ruens-hompage.vercel.app/ |
-| GitHub | https://github.com/banddal/ruens_hompage |
+| 운영 도메인(Production) | **https://kimsung-won.com** (커스텀 도메인) |
+| Vercel 기본 URL | https://ruens-hompage.vercel.app/ |
+| GitHub | https://github.com/banddal/ruens_hompage (브랜치: main) |
 | Supabase URL | https://lzwkhsbfpachkaudszjo.supabase.co |
 | Supabase Storage 버킷 | `portfolio-assets` |
 
-> ⚠️ 과거 흔적: 코드 곳곳에 **Render**(`ruens-hompage.onrender.com`) 기준 설정이
-> 남아 있음. Vercel 통합 과정에서 모두 정리 대상. (아래 4-3 참조)
+> ✅ **Render는 더 이상 사용하지 않음.** 과거 상시서버(server.js) 방식으로 Render를
+> 잠시 썼으나, Vercel 서버리스로 통합 완료. kimsung-won.com은 Vercel Production을 가리킴.
+> Render 서비스는 잉여 상태이므로 Suspend/Delete 가능(급하지 않음).
+> 코드 내 Render 흔적(onrender.com 하드코딩 등)은 모두 제거됨.
 
 ---
 
@@ -147,17 +148,40 @@
 - ☐ `content-data/projects.json` 기반 초기 시딩 확인 (`/api/projects` 호출 시 자동)
 - ☐ `portfolio-assets` 버킷 public 설정 확인
 
-### 4-5. 문서 갱신  ☐ (Claude)
-- ☐ `SUPABASE_DEPLOY.md`를 Render → Vercel 기준으로 갱신
+### 4-5. 문서 갱신 / Render 정리  ☑ (Claude 완료 2026-06-28)
+- ☑ `DEPLOY_VERCEL.md` 작성(Vercel 기준 배포 가이드). 옛 `SUPABASE_DEPLOY.md`(Render 기준) **삭제**.
+- ☑ `server.js`(Render용 상시 서버) **삭제**.
+- ☑ `package.json`의 `"start":"node server.js"` 제거 → `"dev":"vercel dev"`로 교체, 이름 정리.
+- ☑ admin.html의 "Render 환경변수" 문구 → "Vercel 환경변수(ADMIN_PASSWORD)"로 수정.
+- ☑ api/index.js의 `process.env.RENDER` 분기 제거.
+- 결과: **코드·설정에 Render 흔적 0.** (문서엔 "제거함" 기록만 보존)
+
+### 4-6. 대용량 파일 + 공개정책 설계  ☐ (다음 작업, 설계 확정)
+> 정책 = **크기 무관, 공개여부 기준.** 공개허용=승인없이 / 공개불허=승인 후.
+- ☐ Supabase **Pro 플랜** 전환 (50MB 벽 제거, 최대 500GB/파일, egress 250GB 포함). 비용=사용자 부담.
+- ☐ 버킷 2개로 분리: `portfolio-assets`(public, 공개파일·이미지) + **`portfolio-private`**(비공개).
+  파일의 공개여부 플래그 ↔ 버킷이 1:1 매칭 = 곧 다운로드 정책.
+- ☐ **이미지 파이프라인**: 업로드 시 리사이즈(가로~1600px)+썸네일 생성, lazy load, AVIF/WebP.
+  (1GB+ 이미지여도 페이지는 가볍게. CDN이 배포.)
+- ☐ **대용량 업로드**: 브라우저→Supabase 직접 **TUS resumable**(함수 4.5MB 한도 우회, 이어받기).
+  의존성 `@supabase/storage-js` 추가 필요(의존성 0 원칙의 첫 예외 — 7-4 규칙대로 기록).
+- ☐ **비공개 다운로드**: 홈페이지 내 승인 구조 → 승인 시 `createSignedUrl`(예 10분 만료) 발급.
+  요청·승인 상태를 담을 DB 테이블 추가 필요.
 
 ---
 
 ## 5. 미결정 / 사람 결정 필요 항목
 
-1. **데이터 단일화**: source of truth를 Supabase로 통일할지, data.js를 계속 둘지.
-2. **백엔드 개조 방식**: (확정) A안 — 기존 server.js 로직을 의존성 없이 `api/index.js`로 응집.
-   B안(@supabase/supabase-js 도입)은 lockfile 공유 충돌 우려로 보류.
-3. **admin 비밀번호 초기 설정**: 최초 1회 admin.html에서 설정 or 환경변수 `ADMIN_PASSWORD`.
+1. **데이터 단일화**: source of truth를 Supabase로 통일할지, data.js를 계속 둘지. (여전히 미결)
+
+### 해결된 항목 (기록 보존)
+- **백엔드 개조 방식**: A안 확정 — server.js 로직을 의존성 없이 `api/index.js`로 응집.
+- **admin 비밀번호**: **환경변수 `ADMIN_PASSWORD` 전용으로 확정.**
+  화면에서 비번을 "설정"하는 옛 흐름은 서버리스에서 불가(로컬 파일 쓰기 차단).
+  → `handlePasswordSave`는 500 대신 "환경변수로 설정하라" 안내(400) 반환.
+  ⚠️ **함정 기록**: Vercel 환경변수는 **Production 환경 체크**가 안 되면 운영 도메인에서
+  안 보임. ADMIN_PASSWORD가 Preview에만 있어 `authConfigured:false`로 한참 헤맸음.
+  교훈 = 환경변수는 (1) Production 체크 (2) 값 수정 후 Redeploy, 둘 다 해야 적용.
 
 ---
 
@@ -197,6 +221,23 @@ Vercel 대시보드 → Settings → Environment Variables 에만 등록.
   명시하면 교차검증이 빨라진다.
 - 붙여넣은 코드가 반영된 "현재 진짜 상태"는 항상 **로컬 레포 + 이 문서**가 기준.
   대화창의 과거 버전이 아니라.
+
+### 7-1b. 새 세션을 Codex(또는 Claude)에게 시작시킬 때 — 무엇을 주나
+
+이 문서(PROJECT_STATE.md) "하나만" 주면 부족할 수 있습니다.
+문서는 **지도**일 뿐이고, 실제 코드는 로컬 레포에 있기 때문입니다.
+Codex는 보통 로컬 레포에 직접 접근하므로, 다음 3개를 주면 충분합니다.
+
+1. **PROJECT_STATE.md** — "지금 어디까지 됐고 왜 이렇게 됐는지"의 지도.
+   특히 맨 위 **★ 이번 라운드** 블록과 **5번(해결된 항목/함정)** 을 먼저 읽으라고 지시.
+2. **이번에 시킬 작업 한 줄** — 무엇을 해주길 원하는지. (예: "data.js를 Supabase로
+   단일화하는 마이그레이션 스크립트를 만들어줘")
+3. **관련 파일** — Codex가 로컬 레포를 보면 생략 가능. 레포 접근이 없으면
+   해당 파일 내용을 붙여넣기.
+
+> 한 줄 지시 예시(복붙용):
+> "레포 루트의 PROJECT_STATE.md를 먼저 읽어. 특히 ★ 이번 라운드 블록과 5번 항목.
+>  그 맥락 위에서 [이번 작업]을 해줘. 끝나면 변경 요약 + 바뀐 파일/위치를 알려줘."
 
 ### 7-2. 교차검증 루프
 
@@ -239,8 +280,12 @@ Vercel 대시보드 → Settings → Environment Variables 에만 등록.
 
 ## 9. 작업 로그 (최근 → 과거)
 
+- 2026-06-28 (저녁) · Claude · Render 완전 제거(server.js·SUPABASE_DEPLOY.md 삭제, package.json/
+  admin.html/api 정리). 서버리스 유지 확정. 대용량/공개정책 설계(4-6) 신설.
+- 2026-06-28 (오후) · Claude · admin 500 디버깅 해결. 원인=ADMIN_PASSWORD가 Preview에만
+  체크 + handlePasswordSave의 writeJson 크래시. handlePasswordSave를 400 안내로 교체.
+  사람이 Production 체크+Redeploy → admin 정상 가동. Render 미사용 확정.
 - 2026-06-28 · Claude · vercel.json·.gitignore·.env.example 생성, app.js API_BASE 상대경로화.
-  배포 가능한 최소 형태 완성. Supabase env 등록 + git push 만 하면 배포됨.
 - 2026-06-28 · Claude · `server.js` → `api/index.js` 서버리스 개조 완료.
 - 2026-06-28 · Claude · 전체 점검 완료, Vercel 통합 설계 확정, 본 문서 생성.
 - (이전) · 프론트엔드 히어로 섹션 디자인 작업 (중앙정렬 레이아웃, 타이포, 백라이트 등).
