@@ -8436,3 +8436,30 @@ body::before {
 #projectModal .team-position-chip {
   min-height: 24px !important;
 }
+
+/* ===== Dashboard featured project from admin ===== */
+.recent-content h4 {
+  color: #151515 !important;
+}
+
+.recent-meta dd#dashboardRecentTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.recent-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  background: rgba(20,20,20,.055);
+  color: #333;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.recent-tag.muted {
+  color: #888;
+  font-weight: 500;
+}

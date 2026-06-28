@@ -41,6 +41,7 @@ const API_BASE = (() => {
   return DEFAULT_API_ORIGIN;
 })();
 const backendProjectCache = new Map();
+const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 let activeEssayId = null;
 let activeReplyPath = null;
@@ -135,6 +136,59 @@ function getStaticProject(projectId) {
 
 function getCachedProject(projectId) {
   return backendProjectCache.get(projectId) || getStaticProject(projectId);
+}
+
+function visibleProjectTags(tags) {
+  return Array.isArray(tags) ? tags.filter(tag => tag && tag !== DASHBOARD_RECENT_TAG) : [];
+}
+
+function isDashboardFeaturedProject(project) {
+  return Boolean(project?.dashboardFeatured || (project?.tags || []).includes(DASHBOARD_RECENT_TAG));
+}
+
+function dashboardNatureLabels(project) {
+  const labels = [];
+  if (project?.category) labels.push(project.category);
+  (project?.skillTags || []).forEach(tag => {
+    const label = SKILLSET_LABELS?.[tag] || SKILL_CHIP_LABELS[tag] || tag;
+    if (label && !labels.includes(label)) labels.push(label);
+  });
+  visibleProjectTags(project?.tags).forEach(tag => {
+    if (!labels.includes(tag)) labels.push(tag);
+  });
+  return labels.slice(0, 5);
+}
+
+function renderDashboardRecent(projects = []) {
+  const title = $("#dashboardRecentTitle");
+  const description = $("#dashboardRecentDescription");
+  const period = $("#dashboardRecentPeriod");
+  const tags = $("#dashboardRecentTags");
+  const outcome = $("#dashboardRecentOutcome");
+  const open = $("#dashboardRecentOpen");
+  if (!title || !description || !period || !tags || !outcome || !open) return;
+
+  const list = Array.isArray(projects) && projects.length
+    ? projects.map(project => cacheProject(project))
+    : (typeof PROJECTS !== "undefined" ? PROJECTS : []);
+  const featured = list
+    .filter(isDashboardFeaturedProject)
+    .sort((a, b) => Date.parse(b.updatedAt || b.updated_at || 0) - Date.parse(a.updatedAt || a.updated_at || 0));
+  const project = featured[0]
+    || getCachedProject("business-plan")
+    || list.find(item => item?.status !== "private")
+    || list[0];
+  if (!project) return;
+
+  title.textContent = project.title || project.id || "프로젝트";
+  description.textContent = project.short || project.description || "프로젝트 개요가 아직 입력되지 않았습니다.";
+  period.textContent = project.period || "-";
+  const labels = dashboardNatureLabels(project);
+  tags.innerHTML = labels.length
+    ? labels.map(label => `<span class="recent-tag">${escapeHtml(label)}</span>`).join("")
+    : `<span class="recent-tag muted">태그 미정</span>`;
+  outcome.textContent = project.outcome || "-";
+  open.dataset.project = project.slug || project.id;
 }
 
 function truncateText(value, max = 92) {
@@ -917,6 +971,7 @@ async function hydrateProjectCache() {
         syncProjectCards(cached);
       });
       syncAllProjectCards();
+      renderDashboardRecent(projects);
     }
   } catch (error) {
     console.warn("Project index API failed:", error);
@@ -1064,6 +1119,7 @@ async function openProjectModal(projectId) {
   }
 }
 
+renderDashboardRecent(typeof PROJECTS !== "undefined" ? PROJECTS : []);
 hydrateProjectCache();
 
 function renderProjectImageSlot(images) {

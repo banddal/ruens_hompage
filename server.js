@@ -16,6 +16,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "portfolio-assets";
+const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -271,9 +272,10 @@ function publicProject(project) {
     description: project.description,
     role: project.role,
     outcome: project.outcome,
-    tags: project.tags || [],
+    tags: visibleProjectTags(project.tags),
     skillTags: project.skillTags || [],
     teamPositions: project.teamPositions || [],
+    dashboardFeatured: isDashboardFeatured(project),
     gallery: project.gallery || [],
     images: project.images || [],
     files: (project.files || []).filter(file => file.visibility !== "private"),
@@ -287,9 +289,10 @@ function adminProject(project) {
   return {
     ...project,
     slug: project.slug || project.id,
-    tags: project.tags || [],
+    tags: visibleProjectTags(project.tags),
     skillTags: project.skillTags || [],
     teamPositions: project.teamPositions || [],
+    dashboardFeatured: isDashboardFeatured(project),
     gallery: project.gallery || [],
     images: project.images || [],
     files: project.files || [],
@@ -302,8 +305,28 @@ function findProject(projects, key) {
   return projects.find(project => project.id === key || project.slug === key);
 }
 
+function projectTags(tags) {
+  return Array.isArray(tags) ? tags.filter(Boolean) : [];
+}
+
+function visibleProjectTags(tags) {
+  return projectTags(tags).filter(tag => tag !== DASHBOARD_RECENT_TAG);
+}
+
+function isDashboardFeatured(project) {
+  return Boolean(project?.dashboardFeatured || projectTags(project?.tags).includes(DASHBOARD_RECENT_TAG));
+}
+
+function tagsForStorage(project) {
+  const visibleTags = visibleProjectTags(project?.tags);
+  return isDashboardFeatured(project)
+    ? [...visibleTags, DASHBOARD_RECENT_TAG]
+    : visibleTags;
+}
+
 function normalizeProject(project, index = 0) {
   const id = safeSegment(project.id || project.slug || project.title || `project-${index + 1}`);
+  const dashboardFeatured = isDashboardFeatured(project);
   return {
     id,
     slug: safeSegment(project.slug || id),
@@ -315,9 +338,10 @@ function normalizeProject(project, index = 0) {
     description: project.description || "",
     role: project.role || "",
     outcome: project.outcome || "",
-    tags: project.tags || [],
+    tags: tagsForStorage({ ...project, dashboardFeatured }),
     skillTags: project.skillTags || [],
     teamPositions: project.teamPositions || [],
+    dashboardFeatured,
     gallery: project.gallery || [],
     images: project.images || [],
     files: project.files || [],

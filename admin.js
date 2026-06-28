@@ -30,16 +30,17 @@ const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
 const confirmPassword = $("#confirmPassword");
 const passwordStatus = $("#passwordStatus");
+const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 function splitTags(value) {
   return String(value || "")
     .split(",")
     .map(item => item.trim())
-    .filter(Boolean);
+    .filter(item => item && item !== DASHBOARD_RECENT_TAG);
 }
 
 function joinTags(value) {
-  return Array.isArray(value) ? value.join(", ") : "";
+  return Array.isArray(value) ? value.filter(item => item !== DASHBOARD_RECENT_TAG).join(", ") : "";
 }
 
 function readCheckedValues(name) {
@@ -64,6 +65,10 @@ function setStatus(target, message) {
 
 function projectLabel(project) {
   return [project.metric, project.period].filter(Boolean).join(" · ");
+}
+
+function isDashboardFeatured(project) {
+  return Boolean(project?.dashboardFeatured || (project?.tags || []).includes(DASHBOARD_RECENT_TAG));
 }
 
 function escapeHtml(value) {
@@ -209,7 +214,7 @@ function renderProjectList() {
   projectList.innerHTML = filtered.length ? filtered.map(project => `
     <button type="button" class="project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${escapeHtml(project.id)}">
       <strong>${escapeHtml(project.title || project.id)}</strong>
-      <small>${escapeHtml(projectLabel(project) || project.category || "")}</small>
+      <small>${isDashboardFeatured(project) ? "Dashboard · " : ""}${escapeHtml(projectLabel(project) || project.category || "")}</small>
     </button>
   `).join("") : `<div class="asset-empty">표시할 프로젝트가 없습니다.</div>`;
 }
@@ -228,6 +233,7 @@ function fillForm(project) {
   projectForm.elements.role.value = project.role || "";
   projectForm.elements.outcome.value = project.outcome || "";
   projectForm.elements.tags.value = joinTags(project.tags);
+  projectForm.elements.dashboardFeatured.checked = isDashboardFeatured(project);
   writeCheckedValues("skillTags", project.skillTags);
   writeCheckedValues("teamPositions", project.teamPositions);
   renderAssets(project);
@@ -249,6 +255,7 @@ function readForm() {
     role: form.role.value.trim(),
     outcome: form.outcome.value.trim(),
     tags: splitTags(form.tags.value),
+    dashboardFeatured: Boolean(form.dashboardFeatured.checked),
     skillTags: readCheckedValues("skillTags"),
     teamPositions: readCheckedValues("teamPositions"),
     gallery: selectedProject?.gallery || [],
@@ -341,6 +348,7 @@ function newProject() {
     role: "",
     outcome: "",
     tags: [],
+    dashboardFeatured: false,
     skillTags: [],
     teamPositions: [],
     gallery: [],
@@ -362,6 +370,7 @@ function duplicateProject() {
     slug: "",
     title: `${selectedProject.title || "Project"} copy`,
     status: "draft",
+    dashboardFeatured: false,
     gallery: [...(selectedProject.gallery || [])],
     images: [],
     files: [],

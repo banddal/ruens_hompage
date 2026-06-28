@@ -11,7 +11,7 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Kim Sung Won" />
 <meta name="twitter:description" content="공공 정책에서 민간 전략까지, 기획부터 운영까지 — Hybrid Full scale Planner" />
-<link rel="stylesheet" href="styles.css?v=20260628-project-modal-scroll-1" />
+<link rel="stylesheet" href="styles.css?v=20260628-dashboard-featured-1" />
 </head>
 <body>
 <div class="page">
@@ -656,14 +656,14 @@
           <h3>최근 완료한 프로젝트</h3>
         </div>
         <div class="board-content recent-content">
-          <h4>사업계획 수립 <em>170.4억</em></h4>
-          <p>10년간 스타트업 보육사업의 운영 구조, 예산계획, 실행계획을 하나의 사업계획으로 묶은 최근 완료 프로젝트.</p>
+          <h4 id="dashboardRecentTitle">사업계획 수립</h4>
+          <p id="dashboardRecentDescription">10년간 스타트업 보육사업의 운영 구조, 예산계획, 실행계획을 하나의 사업계획으로 묶은 최근 완료 프로젝트.</p>
           <dl class="recent-meta">
-            <div><dt>기간</dt><dd>2026</dd></div>
-            <div><dt>성격</dt><dd>Business Plan · Strategy</dd></div>
-            <div><dt>결과</dt><dd>10년 170.4억 규모 계획 수립</dd></div>
+            <div><dt>기간</dt><dd id="dashboardRecentPeriod">2026</dd></div>
+            <div><dt>성격</dt><dd id="dashboardRecentTags">Business Plan · Strategy</dd></div>
+            <div><dt>결과</dt><dd id="dashboardRecentOutcome">10년 170.4억 규모 계획 수립</dd></div>
           </dl>
-          <button class="board-open js-open-project" type="button" data-project="business-plan">포트폴리오 보기</button>
+          <button class="board-open js-open-project" id="dashboardRecentOpen" type="button" data-project="business-plan">포트폴리오 보기</button>
         </div>
       </article>
 
@@ -1736,7 +1736,7 @@
 </div>
 
 <script src="data.js"></script>
-<script src="app.js?v=20260628-project-modal-scroll-1"></script>
+<script src="app.js?v=20260628-dashboard-featured-1"></script>
 
 
 </html>
