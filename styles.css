@@ -8101,8 +8101,11 @@ body::before {
 
 #projectModal .compact-tags,
 #projectModal .fact-tags .tags {
-  flex-wrap: wrap !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  flex-wrap: nowrap !important;
   gap: 6px !important;
+  width: 100%;
 }
 
 #projectModal .tag,
@@ -8119,7 +8122,13 @@ body::before {
   overflow-wrap: anywhere;
 }
 
-#projectModal .skill-tag,
+#projectModal .skill-tag {
+  background: rgba(250,250,250,.78) !important;
+  border-color: rgba(20,20,20,.10) !important;
+  color: #555 !important;
+}
+
+#projectModal .skill-tag.active,
 #projectModal .team-position-chip.active {
   background: var(--red) !important;
   border-color: var(--red) !important;
@@ -8143,25 +8152,25 @@ body::before {
 
 #projectModal.image-zoomed .frame.image-frame {
   position: fixed !important;
-  inset: 42px 54px !important;
+  inset: 58px 86px !important;
   z-index: 145 !important;
   min-height: auto !important;
-  padding: 26px 68px !important;
+  padding: 24px 82px !important;
   background: rgba(250,250,250,.98) !important;
   box-shadow: 0 28px 95px rgba(0,0,0,.38), inset 0 0 0 1px rgba(20,20,20,.08) !important;
 }
 
 #projectModal.image-zoomed .project-image-figure {
-  max-width: min(1180px, calc(100vw - 190px)) !important;
+  max-width: min(1040px, calc(100vw - 280px)) !important;
 }
 
 #projectModal.image-zoomed .project-image-figure a {
-  min-height: calc(100vh - 150px) !important;
+  min-height: calc(100vh - 190px) !important;
   cursor: zoom-out !important;
 }
 
 #projectModal.image-zoomed .project-image-figure img {
-  max-height: calc(100vh - 170px) !important;
+  max-height: calc(100vh - 210px) !important;
   max-width: 100% !important;
 }
 

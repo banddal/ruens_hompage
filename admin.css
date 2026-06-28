@@ -392,6 +392,9 @@ textarea.admin-input {
   border: 1px solid var(--line);
   font-size: 12px;
   font-weight: 850;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .team-position-field label:has(input:checked),

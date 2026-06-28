@@ -26,6 +26,12 @@ const TEAM_POSITION_LABELS = {
   member: "Member",
   independent: "Independent"
 };
+const SKILL_CHIP_LABELS = {
+  plan: "P",
+  strategy: "S",
+  operation: "O",
+  "communication-negotiation": "C&N"
+};
 const API_BASE = (() => {
   const configured = window.HOMO_RUENS_API_BASE || "";
   if (configured) return configured.replace(/\/+$/, "");
@@ -903,11 +909,14 @@ function renderProjectModal(project) {
   $("#projectRole").textContent = p.role;
   $("#projectOutcome").textContent = p.outcome;
   
-  const skillLabels = (p.skillTags || []).map(t => SKILLSET_LABELS[t] || t);
-  $("#projectMetric").innerHTML = (skillLabels.length ? skillLabels : [p.category || "Project"])
-    .slice(0, 4)
-    .map(label => `<span class="tag skill-tag">${escapeHtml(label)}</span>`)
-    .join("");
+  const skillTags = Array.isArray(p.skillTags) && p.skillTags.length
+    ? p.skillTags
+    : [];
+  $("#projectMetric").innerHTML = Object.entries(SKILL_CHIP_LABELS).map(([value, label]) => {
+    const active = skillTags.includes(value);
+    const fullLabel = SKILLSET_LABELS[value] || value;
+    return `<span class="tag skill-tag${active ? " active" : ""}" title="${escapeHtml(fullLabel)}" aria-label="${escapeHtml(fullLabel)}">${escapeHtml(label)}</span>`;
+  }).join("");
   const teamPositions = Array.isArray(p.teamPositions) && p.teamPositions.length
     ? p.teamPositions
     : [];
