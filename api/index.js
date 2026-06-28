@@ -210,13 +210,11 @@ function securityStatus(req) {
       allowedExtensions: Array.from(ALLOWED_UPLOAD_EXTS).sort()
     },
     storage: {
-      mode: supabaseEnabled() ? "supabase" : (process.env.RENDER ? "render-local" : "local"),
+      mode: supabaseEnabled() ? "supabase" : "local",
       bucket: supabaseEnabled() ? SUPABASE_STORAGE_BUCKET : "",
       note: supabaseEnabled()
         ? "Supabase Database와 Storage를 우선 저장소로 사용 중입니다."
-        : process.env.RENDER
-        ? "Render 재배포 시 로컬 업로드 파일이 사라질 수 있으므로 Persistent Disk 또는 외부 Storage 연결이 필요합니다."
-        : "현재 로컬 파일 시스템에 저장 중입니다."
+        : "Supabase 미설정(로컬 개발). 운영에서는 환경변수로 Supabase를 연결하세요."
     }
   };
 }
@@ -259,6 +257,7 @@ function publicProject(project) {
     images: project.images || [],
     files: (project.files || []).filter(file => file.visibility !== "private"),
     status: project.status || "published",
+    dashboardFeatured: Boolean(project.dashboardFeatured),
     sortOrder: project.sortOrder || 0,
     updatedAt: project.updatedAt
   };
@@ -303,6 +302,7 @@ function normalizeProject(project, index = 0) {
     images: project.images || [],
     files: project.files || [],
     status: project.status || "published",
+    dashboardFeatured: Boolean(project.dashboardFeatured),
     sortOrder: project.sortOrder || index + 1,
     createdAt: project.createdAt || project.updatedAt || new Date().toISOString(),
     updatedAt: project.updatedAt || new Date().toISOString()
@@ -371,6 +371,7 @@ function dbProjectToProject(row, images = [], files = []) {
     images,
     files,
     status: row.status,
+    dashboardFeatured: Boolean(row.dashboard_featured),
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -395,6 +396,7 @@ function projectToDbRow(project) {
     team_positions: normalized.teamPositions,
     gallery: normalized.gallery,
     status: normalized.status,
+    dashboard_featured: normalized.dashboardFeatured,
     sort_order: normalized.sortOrder,
     updated_at: new Date().toISOString()
   };
