@@ -859,6 +859,69 @@ $("#fetchMetaBtn")?.addEventListener("click", fetchEssayMeta);
 $("#cleanBodyBtn")?.addEventListener("click", cleanEssayBody);
 $("#essayBody")?.addEventListener("input", updateBodyCharCount);
 $("#essayEditor")?.addEventListener("input", updateBodyCharCount);
+
+// 붙여넣기: 네이버/브런치의 복잡한 서식 HTML을 깨끗하게 정리해서 삽입
+$("#essayEditor")?.addEventListener("paste", event => {
+  event.preventDefault();
+  const clipboard = event.clipboardData || window.clipboardData;
+  const htmlData = clipboard.getData("text/html");
+  const textData = clipboard.getData("text/plain");
+
+  let cleanHtml;
+  if (htmlData) {
+    cleanHtml = cleanPastedHtml(htmlData);
+  } else {
+    // HTML이 없으면 평문을 문단으로
+    cleanHtml = (textData || "")
+      .split(/\n{2,}/)
+      .map(p => p.trim() ? `<p>${escapeAdminHtml(p).replace(/\n/g, "<br>")}</p>` : "")
+      .join("");
+  }
+  document.execCommand("insertHTML", false, cleanHtml);
+  updateBodyCharCount();
+});
+
+function escapeAdminHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// 붙여넣은 HTML에서 의미있는 구조(문단·제목·굵게·기울임·인용·리스트·이미지)만 남기고
+// class/style/span 등 플랫폼 전용 서식 코드를 전부 제거한다.
+function cleanPastedHtml(html) {
+  const allowed = new Set(["P","BR","H2","H3","STRONG","B","EM","I","U","BLOCKQUOTE","UL","OL","LI","HR","IMG","A"]);
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach(child => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        walk(child);
+        const tag = child.tagName;
+        if (!allowed.has(tag)) {
+          // 허용 안 된 태그(span, div 등)는 내용물만 남기고 태그 제거
+          while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
+          child.remove();
+          return;
+        }
+        // 허용 태그라도 class·style 등 속성은 전부 제거(필요한 것만 남김)
+        const keep = tag === "A" ? ["href"] : tag === "IMG" ? ["src", "alt"] : [];
+        Array.from(child.attributes).forEach(a => {
+          if (!keep.includes(a.name.toLowerCase())) child.removeAttribute(a.name);
+        });
+      } else if (child.nodeType === Node.COMMENT_NODE) {
+        child.remove();
+      }
+    });
+  };
+  walk(tmp);
+
+  // 빈 태그 정리 + 네이버 특유의 줄단위 <p>를 합치기엔 과하니, 빈 p만 제거
+  let out = tmp.innerHTML
+    .replace(/<p>\s*<\/p>/gi, "")
+    .replace(/(<br\s*\/?>\s*){3,}/gi, "<br><br>")
+    .trim();
+  return out || `<p>${escapeAdminHtml(tmp.textContent || "")}</p>`;
+}
 $("#essayToolbar")?.addEventListener("click", event => {
   const btn = event.target.closest("[data-cmd]");
   if (btn) { event.preventDefault(); runEditorCommand(btn.dataset.cmd); }

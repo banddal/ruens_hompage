@@ -56,6 +56,15 @@ function escapeHtml(v) {
   return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
+// 네이버·플랫폼 기본 썸네일이면 카드 배경으로 쓰지 않음
+function isGenericCoverImage(url) {
+  const u = String(url || "").toLowerCase();
+  if (!u) return true;
+  return ["blogpfthumb","blog_profile","static.naver","ssl.pstatic.net/static",
+    "img_share_default","default_image","noimage","no_image","/static/img/help"]
+    .some(p => u.includes(p));
+}
+
 // 에세이 본문 HTML 새니타이저: 허용된 태그·속성만 통과시켜 XSS를 차단한다.
 // 서식 에디터가 저장한 HTML을 안전하게 표시하기 위함.
 function sanitizeEssayHtml(html) {
@@ -448,7 +457,7 @@ function createEssayCard(item, isNews=false) {
 
   // 대표 이미지(og:image)가 있으면 카드 배경으로 사용 → 제목이 그 위에 얹힘
   const cover = (typeof ESSAY_COVER_IMAGES !== "undefined") ? ESSAY_COVER_IMAGES[essay.id] : "";
-  if (cover) {
+  if (cover && !isGenericCoverImage(cover)) {
     btn.classList.add("has-cover");
     btn.style.setProperty("--essay-cover", `url("${cover.replace(/"/g, "%22")}")`);
   }

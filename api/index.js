@@ -1069,6 +1069,19 @@ function buildUrlCandidates(rawUrl) {
   return [...new Set(candidates)];
 }
 
+// 네이버·플랫폼의 기본/공용 썸네일(글 내용과 무관)인지 판별
+function isGenericThumbnail(url) {
+  const u = String(url || "").toLowerCase();
+  if (!u) return true;
+  const genericPatterns = [
+    "blogimgurl", "blog_profile", "blogpfthumb",      // 네이버 프로필/기본
+    "static.naver", "ssl.pstatic.net/static",          // 네이버 정적 기본 이미지
+    "img_share_default", "default_image", "noimage", "no_image",
+    "blank.", "common/img", "/static/img/help"          // 브런치 등 기본 공유 이미지
+  ];
+  return genericPatterns.some(p => u.includes(p));
+}
+
 async function fetchMetaFromUrl(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -1109,8 +1122,30 @@ async function fetchMetaFromUrl(url) {
       if (tm) title = decode(tm[1].replace(/\s*:\s*네이버 블로그\s*$/, "").trim());
     }
     const summary = decode(pick(["og:description", "twitter:description", "description"]));
-    const coverImage = pick(["og:image", "twitter:image"]);
-    const publishedAt = pick(["article:published_time", "og:regDate"]);
+    let coverImage = pick(["og:image", "twitter:image"]);
+    // 네이버·플랫폼의 무의미한 기본 썸네일은 카드 배경으로 쓰지 않음
+    if (coverImage && isGenericThumbnail(coverImage)) coverImage = "";
+    // 작성일: 여러 메타태그 + JSON-LD + 네이버 패턴까지 폭넓게 탐색
+    let publishedAt = pick([
+      "article:published_time", "og:published_time", "published_time",
+      "article:pubDate", "datePublished", "dateCreated",
+      "og:regDate", "og:article:published_time"
+    ]);
+    // JSON-LD 구조화 데이터에서 datePublished 추출
+    if (!publishedAt) {
+      const ld = html.match(/"datePublished"\s*:\s*"([^"]+)"/i);
+      if (ld && ld[1]) publishedAt = ld[1].trim();
+    }
+    // <time datetime="..."> 요소
+    if (!publishedAt) {
+      const t = html.match(/<time[^>]+datetime=["']([^"']+)["']/i);
+      if (t && t[1]) publishedAt = t[1].trim();
+    }
+    // 네이버 모바일: se_publishDate 등 클래스에 든 날짜 텍스트 (YYYY. MM. DD.)
+    if (!publishedAt) {
+      const nv = html.match(/(\d{4})\.\s?(\d{1,2})\.\s?(\d{1,2})\.?\s?\d{0,2}:?\d{0,2}/);
+      if (nv) publishedAt = `${nv[1]}-${String(nv[2]).padStart(2,"0")}-${String(nv[3]).padStart(2,"0")}`;
+    }
     if (!title && !summary) return null;
     return { title, summary, coverImage, publishedAt };
   } catch {
