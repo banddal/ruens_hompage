@@ -30,7 +30,7 @@ const API_BASE = (() => {
   const configured = window.HOMO_RUENS_API_BASE || "";
   if (configured) return configured.replace(/\/+$/, "");
   const host = window.location.hostname || "";
-  if (host === "ruens-hompage.onrender.com") return "";
+  if (window.location.protocol === "http:" || window.location.protocol === "https:") return "";
   return DEFAULT_API_ORIGIN;
 })();
 const backendProjectCache = new Map();
@@ -73,6 +73,27 @@ function fileNameFromUrl(url, fallback = "portfolio-file") {
   } catch (error) {
     return fallback;
   }
+}
+
+function normalizeAssetUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) return raw;
+  if (raw.startsWith("/")) return `${API_BASE}${raw}`;
+  return raw;
+}
+
+function getAssetUrl(asset) {
+  return normalizeAssetUrl(
+    asset?.publicUrl ||
+    asset?.public_url ||
+    asset?.url ||
+    asset?.src ||
+    asset?.path ||
+    asset?.storageUrl ||
+    asset?.storage_url ||
+    ""
+  );
 }
 
 async function downloadInBrowser(url, filename = "portfolio-file") {
@@ -821,14 +842,14 @@ function renderProjectUploads(project) {
   const strip = $("#projectAttachmentStrip");
   const images = Array.isArray(project?.images) ? project.images : [];
   const files = Array.isArray(project?.files) ? project.files.filter(file => file.visibility !== "private") : [];
-  const visibleImages = images.filter(image => image.publicUrl || image.path);
+  const visibleImages = images.filter(image => getAssetUrl(image));
 
   const fileHtml = `
     <section class="project-upload-section">
       <h4>첨부파일</h4>
       <div class="project-upload-files">
         ${files.length ? files.map(file => {
-          const href = file.publicUrl || file.path || "";
+          const href = getAssetUrl(file);
           const publicFile = file.visibility === "public";
           const visibility = publicFile ? "공개 다운로드" : "요청 시 공개";
           const filename = cleanAssetText(file.title) || fileNameFromUrl(href, "portfolio-file");
@@ -897,17 +918,18 @@ function renderProjectModal(project) {
 
   $("#thumbs").innerHTML = "";
   const uploadedImages = Array.isArray(p.images) ? p.images
-    .filter(image => image.publicUrl || image.path)
+    .filter(image => getAssetUrl(image))
     .map((image, imageIndex) => {
       const caption = cleanAssetText(image.caption);
       const description = cleanAssetText(image.description);
       const alt = cleanAssetText(image.alt);
+      const src = getAssetUrl(image);
       return {
         kind: "image",
         type: "사진 설명",
         title: "",
         desc: caption || description || "",
-        src: image.publicUrl || image.path,
+        src,
         alt: alt || caption || p.title || `Project image ${imageIndex + 1}`
       };
     }) : [];
