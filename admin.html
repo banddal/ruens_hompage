@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260627-team-position-1" />
+<link rel="stylesheet" href="admin.css?v=20260628-project-modal-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -129,6 +129,14 @@
               <label><input type="checkbox" name="teamPositions" value="independent" /> Independent</label>
             </fieldset>
 
+            <fieldset class="admin-fieldset skill-tags-field">
+              <legend>핵심 역량</legend>
+              <label><input type="checkbox" name="skillTags" value="plan" /> Plan</label>
+              <label><input type="checkbox" name="skillTags" value="strategy" /> Strategy</label>
+              <label><input type="checkbox" name="skillTags" value="operation" /> Operation</label>
+              <label><input type="checkbox" name="skillTags" value="communication-negotiation" /> Communication</label>
+            </fieldset>
+
             <label>
               결과
               <textarea name="outcome" class="admin-input" rows="3"></textarea>
@@ -138,10 +146,6 @@
               <label>
                 태그, 쉼표 구분
                 <input name="tags" class="admin-input" />
-              </label>
-              <label>
-                역량 태그
-                <input name="skillTags" class="admin-input" placeholder="plan, strategy" />
               </label>
             </div>
 
@@ -203,7 +207,7 @@
         <form id="passwordForm" class="security-card">
           <p class="eyebrow">Password</p>
           <h2>관리자 비밀번호 설정</h2>
-          <p class="security-copy">비밀번호는 코드에 저장하지 않고 Vercel 환경변수(ADMIN_PASSWORD)로 관리합니다.</p>
+          <p class="security-copy">비밀번호는 코드에 저장하지 않고 서버의 보안 JSON 또는 Render 환경변수로 관리합니다.</p>
           <input id="newPassword" class="admin-input" type="password" autocomplete="new-password" placeholder="새 비밀번호, 10자 이상" required />
           <input id="confirmPassword" class="admin-input" type="password" autocomplete="new-password" placeholder="새 비밀번호 확인" required />
           <button type="submit" class="primary">비밀번호 저장</button>
@@ -213,6 +217,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260627-team-position-1"></script>
+<script src="admin.js?v=20260628-project-modal-1"></script>
 </body>
 </html>

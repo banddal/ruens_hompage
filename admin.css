@@ -370,15 +370,18 @@ textarea.admin-input {
   font-weight: 900;
 }
 
-.team-position-field {
+.team-position-field,
+.skill-tags-field {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.team-position-field legend {
+.team-position-field legend,
+.skill-tags-field legend {
   grid-column: 1 / -1;
 }
 
-.team-position-field label {
+.team-position-field label,
+.skill-tags-field label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -389,6 +392,13 @@ textarea.admin-input {
   border: 1px solid var(--line);
   font-size: 12px;
   font-weight: 850;
+}
+
+.team-position-field label:has(input:checked),
+.skill-tags-field label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .asset-panel {

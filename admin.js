@@ -228,7 +228,7 @@ function fillForm(project) {
   projectForm.elements.role.value = project.role || "";
   projectForm.elements.outcome.value = project.outcome || "";
   projectForm.elements.tags.value = joinTags(project.tags);
-  projectForm.elements.skillTags.value = joinTags(project.skillTags);
+  writeCheckedValues("skillTags", project.skillTags);
   writeCheckedValues("teamPositions", project.teamPositions);
   renderAssets(project);
   renderProjectList();
@@ -249,7 +249,7 @@ function readForm() {
     role: form.role.value.trim(),
     outcome: form.outcome.value.trim(),
     tags: splitTags(form.tags.value),
-    skillTags: splitTags(form.skillTags.value),
+    skillTags: readCheckedValues("skillTags"),
     teamPositions: readCheckedValues("teamPositions"),
     gallery: selectedProject?.gallery || [],
     images: selectedProject?.images || [],

@@ -17,19 +17,22 @@ const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 let activeProject = false;
 let projectGalleryImages = [];
 let projectGalleryIndex = 0;
+let projectImageZoomed = false;
 
-// Vercel 통합 배포: 프론트와 API가 같은 도메인이므로 기본값은 상대경로("").
-// 로컬에서 별도 백엔드를 띄워 붙이고 싶을 때만 window.HOMO_RUENS_API_BASE 로 override.
-const API_BASE = (() => {
-  const configured = window.HOMO_RUENS_API_BASE || "";
-  return configured.replace(/\/+$/, "");
-})();
+const DEFAULT_API_ORIGIN = "https://ruens-hompage.onrender.com";
 const TEAM_POSITION_LABELS = {
   director: "Directer",
   pm: "PM",
   member: "Member",
   independent: "Independent"
 };
+const API_BASE = (() => {
+  const configured = window.HOMO_RUENS_API_BASE || "";
+  if (configured) return configured.replace(/\/+$/, "");
+  const host = window.location.hostname || "";
+  if (host === "ruens-hompage.onrender.com") return "";
+  return DEFAULT_API_ORIGIN;
+})();
 const backendProjectCache = new Map();
 
 let activeEssayId = null;
@@ -859,12 +862,12 @@ function renderProjectUploads(project) {
 
   if (strip) {
     if (!visibleImages.length && !files.length) {
-      strip.innerHTML = `<span class="project-attachment-empty">등록된 이미지와 첨부파일이 없습니다.</span>`;
+      strip.innerHTML = "";
+      strip.hidden = true;
       return;
     }
-    strip.innerHTML = `
-      <span class="project-attachment-empty">이미지 ${visibleImages.length}개 · 첨부파일 ${files.length}개</span>
-    `;
+    strip.innerHTML = "";
+    strip.hidden = true;
   }
 }
 
@@ -873,9 +876,9 @@ function renderProjectModal(project) {
   if (!p) return;
   $("#projectCategory").textContent = p.category;
   $("#projectTitle").textContent = p.title;
-  $("#projectDescription").textContent = p.description;
+  $("#projectDescription").textContent = p.short || p.description || "";
   $("#projectPeriod").textContent = p.period;
-  $("#projectShort").textContent = p.short || p.description || "";
+  $("#projectShort").textContent = p.description || p.short || "";
   $("#projectRole").textContent = p.role;
   $("#projectOutcome").textContent = p.outcome;
   
@@ -985,6 +988,7 @@ function renderProjectImageAt(index) {
   projectGalleryIndex = safeIndex;
   const image = projectGalleryImages[safeIndex];
   if (!image?.src) {
+    setProjectImageZoom(false);
     figure.classList.remove("has-image");
     link.removeAttribute("href");
     link.removeAttribute("target");
@@ -1009,6 +1013,16 @@ function renderProjectImageAt(index) {
   $$("#thumbs .thumb").forEach((t, i) => t.classList.toggle("active", i === safeIndex));
 }
 
+function setProjectImageZoom(zoomed) {
+  projectImageZoomed = Boolean(zoomed && projectGalleryImages.length);
+  $("#projectModal")?.classList.toggle("image-zoomed", projectImageZoomed);
+}
+
+function toggleProjectImageZoom() {
+  if (!projectGalleryImages.length) return;
+  setProjectImageZoom(!projectImageZoomed);
+}
+
 function renderAssetText(g, idx) {
   const panel = $("#assetTextPanel");
   const isImage = g?.kind === "image";
@@ -1026,6 +1040,7 @@ function renderAssetText(g, idx) {
 }
 
 function closeProjectModal() {
+  setProjectImageZoom(false);
   $("#projectModal").classList.remove("open");
   $("#projectModal").setAttribute("aria-hidden", "true");
   document.body.classList.remove("lock");
@@ -1040,6 +1055,7 @@ $("#projectImageNext")?.addEventListener("click", () => renderProjectImageAt(pro
   element.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
+    toggleProjectImageZoom();
   });
   element.addEventListener("contextmenu", event => event.preventDefault());
   element.addEventListener("dragstart", event => event.preventDefault());
@@ -1212,7 +1228,13 @@ $$(".js-open-project").forEach(btn => btn.addEventListener("click", () => openPr
 
 $$("[data-close-project]").forEach(el => el.addEventListener("click", closeProjectModal));
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && activeProject) closeProjectModal();
+  if (e.key === "Escape" && activeProject) {
+    if (projectImageZoomed) {
+      setProjectImageZoom(false);
+      return;
+    }
+    closeProjectModal();
+  }
 });
 
 $$("[data-close-essay]").forEach(el => el.addEventListener("click", closeEssayModal));
