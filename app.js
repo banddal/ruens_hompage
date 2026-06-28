@@ -416,10 +416,25 @@ function formatEssaySummary(summary) {
     .replace(/합니다\.?$/, "한 포스트");
 }
 
+// HTML 본문에서 순수 텍스트만 추출(리드문·미리보기용). 태그 노출 방지.
+function htmlToPlainBlocks(html) {
+  const div = document.createElement("div");
+  div.innerHTML = String(html || "");
+  // 블록 요소 경계를 줄바꿈으로 (문단 분리 유지)
+  div.querySelectorAll("p, h2, h3, h4, blockquote, li, br, hr, div").forEach(el => {
+    el.insertAdjacentText("afterend", "\n\n");
+  });
+  const text = div.textContent || "";
+  return text.split(/\n{2,}/).map(p => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
 function essayToObject(item) {
   const fullText = ESSAY_FULL_TEXTS[item[0]];
+  const isHtmlBody = /<(p|h2|h3|strong|b|em|i|u|blockquote|ul|ol|li|hr|img|br)\b/i.test(fullText || "");
   const bodyBlocks = fullText
-    ? fullText.split(/\n{2,}/).map(p => p.trim()).filter(Boolean)
+    ? (isHtmlBody
+        ? htmlToPlainBlocks(fullText)
+        : fullText.split(/\n{2,}/).map(p => p.trim()).filter(Boolean))
     : [
       item[3],
       "이 영역은 실제 글 전문이 들어갈 자리입니다. 지금은 Essay 메뉴의 구조를 먼저 잡기 위해 제목, 요약, 본문, 댓글 기능을 연결해 둔 상태입니다.",
@@ -433,7 +448,9 @@ function essayToObject(item) {
     tags: Array.isArray(item[4]) ? item[4] : [],
     date: item[5] || extractEssayDate(bodyBlocks),
     lead: extractEssayLead(bodyBlocks, item[3], item[2]),
-    body: bodyBlocks
+    body: bodyBlocks,
+    // 모달용 원본(HTML이면 HTML 그대로, 아니면 빈 문자열)
+    bodyRaw: isHtmlBody ? fullText : ""
   };
 }
 
@@ -453,7 +470,8 @@ function createEssayCard(item, isNews=false) {
     : essay.date;
   btn.dataset.date = realDate;
   btn.dataset.lead = essay.lead;
-  btn.dataset.body = essay.body.join("\n\n");
+  // 모달엔 원본 HTML(있으면), 없으면 평문 블록을 줄바꿈으로
+  btn.dataset.body = essay.bodyRaw || essay.body.join("\n\n");
 
   // 대표 이미지(og:image)가 있으면 카드 배경으로 사용 → 제목이 그 위에 얹힘
   const cover = (typeof ESSAY_COVER_IMAGES !== "undefined") ? ESSAY_COVER_IMAGES[essay.id] : "";
