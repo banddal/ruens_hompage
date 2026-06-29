@@ -2186,22 +2186,30 @@ initStoryV6();
     let moved = false;
     let startY = 0;
     let scrollTop = 0;
+    let captured = false;
 
     board.addEventListener("pointerdown", e => {
       if (e.button !== undefined && e.button !== 0) return;
       isDown = true;
       moved = false;
+      captured = false;
       startY = e.clientY;
       scrollTop = board.scrollTop;
-      board.classList.add("dragging");
-      board.setPointerCapture?.(e.pointerId);
     });
 
     board.addEventListener("pointermove", e => {
       if (!isDown) return;
       const dy = e.clientY - startY;
-      if (Math.abs(dy) > 4) moved = true;
-      board.scrollTop = scrollTop - dy;
+      if (Math.abs(dy) > 4) {
+        moved = true;
+        // 실제 드래그가 시작된 순간에만 캡처(단순 클릭은 캡처 안 함 → 클릭 정상 동작)
+        if (!captured) {
+          board.classList.add("dragging");
+          board.setPointerCapture?.(e.pointerId);
+          captured = true;
+        }
+      }
+      if (moved) board.scrollTop = scrollTop - dy;
     });
 
     function endDrag() {
@@ -2218,6 +2226,7 @@ initStoryV6();
     board.addEventListener("pointercancel", endDrag);
     board.addEventListener("pointerleave", endDrag);
     board.addEventListener("click", e => {
+      // 실제 드래그 직후의 클릭만 억제. 단순 클릭은 통과시켜 모달이 열리게 함.
       if (board.dataset.suppressClick === "true") {
         e.preventDefault();
         e.stopPropagation();
