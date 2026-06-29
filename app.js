@@ -2169,7 +2169,7 @@ initStoryV6();
   const ESSAY_CATS = [
     ["publicBusiness", "公과 Business"],
     ["worldOutside", "세계 : The outside world"],
-    ["others", "好不好 , Like & Others"],
+    ["others", "好不好, Like & Others"],
     ["thinkingEmotion", "私와 思, Thinking & Emotion"],
   ];
   function renderEssayArchiveTags() {
