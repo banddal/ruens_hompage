@@ -1067,6 +1067,22 @@ const PROJECTS = [
     "skillTags": [
       "plan"
     ]
+  },
+  {
+    "id": "mingeon8-gyeonggi-policy",
+    "category": "Plan",
+    "metric": "민건 8기",
+    "title": "민건 8기 경기도 정책 제안",
+    "period": "2022",
+    "short": "",
+    "description": "",
+    "role": "",
+    "outcome": "",
+    "tags": [],
+    "gallery": [],
+    "skillTags": [
+      "plan"
+    ]
   }
 ];
 
