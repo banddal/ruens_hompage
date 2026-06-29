@@ -2260,15 +2260,31 @@ initStoryV6();
       essayList.appendChild(cat);
       enableArchEssayBoardSwipe(board);
     });
-    // 모달 연결
-    $$(".js-open-essay", essayList).forEach(row => {
-      row.addEventListener("click", () => {
-        if (typeof openEssayModal === "function" && typeof createEssayCard === "function") {
-          openEssayModal(createEssayCard(row._essayItem));
+    // 모달 연결: 개별 바인딩 대신 컨테이너 이벤트 위임(재렌더돼도 안 끊김)
+    // 위임은 renderEssays 밖에서 1회만 등록(아래 ensureArchEssayDelegation).
+  }
+
+  // essayList에 클릭 위임을 단 한 번만 등록 (renderEssays 재호출에도 유지)
+  let archEssayDelegationBound = false;
+  function ensureArchEssayDelegation() {
+    if (archEssayDelegationBound || !essayList) return;
+    archEssayDelegationBound = true;
+    essayList.addEventListener("click", e => {
+      const row = e.target.closest(".js-open-essay");
+      if (!row) return;
+      if (typeof openEssayModal !== "function" || typeof createEssayCard !== "function") return;
+      // _essayItem 우선, 없으면 essayId로 ESSAYS에서 찾아 폴백
+      let item = row._essayItem;
+      if (!item && row.dataset.essayId && typeof ESSAYS !== "undefined") {
+        for (const key of Object.keys(ESSAYS)) {
+          const found = (ESSAYS[key] || []).find(it => it[0] === row.dataset.essayId);
+          if (found) { item = found; break; }
         }
-      });
+      }
+      if (item) openEssayModal(createEssayCard(item));
     });
   }
+  ensureArchEssayDelegation();
   essayTags?.addEventListener("click", e => {
     const button = e.target.closest("[data-arch-essay-tag]");
     if (!button) return;
