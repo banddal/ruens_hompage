@@ -1,0 +1,10 @@
+{
+  "passwordHash": {
+    "algorithm": "pbkdf2-sha256",
+    "iterations": 120000,
+    "salt": "345b6862b4aa391e668e61a52b68e070",
+    "hash": "234d556ca1aa4c37744efce90b7e1f3192ffb7f91fc6c9ba78b6423212fabcb3",
+    "updatedAt": "2026-06-26T21:50:41.463Z"
+  },
+  "updatedAt": "2026-06-26T21:50:41.463Z"
+}
