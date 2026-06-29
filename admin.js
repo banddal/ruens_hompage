@@ -511,6 +511,10 @@ function switchTab(name) {
     panel.classList.toggle("hidden", panel.id !== `${name}Panel`);
   });
   if (name === "memos") loadMemos();
+  if (name === "comments") {
+    loadComments();
+    loadBlockedIps();
+  }
   if (name === "essays") loadEssays();
 }
 
@@ -810,6 +814,96 @@ async function deleteMemo(id) {
   loadMemos();
 }
 
+// ===== 에세이 댓글 관리 (관리자 전용) =====
+async function loadComments() {
+  const list = $("#commentList");
+  const countEl = $("#commentCount");
+  if (!list) return;
+  list.innerHTML = `<p class="memo-admin-empty">댓글을 불러오는 중…</p>`;
+  const comments = await apiJson("/api/admin/comments").catch(() => null);
+  if (!Array.isArray(comments)) {
+    list.innerHTML = `<p class="memo-admin-empty">댓글을 불러오지 못했습니다.</p>`;
+    return;
+  }
+  if (countEl) countEl.textContent = comments.length ? `(${comments.length})` : "";
+  if (!comments.length) {
+    list.innerHTML = `<p class="memo-admin-empty">등록된 댓글이 없습니다.</p>`;
+    return;
+  }
+  list.innerHTML = comments.map(comment => {
+    const isReply = Boolean(comment.parent_id);
+    const blocked = Boolean(comment.is_blocked);
+    return `
+      <article class="memo-admin-item comment-admin-item ${blocked ? "is-read" : "is-unread"}" data-comment-id="${escapeMemo(comment.id)}">
+        <div class="memo-admin-head">
+          <strong>${escapeMemo(comment.writer || "익명")}${isReply ? " · 답글" : ""}</strong>
+          <span class="memo-admin-meta">${escapeMemo(comment.essay_id || "-")} · ${escapeMemo(formatMemoDate(comment.created_at))}</span>
+        </div>
+        <p class="memo-admin-body">${escapeMemo(comment.body || "")}</p>
+        <div class="comment-admin-meta">
+          <span>IP ${escapeMemo(comment.source_ip || "-")}</span>
+          ${blocked ? "<span>차단됨</span>" : ""}
+        </div>
+        <div class="memo-admin-actions">
+          <button type="button" class="danger" data-comment-delete="${escapeMemo(comment.id)}">삭제</button>
+          ${comment.source_ip ? `<button type="button" class="ghost" data-comment-block="${escapeMemo(comment.id)}">IP 차단</button>` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+async function deleteComment(id) {
+  if (!window.confirm("이 댓글을 삭제할까요? 답글이 있으면 함께 삭제될 수 있습니다.")) return;
+  await apiJson(`/api/admin/comments/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);
+  await loadComments();
+}
+
+async function blockCommentIp(commentId) {
+  if (!window.confirm("이 댓글 작성자의 IP를 차단하고 기존 댓글을 숨길까요?")) return;
+  await apiJson("/api/admin/block-ip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commentId })
+  }).catch(() => null);
+  await loadComments();
+  await loadBlockedIps();
+}
+
+async function loadBlockedIps() {
+  const list = $("#blockedIpList");
+  if (!list) return;
+  list.innerHTML = `<p class="memo-admin-empty">차단 IP를 불러오는 중…</p>`;
+  const ips = await apiJson("/api/admin/blocked-ips").catch(() => null);
+  if (!Array.isArray(ips)) {
+    list.innerHTML = `<p class="memo-admin-empty">차단 IP를 불러오지 못했습니다.</p>`;
+    return;
+  }
+  if (!ips.length) {
+    list.innerHTML = `<p class="memo-admin-empty">차단된 IP가 없습니다.</p>`;
+    return;
+  }
+  list.innerHTML = ips.map(item => `
+    <article class="memo-admin-item blocked-ip-item">
+      <div class="memo-admin-head">
+        <strong>${escapeMemo(item.ip || "-")}</strong>
+        <span class="memo-admin-meta">${escapeMemo(formatMemoDate(item.created_at))}</span>
+      </div>
+      ${item.reason ? `<p class="memo-admin-body">${escapeMemo(item.reason)}</p>` : ""}
+      <div class="memo-admin-actions">
+        <button type="button" class="ghost" data-ip-unblock="${escapeMemo(item.ip || "")}">차단 해제</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+async function unblockIp(ip) {
+  if (!ip || !window.confirm(`${ip} 차단을 해제할까요?`)) return;
+  await apiJson(`/api/admin/block-ip/${encodeURIComponent(ip)}`, { method: "DELETE" }).catch(() => null);
+  await loadBlockedIps();
+  await loadComments();
+}
+
 projectList.addEventListener("click", async event => {
   const button = event.target.closest("[data-project-id]");
   if (!button) return;
@@ -849,6 +943,8 @@ $$(".admin-tab").forEach(button => {
   button.addEventListener("click", () => switchTab(button.dataset.adminTab));
 });
 $("#reloadMemos")?.addEventListener("click", () => loadMemos());
+$("#reloadComments")?.addEventListener("click", () => loadComments());
+$("#reloadBlockedIps")?.addEventListener("click", () => loadBlockedIps());
 
 // 에세이 이벤트 연결
 $("#reloadEssays")?.addEventListener("click", () => loadEssays());
@@ -943,6 +1039,21 @@ $("#memoList")?.addEventListener("click", event => {
   }
   const delBtn = event.target.closest("[data-memo-delete]");
   if (delBtn) deleteMemo(delBtn.dataset.memoDelete);
+});
+
+$("#commentList")?.addEventListener("click", event => {
+  const deleteButton = event.target.closest("[data-comment-delete]");
+  if (deleteButton) {
+    deleteComment(deleteButton.dataset.commentDelete);
+    return;
+  }
+  const blockButton = event.target.closest("[data-comment-block]");
+  if (blockButton) blockCommentIp(blockButton.dataset.commentBlock);
+});
+
+$("#blockedIpList")?.addEventListener("click", event => {
+  const unblockButton = event.target.closest("[data-ip-unblock]");
+  if (unblockButton) unblockIp(unblockButton.dataset.ipUnblock);
 });
 
 loadSecurityStatus().catch(error => {

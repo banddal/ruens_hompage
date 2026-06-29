@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260629-lead-1" />
+<link rel="stylesheet" href="admin.css?v=20260629-comment-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -38,6 +38,7 @@
       <button type="button" class="admin-tab active" data-admin-tab="projects">Projects</button>
       <button type="button" class="admin-tab" data-admin-tab="essays">Essays</button>
       <button type="button" class="admin-tab" data-admin-tab="memos">Memos</button>
+      <button type="button" class="admin-tab" data-admin-tab="comments">Comments</button>
       <button type="button" class="admin-tab" data-admin-tab="security">Security</button>
     </nav>
 
@@ -357,6 +358,31 @@
       </section>
     </section>
 
+    <section id="commentsPanel" class="admin-tab-panel comments-panel hidden">
+      <section class="security-card">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Comments</p>
+            <h2>에세이 댓글 <span id="commentCount" class="memo-count"></span></h2>
+          </div>
+          <button type="button" id="reloadComments">새로고침</button>
+        </div>
+        <p class="security-copy">에세이 모달에 등록된 댓글과 답글입니다. 관리자는 댓글 삭제와 IP 차단/해제를 할 수 있습니다.</p>
+        <div id="commentList" class="memo-admin-list comment-admin-list" aria-live="polite"></div>
+      </section>
+
+      <section class="security-card">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Blocked IP</p>
+            <h2>차단 IP</h2>
+          </div>
+          <button type="button" id="reloadBlockedIps">새로고침</button>
+        </div>
+        <div id="blockedIpList" class="memo-admin-list blocked-ip-list" aria-live="polite"></div>
+      </section>
+    </section>
+
     <section id="securityPanel" class="admin-tab-panel security-panel hidden">
       <div class="security-layout">
         <section class="security-card">
@@ -378,6 +404,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-lead-1"></script>
+<script src="admin.js?v=20260629-comment-1"></script>
 </body>
 </html>

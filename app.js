@@ -43,14 +43,13 @@ const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 let activeEssayId = null;
 let activeReplyPath = null;
+let essayComments = {};
 const activeEssayTags = {
   publicBusiness: null,
   worldOutside: null,
   thinkingEmotion: null,
   others: null
 };
-const ESSAY_COMMENT_STORAGE_KEY = "homoRuensEssayComments";
-const essayComments = loadEssayComments();
 
 function escapeHtml(v) {
   return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
@@ -351,34 +350,67 @@ function syncAllProjectCards() {
   });
 }
 
-function loadEssayComments() {
-  try {
-    return JSON.parse(localStorage.getItem(ESSAY_COMMENT_STORAGE_KEY) || "{}");
-  } catch(e) {
-    return {};
-  }
-}
-
-function saveEssayComments() {
-  try {
-    localStorage.setItem(ESSAY_COMMENT_STORAGE_KEY, JSON.stringify(essayComments));
-  } catch(e) {}
-}
-
 function normalizeEssayComment(comment) {
   return {
+    id: comment?.id || "",
     writer: comment?.writer || "익명",
     body: comment?.body || "",
+    createdAt: comment?.createdAt || comment?.created_at || "",
     replies: Array.isArray(comment?.replies) ? comment.replies.map(normalizeEssayComment) : []
   };
 }
 
-function getEssayCommentByPath(comments, path) {
-  return String(path).split(".").reduce((items, part, idx, parts) => {
-    const comment = Array.isArray(items) ? items[Number(part)] : null;
-    if (!comment) return null;
-    return idx === parts.length - 1 ? comment : comment.replies;
-  }, comments);
+function setEssayCommentMessage(message, tone = "") {
+  const list = $("#essayCommentList");
+  if (!list) return;
+  list.innerHTML = `<div class="essay-comment essay-comment-system ${tone ? `is-${tone}` : ""}"><span>${escapeHtml(message)}</span></div>`;
+}
+
+function formatEssayCommentDate(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function loadEssayCommentsFromApi(essayId) {
+  if (!essayId) return;
+  setEssayCommentMessage("댓글을 불러오는 중입니다.");
+  try {
+    const response = await fetch(apiUrl(`/api/essays/${encodeURIComponent(essayId)}/comments`), { cache: "no-store" });
+    if (!response.ok) throw new Error("댓글을 불러오지 못했습니다.");
+    const comments = await response.json();
+    essayComments[essayId] = Array.isArray(comments) ? comments.map(normalizeEssayComment) : [];
+    renderEssayComments();
+  } catch (error) {
+    console.warn("Essay comments failed:", error);
+    essayComments[essayId] = [];
+    setEssayCommentMessage("댓글을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.", "error");
+  }
+}
+
+async function postEssayComment({ writer, body, password, parentId = "", company = "" }) {
+  if (!activeEssayId) return false;
+  const response = await fetch(apiUrl(`/api/essays/${encodeURIComponent(activeEssayId)}/comments`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ writer, body, password, parentId, company })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "댓글을 등록하지 못했습니다.");
+  await loadEssayCommentsFromApi(activeEssayId);
+  return true;
+}
+
+async function deleteEssayComment(commentId, password) {
+  const response = await fetch(apiUrl(`/api/essays/comments/${encodeURIComponent(commentId)}/delete`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "댓글을 삭제하지 못했습니다.");
+  await loadEssayCommentsFromApi(activeEssayId);
 }
 
 function truncateText(text, limit=52) {
@@ -890,25 +922,30 @@ function renderEssayComments() {
   const comments = (essayComments[activeEssayId] || []).map(normalizeEssayComment);
   essayComments[activeEssayId] = comments;
   list.innerHTML = comments.length
-    ? comments.map((comment, idx) => renderEssayCommentNode(comment, String(idx), 0)).join("")
+    ? comments.map(comment => renderEssayCommentNode(comment, 0)).join("")
     : `<div class="essay-comment"><span>아직 댓글이 없습니다. 첫 댓글을 남겨주세요.</span></div>`;
 }
 
-function renderEssayCommentNode(comment, path, depth) {
+function renderEssayCommentNode(comment, depth) {
   const replies = Array.isArray(comment.replies) ? comment.replies : [];
   const repliesHtml = replies.length
-    ? `<div class="essay-replies">${replies.map((reply, idx) => renderEssayCommentNode(reply, `${path}.${idx}`, depth + 1)).join("")}</div>`
+    ? `<div class="essay-replies">${replies.map(reply => renderEssayCommentNode(reply, depth + 1)).join("")}</div>`
     : "";
   const nodeClass = depth ? "essay-comment essay-reply" : "essay-comment";
+  const id = comment.id || "";
+  const date = formatEssayCommentDate(comment.createdAt);
   return `<div class="${nodeClass}">
-    <b>${escapeHtml(comment.writer || "익명")}</b>
+    <b>${escapeHtml(comment.writer || "익명")}${date ? `<em>${escapeHtml(date)}</em>` : ""}</b>
     <span>${escapeHtml(comment.body || "")}</span>
     ${repliesHtml}
     <div class="essay-comment-actions">
-      <button type="button" class="essay-reply-toggle" data-reply-toggle="${escapeHtml(path)}">${activeReplyPath === path ? "답글 닫기" : "답글 달기"}</button>
+      <button type="button" class="essay-reply-toggle" data-reply-toggle="${escapeHtml(id)}">${activeReplyPath === id ? "답글 닫기" : "답글 달기"}</button>
+      <button type="button" class="essay-comment-delete" data-comment-delete="${escapeHtml(id)}">삭제</button>
     </div>
-    <form class="essay-reply-form" data-reply-form="${escapeHtml(path)}" ${activeReplyPath === path ? "" : "hidden"}>
+    <form class="essay-reply-form" data-reply-form="${escapeHtml(id)}" ${activeReplyPath === id ? "" : "hidden"}>
       <input type="text" data-reply-writer placeholder="이름" required>
+      <input type="password" data-reply-password placeholder="삭제용 비밀번호" required>
+      <input type="text" data-reply-company class="memo-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <textarea data-reply-body placeholder="답글을 남겨주세요." required></textarea>
       <button type="submit">답글 등록</button>
     </form>
@@ -964,10 +1001,12 @@ function openEssayModal(card) {
       ? `<p class="essay-source-link">이 글의 본문은 아직 옮겨지지 않았습니다.<br><a href="${escapeHtml(srcUrl)}" target="_blank" rel="noopener">원문 보기 →</a></p>`
       : `<p class="essay-source-link">본문이 아직 등록되지 않았습니다.</p>`;
   }
-  renderEssayComments();
+  essayComments[activeEssayId] = [];
+  setEssayCommentMessage("댓글을 불러오는 중입니다.");
   $("#essayModal").classList.add("open");
   $("#essayModal").setAttribute("aria-hidden", "false");
   document.body.classList.add("lock");
+  loadEssayCommentsFromApi(activeEssayId);
 }
 
 function closeEssayModal() {
@@ -1576,51 +1615,76 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && activeEssayId) closeEssayModal();
 });
 
-$("#essayCommentForm")?.addEventListener("submit", e => {
+$("#essayCommentForm")?.addEventListener("submit", async e => {
   e.preventDefault();
   if (!activeEssayId) return;
 
   const writerInput = $("#essayCommentWriter");
+  const passwordInput = $("#essayCommentPassword");
+  const companyInput = $("#essayCommentCompany");
   const bodyInput = $("#essayCommentBody");
+  const submitButton = e.currentTarget.querySelector('button[type="submit"]');
   const writer = writerInput?.value.trim() || "익명";
+  const password = passwordInput?.value.trim() || "";
+  const company = companyInput?.value.trim() || "";
   const body = bodyInput?.value.trim() || "";
-  if (!body) return;
+  if (!body || !password) return;
 
-  essayComments[activeEssayId] = essayComments[activeEssayId] || [];
-  essayComments[activeEssayId].push({ writer, body, replies: [] });
-  saveEssayComments();
-  if (writerInput) writerInput.value = "";
-  if (bodyInput) bodyInput.value = "";
-  renderEssayComments();
+  submitButton.disabled = true;
+  try {
+    await postEssayComment({ writer, body, password, company });
+    if (writerInput) writerInput.value = "";
+    if (passwordInput) passwordInput.value = "";
+    if (companyInput) companyInput.value = "";
+    if (bodyInput) bodyInput.value = "";
+  } catch (error) {
+    window.alert(error.message || "댓글을 등록하지 못했습니다.");
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 $("#essayCommentList")?.addEventListener("click", e => {
+  const deleteButton = e.target.closest("[data-comment-delete]");
+  if (deleteButton && activeEssayId) {
+    const commentId = deleteButton.dataset.commentDelete;
+    const password = window.prompt("댓글 작성 시 입력한 삭제용 비밀번호를 입력해 주세요.");
+    if (!password) return;
+    deleteEssayComment(commentId, password).catch(error => {
+      window.alert(error.message || "댓글을 삭제하지 못했습니다.");
+    });
+    return;
+  }
+
   const button = e.target.closest("[data-reply-toggle]");
   if (!button || !activeEssayId) return;
-  const path = button.dataset.replyToggle;
-  activeReplyPath = activeReplyPath === path ? null : path;
+  const parentId = button.dataset.replyToggle;
+  activeReplyPath = activeReplyPath === parentId ? null : parentId;
   renderEssayComments();
 });
 
-$("#essayCommentList")?.addEventListener("submit", e => {
+$("#essayCommentList")?.addEventListener("submit", async e => {
   const form = e.target.closest(".essay-reply-form");
   if (!form || !activeEssayId) return;
   e.preventDefault();
 
-  const path = form.dataset.replyForm;
-  const comments = essayComments[activeEssayId] || [];
-  const targetComment = getEssayCommentByPath(comments, path);
-  if (!targetComment) return;
-
+  const parentId = form.dataset.replyForm;
   const writer = form.querySelector("[data-reply-writer]")?.value.trim() || "익명";
+  const password = form.querySelector("[data-reply-password]")?.value.trim() || "";
+  const company = form.querySelector("[data-reply-company]")?.value.trim() || "";
   const body = form.querySelector("[data-reply-body]")?.value.trim() || "";
-  if (!body) return;
+  if (!body || !password || !parentId) return;
 
-  targetComment.replies = Array.isArray(targetComment.replies) ? targetComment.replies : [];
-  targetComment.replies.push({ writer, body, replies: [] });
-  activeReplyPath = null;
-  saveEssayComments();
-  renderEssayComments();
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  try {
+    await postEssayComment({ writer, body, password, parentId, company });
+    activeReplyPath = null;
+  } catch (error) {
+    window.alert(error.message || "답글을 등록하지 못했습니다.");
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 /* project board memo → Supabase 저장 (비공개 의견함) */
