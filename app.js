@@ -205,7 +205,8 @@ function cacheProject(project) {
 }
 
 function getStaticProject(projectId) {
-  return PROJECTS.find(item => item.id === projectId || item.slug === projectId);
+  if (typeof PROJECTS === "undefined" || !Array.isArray(PROJECTS)) return null;
+  return PROJECTS.find(item => item.id === projectId || item.slug === projectId) || null;
 }
 
 function getCachedProject(projectId) {
