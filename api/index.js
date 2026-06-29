@@ -1197,15 +1197,21 @@ function isGenericThumbnail(url) {
   return genericPatterns.some(p => u.includes(p));
 }
 
-async function fetchMetaFromUrl(url) {
+const UA_DESKTOP = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const UA_MOBILE = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1";
+// SNS/검색 크롤러 UA: og:태그 응답에 특화 → 브런치 등이 메타데이터를 잘 반환
+const UA_KAKAO = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php) kakaotalk-scrap/1.0";
+const UA_FACEBOOK = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+const UA_GOOGLEBOT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+
+async function fetchMetaFromUrl(url, userAgent = UA_MOBILE) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        // 모바일 UA가 네이버 모바일 페이지를 더 잘 반환함
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+        "User-Agent": userAgent,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "ko-KR,ko;q=0.9"
       }
@@ -1270,12 +1276,23 @@ async function fetchMetaFromUrl(url) {
   }
 }
 
-async function fetchEssayMetadata(url) {
-  // 여러 주소 후보를 순서대로 시도, 첫 성공을 반환
+async function fetchEssayMetadata(url, source = "") {
   const candidates = buildUrlCandidates(url);
+  const host = (() => { try { return new URL(url).hostname; } catch { return ""; } })();
+
+  // 사이트별 UA 우선순위: 브런치=데스크톱 우선, 네이버=모바일 우선
+  const isBrunch = source === "brunch" || host.includes("brunch.co.kr");
+  const isNaver = source === "naver" || host.includes("naver.com");
+  let uaOrder;
+  if (isBrunch) uaOrder = [UA_KAKAO, UA_FACEBOOK, UA_GOOGLEBOT, UA_DESKTOP, UA_MOBILE];
+  else if (isNaver) uaOrder = [UA_MOBILE, UA_DESKTOP, UA_KAKAO];
+  else uaOrder = [UA_KAKAO, UA_DESKTOP, UA_MOBILE]; // 기타: 크롤러 UA 먼저
+
   for (const candidate of candidates) {
-    const meta = await fetchMetaFromUrl(candidate);
-    if (meta && (meta.title || meta.summary)) return meta;
+    for (const ua of uaOrder) {
+      const meta = await fetchMetaFromUrl(candidate, ua);
+      if (meta && (meta.title || meta.summary)) return meta;
+    }
   }
   return { title: "", summary: "", coverImage: "", publishedAt: "" };
 }
@@ -1293,7 +1310,8 @@ async function handleEssayFetchMeta(req, res) {
   if (!/^https?:\/\//i.test(url)) {
     return sendError(res, 400, "올바른 링크(http/https)를 입력해 주세요.");
   }
-  const meta = await fetchEssayMetadata(url);
+  const source = String(payload.source || "").trim();
+  const meta = await fetchEssayMetadata(url, source);
   return sendJson(res, 200, meta);
 }
 
