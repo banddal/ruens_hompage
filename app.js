@@ -1064,6 +1064,8 @@ async function hydrateEssaysFromSupabase() {
     });
     Object.entries(grouped).forEach(([group, items]) => { ESSAYS[group] = items; });
     renderEssayCards();
+    // archiving 탭의 에세이 목록도 최신 데이터로 갱신(모달 연결 유지)
+    if (typeof window.refreshArchEssays === "function") window.refreshArchEssays();
   } catch (error) {
     console.warn("essay hydrate skipped:", error);
   }
@@ -2274,6 +2276,8 @@ initStoryV6();
     renderEssays();
   });
   renderEssays();
+  // Supabase 에세이 hydrate 이후 archiving 목록도 갱신할 수 있게 외부 노출
+  window.refreshArchEssays = renderEssays;
   essayNav?.addEventListener("click", e => {
     const button = e.target.closest("[data-arch-essay-target]");
     if (!button || !essayList) return;
