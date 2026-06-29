@@ -2128,17 +2128,18 @@ initStoryV6();
       g.innerHTML = `
         <div class="arch-pf-year">${year}<span class="arch-pf-year-count">${groups[year].length}건</span></div>
         <div class="arch-pf-head">
-          <span>분류</span><span>업무</span><span>전달처</span><span>주요 성과</span>
+          <span>분류</span><span>업무</span><span>주요내용</span><span>주요 성과</span>
         </div>`;
       groups[year].forEach(p => {
         const row = document.createElement("div");
         row.className = "arch-pf-rowitem js-open-project";
         row.dataset.project = p.id;
+        const summary = p.description || p.short || "";
         row.innerHTML = `
-          <span class="arch-pf-cat" data-cat="${p.category}">${p.category}</span>
-          <span class="arch-pf-title">${p.title}<span class="arch-pf-title-short">${p.short || ""}</span></span>
-          <span class="arch-pf-to">—</span>
-          <span class="arch-pf-metric">${p.metric || ""}</span>`;
+          <span class="arch-pf-cat" data-cat="${escapeHtml(p.category)}">${escapeHtml(p.category)}</span>
+          <span class="arch-pf-title">${escapeHtml(p.title)}<span class="arch-pf-title-short">${escapeHtml(p.short || "")}</span></span>
+          <span class="arch-pf-summary">${escapeHtml(summary)}</span>
+          <span class="arch-pf-metric">${escapeHtml(p.metric || "")}</span>`;
         g.appendChild(row);
       });
       pfTable.appendChild(g);
@@ -2257,11 +2258,13 @@ initStoryV6();
         const row = document.createElement("div");
         row.className = "arch-essay-item js-open-essay";
         row.dataset.essayId = id;
+        const tags = (essay.tags || []).map(tag => `#${tag}`).join(" ");
         row.innerHTML = `
           <span class="arch-essay-tag">${label.split(/[ ,:]/)[0]}</span>
           <span class="arch-essay-body">
-            <span class="arch-essay-title">${title}</span>
-            <span class="arch-essay-meta"><span class="arch-essay-date">${essay.date}</span><span class="arch-essay-hashes">${essay.tags.map(tag => `<span class="arch-essay-hash">#${tag}</span>`).join(" ")}</span></span>
+            <span class="arch-essay-title">${escapeHtml(title)}</span>
+            <span class="arch-essay-desc">${escapeHtml(desc || "")}</span>
+            <span class="arch-essay-hashes" title="${escapeHtml(tags)}">${escapeHtml(tags)}</span>
           </span>`;
         row._essayItem = item;
         board.appendChild(row);
