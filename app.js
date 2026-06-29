@@ -180,6 +180,23 @@ function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
+async function loadSiteSettings() {
+  const noticeLine = $("#siteNoticeLine");
+  const noticeText = $("#siteNoticeText");
+  if (!noticeLine || !noticeText) return;
+  try {
+    const response = await fetch(apiUrl("/api/site-settings"), { cache: "no-store" });
+    if (!response.ok) throw new Error("site settings unavailable");
+    const settings = await response.json();
+    const notice = settings?.notice || {};
+    const text = String(notice.text || "").trim();
+    noticeLine.hidden = notice.enabled === false || !text;
+    if (text) noticeText.textContent = text;
+  } catch (error) {
+    noticeLine.hidden = false;
+  }
+}
+
 function cacheProject(project) {
   if (!project?.id) return project;
   backendProjectCache.set(project.id, project);
@@ -761,6 +778,7 @@ function refreshSectionJump() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  loadSiteSettings();
   initSectionJump();
   positionSectionJump();
   refreshSectionJump();
@@ -1287,7 +1305,10 @@ function renderProjectModal(project) {
     btn.className = "thumb" + (i === 0 ? " active" : "");
     if (g.kind === "image") {
       btn.innerHTML = `<span class="thumb-image-wrap"><img src="${escapeHtml(g.src)}" alt="${escapeHtml(g.alt || g.title)}" loading="lazy"></span>`;
-      btn.addEventListener("click", () => renderProjectImageAt(i));
+      btn.addEventListener("click", () => {
+        renderProjectImageAt(i);
+        if (i >= 3) setProjectImageZoom(true);
+      });
     } else {
       btn.innerHTML = `<b>${escapeHtml(g.type)}</b><span>${escapeHtml(g.title)}</span>`;
       btn.addEventListener("click", () => renderAssetText(g, i));
@@ -1534,68 +1555,21 @@ $$(".js-open-project").forEach(btn => btn.addEventListener("click", () => openPr
   });
 })();
 
-/* staged reveal for Portfolio timeline rows */
+/* Portfolio timeline rows: project points are visible from the initial screen. */
 (function() {
   const timeline = document.querySelector(".timeline-screen.timeline-staged");
   if (!timeline) return;
 
-  let revealTimers = [];
-
-  function clearRevealTimers() {
-    revealTimers.forEach(timer => window.clearTimeout(timer));
-    revealTimers = [];
-  }
-
-  function timelineEventsForRow(row) {
-    const years = Array.from(row.querySelectorAll(".year-header span")).map(item => item.textContent.trim());
-    const events = [];
-
-    years.forEach(year => {
-      row.querySelectorAll(`.lane.main .year-cell[data-year="${year}"] .grid-event.js-open-project`)
-        .forEach(event => events.push(event));
-      row.querySelectorAll(`.lane.side .year-cell[data-year="${year}"] .grid-event.js-open-project`)
-        .forEach(event => events.push(event));
-    });
-
-    return events;
-  }
-
-  function revealTimelineRow(row) {
-    const events = timelineEventsForRow(row).filter(event => !event.classList.contains("is-revealed"));
-    clearRevealTimers();
-    row.classList.add("is-revealing");
-
-    if (!events.length) {
-      row.classList.remove("is-revealing");
-      row.classList.add("is-revealed-row");
-      return;
-    }
-
-    events.forEach((event, index) => {
-      const timer = window.setTimeout(() => {
-        event.classList.add("is-revealed");
-        if (index === events.length - 1) {
-          row.classList.remove("is-revealing");
-          row.classList.add("is-revealed-row");
-        }
-      }, index * 260);
-      revealTimers.push(timer);
-    });
-  }
+  timeline.querySelectorAll(".grid-event.js-open-project")
+    .forEach(event => event.classList.add("is-revealed"));
 
   timeline.querySelectorAll(".timeline-row.equal-row").forEach(row => {
     const phase = row.querySelector(".phase");
     if (!phase) return;
-    phase.setAttribute("role", "button");
-    phase.setAttribute("tabindex", "0");
-    phase.setAttribute("aria-label", `${phase.querySelector("strong")?.textContent.trim() || "Timeline phase"} 프로젝트 순차 보기`);
-
-    phase.addEventListener("click", () => revealTimelineRow(row));
-    phase.addEventListener("keydown", e => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      e.preventDefault();
-      revealTimelineRow(row);
-    });
+    row.classList.add("is-revealed-row");
+    phase.removeAttribute("role");
+    phase.removeAttribute("tabindex");
+    phase.removeAttribute("aria-label");
   });
 })();
 

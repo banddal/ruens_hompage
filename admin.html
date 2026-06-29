@@ -39,6 +39,7 @@
       <button type="button" class="admin-tab" data-admin-tab="essays">Essays</button>
       <button type="button" class="admin-tab" data-admin-tab="memos">Memos</button>
       <button type="button" class="admin-tab" data-admin-tab="comments">Comments</button>
+      <button type="button" class="admin-tab" data-admin-tab="site">Site</button>
       <button type="button" class="admin-tab" data-admin-tab="security">Security</button>
     </nav>
 
@@ -383,6 +384,28 @@
       </section>
     </section>
 
+    <section id="sitePanel" class="admin-tab-panel site-panel hidden">
+      <section class="security-card">
+        <p class="eyebrow">Site Notice</p>
+        <h2>상단 공지 관리</h2>
+        <p class="security-copy">메인 메뉴 아래 공지 줄에 표시될 짧은 문구를 관리합니다.</p>
+        <form id="siteSettingsForm" class="project-form">
+          <label class="admin-check-row">
+            <input type="checkbox" name="noticeEnabled" checked />
+            공지 표시
+          </label>
+          <label>
+            공지 문구
+            <input name="noticeText" class="admin-input" maxlength="180" placeholder="예: 짧은 공지글이 들어갈 자리입니다." />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">공지 저장</button>
+            <span id="siteSettingsStatus" class="status-text"></span>
+          </div>
+        </form>
+      </section>
+    </section>
+
     <section id="securityPanel" class="admin-tab-panel security-panel hidden">
       <div class="security-layout">
         <section class="security-card">
@@ -404,6 +427,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-comment-1"></script>
+<script src="admin.js?v=20260629-front-2"></script>
 </body>
 </html>

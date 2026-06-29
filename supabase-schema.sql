@@ -226,3 +226,54 @@ on public.essays for select
 to anon, authenticated
 using (status = 'published');
 -- INSERT/UPDATE/DELETE 정책 없음 → service_role(관리자 백엔드)만 가능.
+
+-- =========================================================
+-- essay_comments: 에세이 댓글(답글 중첩 = parent_id) + 비밀번호 + IP
+-- =========================================================
+create table if not exists public.essay_comments (
+  id uuid primary key default gen_random_uuid(),
+  essay_id text not null,
+  parent_id uuid references public.essay_comments(id) on delete cascade,
+  writer text not null default '익명',
+  body text not null,
+  password_hash text default '',     -- 작성자 자가삭제용(평문 저장 안 함)
+  source_ip text default '',
+  is_blocked boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists essay_comments_essay_idx on public.essay_comments (essay_id, created_at);
+create index if not exists essay_comments_parent_idx on public.essay_comments (parent_id);
+
+alter table public.essay_comments enable row level security;
+
+-- 차단되지 않은 댓글은 누구나 읽기 가능. 쓰기/수정/삭제는 service_role(백엔드)만.
+drop policy if exists "public read comments" on public.essay_comments;
+create policy "public read comments"
+on public.essay_comments for select
+to anon, authenticated
+using (is_blocked = false);
+
+-- =========================================================
+-- blocked_ips: 관리자가 차단한 IP 목록
+-- =========================================================
+create table if not exists public.blocked_ips (
+  ip text primary key,
+  reason text default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.blocked_ips enable row level security;
+-- 정책 없음 → service_role(백엔드)만 접근 가능.
+
+-- =========================================================
+-- site_settings: 상단 공지 등 사이트 전역 설정
+-- =========================================================
+create table if not exists public.site_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_settings enable row level security;
+-- 정책 없음 → service_role(백엔드)만 접근 가능. 공개 노출은 /api/site-settings가 담당.

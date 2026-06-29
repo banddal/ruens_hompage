@@ -20,6 +20,13 @@ const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "portfolio-assets";
+const SITE_SETTINGS_KEY = "main";
+const DEFAULT_SITE_SETTINGS = {
+  notice: {
+    enabled: true,
+    text: "짧은 공지글이 들어갈 자리입니다."
+  }
+};
 
 const ALLOWED_UPLOAD_EXTS = new Set([
   ".png", ".jpg", ".jpeg", ".webp", ".avif",
@@ -450,6 +457,45 @@ function groupByProjectId(rows) {
     map.get(projectId).push(dbAssetToAsset(row));
     return map;
   }, new Map());
+}
+
+function normalizeSiteSettings(value = {}) {
+  const notice = value.notice && typeof value.notice === "object" ? value.notice : {};
+  return {
+    notice: {
+      enabled: notice.enabled !== false,
+      text: String(notice.text || DEFAULT_SITE_SETTINGS.notice.text).slice(0, 180)
+    }
+  };
+}
+
+async function getSiteSettingsStore() {
+  if (!supabaseEnabled()) return normalizeSiteSettings(DEFAULT_SITE_SETTINGS);
+  try {
+    const rows = await supabaseRequest(`/rest/v1/site_settings?key=eq.${encodeURIComponent(SITE_SETTINGS_KEY)}&select=value`);
+    return normalizeSiteSettings(rows?.[0]?.value || DEFAULT_SITE_SETTINGS);
+  } catch (error) {
+    console.error("Site settings read failed:", error);
+    return normalizeSiteSettings(DEFAULT_SITE_SETTINGS);
+  }
+}
+
+async function saveSiteSettingsStore(payload) {
+  const settings = normalizeSiteSettings(payload);
+  if (!supabaseEnabled()) throw new Error("Supabase settings store is not configured.");
+  const rows = await supabaseRequest("/rest/v1/site_settings?on_conflict=key", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify({
+      key: SITE_SETTINGS_KEY,
+      value: settings,
+      updated_at: new Date().toISOString()
+    })
+  });
+  return normalizeSiteSettings(rows?.[0]?.value || settings);
 }
 
 async function supabaseListProjects() {
@@ -1334,6 +1380,260 @@ async function handleEssayDelete(req, res, id) {
   }
 }
 
+// =========================================================
+// 에세이 댓글(essay_comments): 작성·조회·삭제 + IP차단 + 스팸방어
+// =========================================================
+const COMMENT_MAX_BODY = 1000;
+const COMMENT_MAX_WRITER = 30;
+const COMMENT_RATE_WINDOW_MS = 60 * 1000;
+const COMMENT_RATE_MAX = 5;
+
+function hashCommentPassword(pw) {
+  if (!pw) return "";
+  return crypto.createHash("sha256").update(String(pw) + "homoruens-salt").digest("hex");
+}
+
+async function isIpBlocked(ip) {
+  try {
+    const rows = await supabaseRequest(
+      `/rest/v1/blocked_ips?select=ip&ip=eq.${encodeURIComponent(ip)}`
+    );
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// 평면 댓글 목록 → 트리(중첩 답글) 구조로 조립
+function buildCommentTree(rows) {
+  const map = new Map();
+  const roots = [];
+  rows.forEach(r => {
+    map.set(r.id, {
+      id: r.id,
+      writer: r.writer || "익명",
+      body: r.body,
+      createdAt: r.created_at,
+      replies: []
+    });
+  });
+  rows.forEach(r => {
+    const node = map.get(r.id);
+    if (r.parent_id && map.has(r.parent_id)) {
+      map.get(r.parent_id).replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
+// 공개: 특정 에세이의 댓글 목록 (GET /api/essays/:id/comments)
+async function handleCommentList(req, res, essayId) {
+  if (!supabaseEnabled()) return sendJson(res, 200, []);
+  try {
+    const rows = await supabaseRequest(
+      `/rest/v1/essay_comments?essay_id=eq.${encodeURIComponent(essayId)}&is_blocked=eq.false&select=*&order=created_at.asc`
+    );
+    return sendJson(res, 200, buildCommentTree(Array.isArray(rows) ? rows : []));
+  } catch (error) {
+    console.error("Comment list failed:", error);
+    return sendError(res, 502, "댓글을 불러오지 못했습니다.");
+  }
+}
+
+// 공개: 댓글/답글 작성 (POST /api/essays/:id/comments)
+async function handleCommentCreate(req, res, essayId) {
+  if (!supabaseEnabled()) return sendError(res, 503, "댓글 저장소가 설정되지 않았습니다.");
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 16 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+
+  // 스팸방어 ③ 허니팟
+  if (payload.company || payload.website) return sendJson(res, 200, { ok: true });
+
+  const ip = clientIp(req);
+  // IP 차단 확인
+  if (await isIpBlocked(ip)) {
+    return sendError(res, 403, "댓글 작성이 제한되었습니다.");
+  }
+
+  // 스팸방어 ① 입력 제한
+  const writer = String(payload.writer || "익명").trim().slice(0, COMMENT_MAX_WRITER) || "익명";
+  const commentBody = String(payload.body || "").trim();
+  const parentId = payload.parentId ? String(payload.parentId) : null;
+  const password = String(payload.password || "");
+
+  if (!commentBody) return sendError(res, 400, "내용을 입력해 주세요.");
+  if (commentBody.length > COMMENT_MAX_BODY) {
+    return sendError(res, 400, `댓글은 ${COMMENT_MAX_BODY}자 이내로 입력해 주세요.`);
+  }
+  if ((commentBody.match(/https?:\/\//gi) || []).length >= 5) {
+    return sendError(res, 400, "링크가 너무 많습니다.");
+  }
+
+  // 스팸방어 ② 속도 제한(같은 IP 1분 5개)
+  try {
+    const since = new Date(Date.now() - COMMENT_RATE_WINDOW_MS).toISOString();
+    const recent = await supabaseRequest(
+      `/rest/v1/essay_comments?select=id&source_ip=eq.${encodeURIComponent(ip)}&created_at=gte.${encodeURIComponent(since)}`
+    );
+    if (Array.isArray(recent) && recent.length >= COMMENT_RATE_MAX) {
+      return sendError(res, 429, "잠시 후 다시 시도해 주세요.");
+    }
+  } catch {}
+
+  try {
+    const row = {
+      essay_id: essayId,
+      parent_id: parentId,
+      writer,
+      body: commentBody,
+      password_hash: hashCommentPassword(password),
+      source_ip: ip
+    };
+    const saved = await supabaseRequest("/rest/v1/essay_comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(row)
+    });
+    const c = saved?.[0];
+    return sendJson(res, 201, {
+      ok: true,
+      comment: c ? { id: c.id, writer: c.writer, body: c.body, createdAt: c.created_at, replies: [] } : null
+    });
+  } catch (error) {
+    console.error("Comment create failed:", error);
+    return sendError(res, 502, "댓글 저장에 실패했습니다.");
+  }
+}
+
+// 공개: 작성자 자가삭제 (POST /api/essays/comments/:id/delete) — 비밀번호 확인
+async function handleCommentSelfDelete(req, res, commentId) {
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 4 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+  const password = String(payload.password || "");
+  try {
+    const rows = await supabaseRequest(
+      `/rest/v1/essay_comments?id=eq.${encodeURIComponent(commentId)}&select=password_hash`
+    );
+    const row = rows?.[0];
+    if (!row) return sendError(res, 404, "댓글을 찾을 수 없습니다.");
+    if (!row.password_hash || row.password_hash !== hashCommentPassword(password)) {
+      return sendError(res, 403, "비밀번호가 일치하지 않습니다.");
+    }
+    await supabaseRequest(`/rest/v1/essay_comments?id=eq.${encodeURIComponent(commentId)}`, {
+      method: "DELETE"
+    });
+    return sendJson(res, 200, { ok: true });
+  } catch (error) {
+    console.error("Comment self-delete failed:", error);
+    return sendError(res, 502, "댓글 삭제에 실패했습니다.");
+  }
+}
+
+// 관리자: 전체 댓글 목록 (GET /api/admin/comments)
+async function handleAdminCommentList(req, res) {
+  if (!supabaseEnabled()) return sendJson(res, 200, []);
+  try {
+    const rows = await supabaseRequest(
+      "/rest/v1/essay_comments?select=*&order=created_at.desc&limit=200"
+    );
+    return sendJson(res, 200, Array.isArray(rows) ? rows : []);
+  } catch (error) {
+    console.error("Admin comment list failed:", error);
+    return sendError(res, 502, "댓글을 불러오지 못했습니다.");
+  }
+}
+
+// 관리자: 댓글 삭제 (DELETE /api/admin/comments/:id)
+async function handleAdminCommentDelete(req, res, commentId) {
+  try {
+    await supabaseRequest(`/rest/v1/essay_comments?id=eq.${encodeURIComponent(commentId)}`, {
+      method: "DELETE"
+    });
+    return sendJson(res, 200, { ok: true });
+  } catch (error) {
+    console.error("Admin comment delete failed:", error);
+    return sendError(res, 502, "댓글 삭제에 실패했습니다.");
+  }
+}
+
+// 관리자: IP 차단 (POST /api/admin/block-ip) — 해당 댓글의 IP를 차단 + 그 IP 댓글 숨김
+async function handleBlockIp(req, res) {
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 4 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "잘못된 요청입니다.");
+  }
+  const commentId = payload.commentId ? String(payload.commentId) : "";
+  let ip = payload.ip ? String(payload.ip) : "";
+  try {
+    // commentId만 온 경우 그 댓글의 IP를 조회
+    if (!ip && commentId) {
+      const rows = await supabaseRequest(
+        `/rest/v1/essay_comments?id=eq.${encodeURIComponent(commentId)}&select=source_ip`
+      );
+      ip = rows?.[0]?.source_ip || "";
+    }
+    if (!ip) return sendError(res, 400, "차단할 IP를 찾을 수 없습니다.");
+
+    await supabaseRequest("/rest/v1/blocked_ips?on_conflict=ip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ ip, reason: String(payload.reason || "관리자 차단") })
+    });
+    // 그 IP가 단 댓글들을 숨김 처리(is_blocked = true)
+    await supabaseRequest(`/rest/v1/essay_comments?source_ip=eq.${encodeURIComponent(ip)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_blocked: true })
+    });
+    return sendJson(res, 200, { ok: true, ip });
+  } catch (error) {
+    console.error("Block IP failed:", error);
+    return sendError(res, 502, "IP 차단에 실패했습니다.");
+  }
+}
+
+// 관리자: IP 차단 해제 (DELETE /api/admin/block-ip/:ip)
+async function handleUnblockIp(req, res, ip) {
+  try {
+    await supabaseRequest(`/rest/v1/blocked_ips?ip=eq.${encodeURIComponent(ip)}`, { method: "DELETE" });
+    await supabaseRequest(`/rest/v1/essay_comments?source_ip=eq.${encodeURIComponent(ip)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_blocked: false })
+    });
+    return sendJson(res, 200, { ok: true });
+  } catch (error) {
+    console.error("Unblock IP failed:", error);
+    return sendError(res, 502, "차단 해제에 실패했습니다.");
+  }
+}
+
+// 관리자: 차단 IP 목록 (GET /api/admin/blocked-ips)
+async function handleBlockedIpList(req, res) {
+  if (!supabaseEnabled()) return sendJson(res, 200, []);
+  try {
+    const rows = await supabaseRequest("/rest/v1/blocked_ips?select=*&order=created_at.desc");
+    return sendJson(res, 200, Array.isArray(rows) ? rows : []);
+  } catch (error) {
+    return sendError(res, 502, "차단 목록을 불러오지 못했습니다.");
+  }
+}
+
 async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -1354,6 +1654,31 @@ async function router(req, res) {
 
   if (req.method === "GET" && pathname === "/api/admin/security/status") {
     return sendJson(res, 200, securityStatus(req));
+  }
+
+  if (req.method === "GET" && pathname === "/api/site-settings") {
+    return sendJson(res, 200, await getSiteSettingsStore());
+  }
+
+  if (req.method === "GET" && pathname === "/api/admin/site-settings") {
+    if (!requireAdmin(req, res)) return;
+    return sendJson(res, 200, await getSiteSettingsStore());
+  }
+
+  if ((req.method === "POST" || req.method === "PUT") && pathname === "/api/admin/site-settings") {
+    if (!requireAdmin(req, res)) return;
+    let payload;
+    try {
+      const body = await collectRequestBody(req, 64 * 1024);
+      payload = JSON.parse(body.toString("utf8") || "{}");
+    } catch {
+      return sendError(res, 400, "Invalid JSON body.");
+    }
+    try {
+      return sendJson(res, 200, await saveSiteSettingsStore(payload));
+    } catch (error) {
+      return sendError(res, 400, error.message);
+    }
   }
 
   if (req.method === "POST" && pathname === "/api/admin/login") {
@@ -1394,6 +1719,22 @@ async function router(req, res) {
   if (req.method === "GET" && pathname === "/api/essays") {
     return handleEssayList(req, res);
   }
+
+  // 공개: 에세이 댓글 조회 / 작성
+  const essayCommentsPath = pathname.match(/^\/api\/essays\/([^/]+)\/comments$/);
+  if (req.method === "GET" && essayCommentsPath) {
+    return handleCommentList(req, res, essayCommentsPath[1]);
+  }
+  if (req.method === "POST" && essayCommentsPath) {
+    return handleCommentCreate(req, res, essayCommentsPath[1]);
+  }
+
+  // 공개: 댓글 작성자 비밀번호로 자가삭제
+  const commentSelfDelete = pathname.match(/^\/api\/essays\/comments\/([^/]+)\/delete$/);
+  if (req.method === "POST" && commentSelfDelete) {
+    return handleCommentSelfDelete(req, res, commentSelfDelete[1]);
+  }
+
   const essayDetail = pathname.match(/^\/api\/essays\/([^/]+)$/);
   if (req.method === "GET" && essayDetail) {
     return handleEssayDetail(req, res, essayDetail[1]);
@@ -1431,6 +1772,30 @@ async function router(req, res) {
   if (req.method === "DELETE" && memoDetail) {
     if (!requireAdmin(req, res)) return;
     return handleMemoDelete(req, res, memoDetail[1]);
+  }
+
+  // 관리자: 에세이 댓글 / IP 차단 관리
+  if (req.method === "GET" && pathname === "/api/admin/comments") {
+    if (!requireAdmin(req, res)) return;
+    return handleAdminCommentList(req, res);
+  }
+  const adminCommentDetail = pathname.match(/^\/api\/admin\/comments\/([^/]+)$/);
+  if (req.method === "DELETE" && adminCommentDetail) {
+    if (!requireAdmin(req, res)) return;
+    return handleAdminCommentDelete(req, res, adminCommentDetail[1]);
+  }
+  if (req.method === "POST" && pathname === "/api/admin/block-ip") {
+    if (!requireAdmin(req, res)) return;
+    return handleBlockIp(req, res);
+  }
+  const unblockIp = pathname.match(/^\/api\/admin\/block-ip\/(.+)$/);
+  if (req.method === "DELETE" && unblockIp) {
+    if (!requireAdmin(req, res)) return;
+    return handleUnblockIp(req, res, decodeURIComponent(unblockIp[1]));
+  }
+  if (req.method === "GET" && pathname === "/api/admin/blocked-ips") {
+    if (!requireAdmin(req, res)) return;
+    return handleBlockedIpList(req, res);
   }
 
   if (req.method === "GET" && pathname === "/api/admin/projects") {

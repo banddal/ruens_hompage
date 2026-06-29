@@ -30,6 +30,8 @@ const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
 const confirmPassword = $("#confirmPassword");
 const passwordStatus = $("#passwordStatus");
+const siteSettingsForm = $("#siteSettingsForm");
+const siteSettingsStatus = $("#siteSettingsStatus");
 const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 function splitTags(value) {
@@ -503,6 +505,45 @@ async function savePassword(event) {
   }
 }
 
+function fillSiteSettings(settings) {
+  if (!siteSettingsForm) return;
+  const notice = settings?.notice || {};
+  siteSettingsForm.elements.noticeEnabled.checked = notice.enabled !== false;
+  siteSettingsForm.elements.noticeText.value = notice.text || "";
+}
+
+async function loadSiteSettings() {
+  if (!siteSettingsForm) return;
+  try {
+    const settings = await apiJson("/api/admin/site-settings");
+    fillSiteSettings(settings);
+  } catch (error) {
+    setStatus(siteSettingsStatus, error.message);
+  }
+}
+
+async function saveSiteSettings(event) {
+  event.preventDefault();
+  if (!siteSettingsForm) return;
+  const payload = {
+    notice: {
+      enabled: Boolean(siteSettingsForm.elements.noticeEnabled.checked),
+      text: siteSettingsForm.elements.noticeText.value.trim()
+    }
+  };
+  try {
+    const settings = await apiJson("/api/admin/site-settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    fillSiteSettings(settings);
+    setStatus(siteSettingsStatus, "공지 설정이 저장되었습니다.");
+  } catch (error) {
+    setStatus(siteSettingsStatus, error.message);
+  }
+}
+
 function switchTab(name) {
   $$(".admin-tab").forEach(button => {
     button.classList.toggle("active", button.dataset.adminTab === name);
@@ -516,6 +557,7 @@ function switchTab(name) {
     loadBlockedIps();
   }
   if (name === "essays") loadEssays();
+  if (name === "site") loadSiteSettings();
 }
 
 // ===== 에세이 관리 (관리자 전용) =====
@@ -939,6 +981,7 @@ fileList.addEventListener("change", event => {
 authForm.addEventListener("submit", submitAuth);
 logoutButton.addEventListener("click", logout);
 passwordForm.addEventListener("submit", savePassword);
+siteSettingsForm?.addEventListener("submit", saveSiteSettings);
 $$(".admin-tab").forEach(button => {
   button.addEventListener("click", () => switchTab(button.dataset.adminTab));
 });
