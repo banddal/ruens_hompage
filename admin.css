@@ -793,3 +793,15 @@ textarea.admin-input {
 }
 .asset-drag-handle:active { cursor: grabbing; }
 .asset-item-body { flex: 1; min-width: 0; }
+
+/* 에세이 네이버/브런치 가져오기 버튼 (Claude 추가) */
+.essay-fetch-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.essay-fetch-btns button { flex: 1; }
+#fetchMetaBrunch { border-color: #00c73c; color: #009e30; }
+#fetchMetaBrunch:hover { background: #00c73c; color: #fff; }
+#fetchMetaNaver { border-color: #03c75a; color: #02a64b; }
+#fetchMetaNaver:hover { background: #03c75a; color: #fff; }

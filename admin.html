@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260629-imgtools-1" />
+<link rel="stylesheet" href="admin.css?v=20260629-brunch-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -245,8 +245,11 @@
             <label>
               원본 링크 (브런치/네이버)
               <span class="essay-link-row">
-                <input name="sourceUrl" class="admin-input" placeholder="https://brunch.co.kr/@.../..." />
-                <button type="button" id="fetchMetaBtn" class="ghost">링크에서 가져오기</button>
+                <input name="sourceUrl" class="admin-input" placeholder="https://brunch.co.kr/@.../... 또는 blog.naver.com/..." />
+              </span>
+              <span class="essay-fetch-btns">
+                <button type="button" id="fetchMetaNaver" class="ghost">네이버에서 가져오기</button>
+                <button type="button" id="fetchMetaBrunch" class="ghost">브런치에서 가져오기</button>
               </span>
             </label>
             <span id="metaStatus" class="status-text"></span>
@@ -435,6 +438,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-imgtools-1"></script>
+<script src="admin.js?v=20260629-brunch-1"></script>
 </body>
 </html>

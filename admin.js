@@ -777,18 +777,19 @@ function updateBodyCharCount() {
   if (el) el.textContent = len ? `${len.toLocaleString()}자` : "";
 }
 
-async function fetchEssayMeta() {
+async function fetchEssayMeta(source = "") {
   const url = $("#essayForm").elements.sourceUrl.value.trim();
   const status = $("#metaStatus");
   if (!/^https?:\/\//i.test(url)) {
     if (status) status.textContent = "올바른 링크를 입력해 주세요.";
     return;
   }
-  if (status) status.textContent = "가져오는 중…";
+  const srcLabel = source === "brunch" ? "브런치" : source === "naver" ? "네이버" : "";
+  if (status) status.textContent = `${srcLabel} 링크에서 가져오는 중…`;
   const meta = await apiJson("/api/admin/essays/fetch-meta", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url })
+    body: JSON.stringify({ url, source })
   }).catch(() => null);
   if (!meta || (!meta.title && !meta.summary)) {
     if (status) status.textContent = "자동 추출이 안 됐습니다. 제목·요약을 직접 입력해 주세요.";
@@ -1099,7 +1100,8 @@ $("#reloadEssays")?.addEventListener("click", () => loadEssays());
 $("#essayFilterCategory")?.addEventListener("change", renderEssayAdminList);
 $("#essaySearch")?.addEventListener("input", renderEssayAdminList);
 $("#newEssay")?.addEventListener("click", () => { fillEssayForm(null); $("#essaySaveStatus").textContent = ""; });
-$("#fetchMetaBtn")?.addEventListener("click", fetchEssayMeta);
+$("#fetchMetaNaver")?.addEventListener("click", () => fetchEssayMeta("naver"));
+$("#fetchMetaBrunch")?.addEventListener("click", () => fetchEssayMeta("brunch"));
 $("#cleanBodyBtn")?.addEventListener("click", cleanEssayBody);
 $("#essayBody")?.addEventListener("input", updateBodyCharCount);
 $("#essayEditor")?.addEventListener("input", updateBodyCharCount);
