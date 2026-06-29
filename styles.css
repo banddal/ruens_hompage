@@ -8875,11 +8875,13 @@ body {
 body::before {
   display: block !important;
   content: "" !important;
+  width: 100% !important;
   height: clamp(980px, 128vw, 1480px) !important;
   background-image: var(--bg-image) !important;
   background-repeat: no-repeat !important;
   background-position: center top !important;
-  background-size: auto clamp(1040px, 112vw, 1480px) !important;
+  /* 가로를 꽉 채워 좌우 검은 여백 제거(세로는 비율 유지하며 자연 크롭) */
+  background-size: cover !important;
   opacity: .98 !important;
   -webkit-mask-image: linear-gradient(
     180deg,
@@ -8902,6 +8904,6 @@ body::before {
 @media(max-width: 760px) {
   body::before {
     height: clamp(980px, 260vw, 1420px) !important;
-    background-size: auto clamp(1040px, 282vw, 1380px) !important;
+    background-size: cover !important;
   }
 }
