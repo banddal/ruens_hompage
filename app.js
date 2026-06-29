@@ -1197,6 +1197,30 @@ async function hydrateProjectCache() {
       });
       syncAllProjectCards();
       renderDashboardRecent(projects);
+      // archiving Portfolio가 읽는 PROJECTS를 Supabase 최신값으로 갱신(admin에서 채운 내용 반영)
+      if (typeof PROJECTS !== "undefined" && Array.isArray(PROJECTS)) {
+        projects.forEach(sp => {
+          const idx = PROJECTS.findIndex(p => p.id === sp.id);
+          const merged = {
+            id: sp.id,
+            category: sp.category || "Plan",
+            metric: sp.metric || "",
+            title: sp.title || "",
+            period: sp.period || "",
+            short: sp.short || "",
+            description: sp.description || "",
+            role: sp.role || "",
+            outcome: sp.outcome || "",
+            tags: Array.isArray(sp.tags) ? sp.tags : [],
+            gallery: Array.isArray(sp.gallery) ? sp.gallery : [],
+            skillTags: Array.isArray(sp.skillTags) ? sp.skillTags : (Array.isArray(sp.skill_tags) ? sp.skill_tags : [])
+          };
+          if (idx >= 0) PROJECTS[idx] = { ...PROJECTS[idx], ...merged };
+          else PROJECTS.push(merged);
+        });
+        // archiving Portfolio 다시 그리기
+        if (typeof window.refreshArchPortfolio === "function") window.refreshArchPortfolio("all");
+      }
     }
   } catch (error) {
     console.warn("Project index API failed:", error);
@@ -2128,18 +2152,17 @@ initStoryV6();
       g.innerHTML = `
         <div class="arch-pf-year">${year}<span class="arch-pf-year-count">${groups[year].length}건</span></div>
         <div class="arch-pf-head">
-          <span>분류</span><span>업무</span><span>주요내용</span><span>주요 성과</span>
+          <span>분류</span><span>업무</span><span>전달처</span><span>주요 성과</span>
         </div>`;
       groups[year].forEach(p => {
         const row = document.createElement("div");
         row.className = "arch-pf-rowitem js-open-project";
         row.dataset.project = p.id;
-        const summary = p.description || p.short || "";
         row.innerHTML = `
-          <span class="arch-pf-cat" data-cat="${escapeHtml(p.category)}">${escapeHtml(p.category)}</span>
-          <span class="arch-pf-title">${escapeHtml(p.title)}<span class="arch-pf-title-short">${escapeHtml(p.short || "")}</span></span>
-          <span class="arch-pf-summary">${escapeHtml(summary)}</span>
-          <span class="arch-pf-metric">${escapeHtml(p.metric || "")}</span>`;
+          <span class="arch-pf-cat" data-cat="${p.category}">${p.category}</span>
+          <span class="arch-pf-title">${p.title}<span class="arch-pf-title-short">${p.short || ""}</span></span>
+          <span class="arch-pf-to">—</span>
+          <span class="arch-pf-metric">${p.metric || ""}</span>`;
         g.appendChild(row);
       });
       pfTable.appendChild(g);
@@ -2160,6 +2183,8 @@ initStoryV6();
     });
   });
   renderPortfolio("all");
+  // Supabase 프로젝트 hydrate 후 archiving Portfolio도 갱신할 수 있게 노출
+  window.refreshArchPortfolio = renderPortfolio;
 
   // ── BLOCK 3: Essay 목록 ──
   const essayList = $1("#archEssayList");
@@ -2169,7 +2194,7 @@ initStoryV6();
   const ESSAY_CATS = [
     ["publicBusiness", "公과 Business"],
     ["worldOutside", "세계 : The outside world"],
-    ["others", "好不好, Like & Others"],
+    ["others", "好不好 , Like & Others"],
     ["thinkingEmotion", "私와 思, Thinking & Emotion"],
   ];
   function renderEssayArchiveTags() {
@@ -2258,13 +2283,11 @@ initStoryV6();
         const row = document.createElement("div");
         row.className = "arch-essay-item js-open-essay";
         row.dataset.essayId = id;
-        const tags = (essay.tags || []).map(tag => `#${tag}`).join(" ");
         row.innerHTML = `
           <span class="arch-essay-tag">${label.split(/[ ,:]/)[0]}</span>
           <span class="arch-essay-body">
-            <span class="arch-essay-title">${escapeHtml(title)}</span>
-            <span class="arch-essay-desc">${escapeHtml(desc || "")}</span>
-            <span class="arch-essay-hashes" title="${escapeHtml(tags)}">${escapeHtml(tags)}</span>
+            <span class="arch-essay-title">${title}</span>
+            <span class="arch-essay-meta"><span class="arch-essay-date">${essay.date}</span><span class="arch-essay-hashes">${essay.tags.map(tag => `<span class="arch-essay-hash">#${tag}</span>`).join(" ")}</span></span>
           </span>`;
         row._essayItem = item;
         board.appendChild(row);
