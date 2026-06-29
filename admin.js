@@ -272,19 +272,28 @@ function renderAssets(project) {
   const files = project?.files || [];
 
   imageList.innerHTML = images.length ? images.map(item => `
-    <div class="asset-item" data-asset-id="${escapeHtml(item.id || "")}">
-      <strong>${escapeHtml(item.title || item.originalFilename || "Image")}</strong>
-      <span>${escapeHtml(item.caption || item.alt || "")}</span>
-      <div class="asset-meta">
-        <span class="asset-badge public">이미지</span>
-        <span class="asset-badge">${escapeHtml(fileSizeLabel(item.fileSize))}</span>
-      </div>
-      <div class="asset-actions">
-        ${assetUrl(item) ? `<a href="${escapeHtml(assetUrl(item))}" target="_blank" rel="noopener">열기</a>` : ""}
-        <button type="button" class="danger" data-delete-asset="images" data-asset-id="${escapeHtml(item.id || "")}">삭제</button>
+    <div class="asset-item asset-image-item" draggable="true" data-asset-id="${escapeHtml(item.id || "")}">
+      <label class="asset-check">
+        <input type="checkbox" class="img-select" data-asset-id="${escapeHtml(item.id || "")}">
+      </label>
+      <span class="asset-drag-handle" title="드래그하여 순서 변경" aria-hidden="true">⠿</span>
+      <div class="asset-item-body">
+        <strong>${escapeHtml(item.title || item.originalFilename || "Image")}</strong>
+        <span>${escapeHtml(item.caption || item.alt || "")}</span>
+        <div class="asset-meta">
+          <span class="asset-badge public">이미지</span>
+          <span class="asset-badge">${escapeHtml(fileSizeLabel(item.fileSize))}</span>
+        </div>
+        <div class="asset-actions">
+          ${assetUrl(item) ? `<a href="${escapeHtml(assetUrl(item))}" target="_blank" rel="noopener">열기</a>` : ""}
+          <button type="button" class="danger" data-delete-asset="images" data-asset-id="${escapeHtml(item.id || "")}">삭제</button>
+        </div>
       </div>
     </div>
   `).join("") : `<div class="asset-empty">등록된 이미지가 없습니다.</div>`;
+
+  // 이미지 다중선택/순서변경 툴바 + 드래그 활성화
+  setupImageBulkTools(project);
 
   fileList.innerHTML = files.length ? files.map(item => `
     <div class="asset-item" data-asset-id="${escapeHtml(item.id || "")}">
@@ -306,6 +315,102 @@ function renderAssets(project) {
       </div>
     </div>
   `).join("") : `<div class="asset-empty">등록된 첨부파일이 없습니다.</div>`;
+}
+
+// 이미지 다중선택(체크박스·전체선택·선택삭제) + 드래그앤드롭 순서변경
+function setupImageBulkTools(project) {
+  const bar = $("#imageBulkBar");
+  const selectAll = $("#imgSelectAll");
+  const countEl = $("#imgSelectCount");
+  const deleteBtn = $("#imgDeleteSelected");
+  if (!imageList) return;
+
+  const checks = () => Array.from(imageList.querySelectorAll(".img-select"));
+  const selectedIds = () => checks().filter(c => c.checked).map(c => c.dataset.assetId);
+
+  function refresh() {
+    const all = checks();
+    const sel = all.filter(c => c.checked);
+    if (bar) bar.hidden = all.length === 0;
+    if (countEl) countEl.textContent = sel.length ? `${sel.length}개 선택됨` : "";
+    if (selectAll) selectAll.checked = all.length > 0 && sel.length === all.length;
+  }
+
+  // 개별 체크
+  imageList.querySelectorAll(".img-select").forEach(c => {
+    c.addEventListener("change", refresh);
+  });
+  // 전체선택
+  if (selectAll) {
+    selectAll.onchange = () => {
+      checks().forEach(c => { c.checked = selectAll.checked; });
+      refresh();
+    };
+  }
+  // 선택 삭제
+  if (deleteBtn) {
+    deleteBtn.onclick = async () => {
+      const ids = selectedIds();
+      if (!ids.length) return;
+      if (!window.confirm(`선택한 이미지 ${ids.length}개를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/images/bulk-delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids })
+        });
+        setStatus(saveStatus, `${ids.length}개 이미지를 삭제했습니다.`);
+        await loadProjects(selectedProject.id);
+      } catch (error) {
+        setStatus(saveStatus, "선택 삭제에 실패했습니다.");
+      } finally {
+        deleteBtn.disabled = false;
+      }
+    };
+  }
+
+  // ── 드래그앤드롭 순서변경 ──
+  let dragEl = null;
+  imageList.querySelectorAll(".asset-image-item").forEach(item => {
+    item.addEventListener("dragstart", e => {
+      dragEl = item;
+      item.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    item.addEventListener("dragend", () => {
+      item.classList.remove("dragging");
+      dragEl = null;
+    });
+    item.addEventListener("dragover", e => {
+      e.preventDefault();
+      const target = e.currentTarget;
+      if (!dragEl || dragEl === target) return;
+      const rect = target.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height / 2;
+      imageList.insertBefore(dragEl, after ? target.nextSibling : target);
+    });
+  });
+  imageList.ondrop = async e => {
+    e.preventDefault();
+    // 새 순서 수집 후 저장
+    const order = Array.from(imageList.querySelectorAll(".asset-image-item"))
+      .map(el => el.dataset.assetId).filter(Boolean);
+    if (!order.length || !selectedProject) return;
+    try {
+      await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/images/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order })
+      });
+      setStatus(saveStatus, "이미지 순서를 변경했습니다.");
+    } catch (error) {
+      setStatus(saveStatus, "순서 저장에 실패했습니다.");
+      await loadProjects(selectedProject.id); // 실패 시 원복
+    }
+  };
+
+  refresh();
 }
 
 async function loadProjects(selectId = selectedProject?.id) {

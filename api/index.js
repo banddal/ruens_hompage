@@ -500,9 +500,9 @@ async function saveSiteSettingsStore(payload) {
 
 async function supabaseListProjects() {
   const [projectRows, imageRows, fileRows] = await Promise.all([
-    supabaseRequest("/rest/v1/projects?select=*&order=sort_order.asc"),
-    supabaseRequest("/rest/v1/project_images?select=*&order=sort_order.asc,created_at.asc"),
-    supabaseRequest("/rest/v1/project_files?select=*&order=sort_order.asc,created_at.asc")
+    supabaseRequestAll("/rest/v1/projects?select=*&order=sort_order.asc"),
+    supabaseRequestAll("/rest/v1/project_images?select=*&order=sort_order.asc,created_at.asc"),
+    supabaseRequestAll("/rest/v1/project_files?select=*&order=sort_order.asc,created_at.asc")
   ]);
   const imagesByProject = groupByProjectId(imageRows || []);
   const filesByProject = groupByProjectId(fileRows || []);
@@ -511,6 +511,29 @@ async function supabaseListProjects() {
     imagesByProject.get(row.id) || [],
     filesByProject.get(row.id) || []
   ));
+}
+
+// Supabase REST의 행 제한(기본 ~1000)을 넘겨 전체 행을 페이지네이션으로 모두 가져온다.
+// 이미지/파일이 100~1000개를 넘어도 잘리지 않게 함.
+async function supabaseRequestAll(pathname, pageSize = 1000) {
+  const all = [];
+  let offset = 0;
+  for (let page = 0; page < 50; page++) {
+    let rows;
+    try {
+      rows = await supabaseRequest(pathname, {
+        headers: { Range: `${offset}-${offset + pageSize - 1}`, "Range-Unit": "items" }
+      });
+    } catch (error) {
+      // offset이 전체 행수를 넘으면 416이 날 수 있음 → 끝으로 간주
+      break;
+    }
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
 }
 
 async function seedSupabaseProjectsFromContent() {
@@ -620,6 +643,43 @@ async function deleteProjectStore(key) {
   const media = readJson(MEDIA_DB, []);
   writeJson(MEDIA_DB, media.filter(item => item.projectId !== project.id));
   return true;
+}
+
+// 이미지 다중 삭제 (Supabase) — 여러 id를 한 번에 삭제
+async function bulkDeleteImages(projectKey, ids) {
+  const project = await getProjectStore(projectKey);
+  if (!project || !Array.isArray(ids) || !ids.length) return 0;
+  if (supabaseEnabled()) {
+    // PostgREST in 연산자: id=in.(a,b,c)
+    const list = ids.map(id => `"${String(id).replace(/"/g, "")}"`).join(",");
+    await supabaseRequest(
+      `/rest/v1/project_images?id=in.(${list})&project_id=eq.${encodeURIComponent(project.id)}`,
+      { method: "DELETE" }
+    );
+    return ids.length;
+  }
+  return 0;
+}
+
+// 이미지 순서 변경 (Supabase) — order 배열 순서대로 sort_order 부여
+async function reorderImages(projectKey, order) {
+  const project = await getProjectStore(projectKey);
+  if (!project || !Array.isArray(order) || !order.length) return false;
+  if (supabaseEnabled()) {
+    // 각 이미지의 sort_order를 순서대로 갱신
+    for (let i = 0; i < order.length; i++) {
+      await supabaseRequest(
+        `/rest/v1/project_images?id=eq.${encodeURIComponent(order[i])}&project_id=eq.${encodeURIComponent(project.id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sort_order: i })
+        }
+      );
+    }
+    return true;
+  }
+  return false;
 }
 
 async function deleteAssetStore(projectKey, target, assetId) {
@@ -1643,45 +1703,6 @@ async function handleBlockedIpList(req, res) {
   }
 }
 
-// 관리자: G-FAIR 3개를 시드에서 Supabase에 실제 레코드로 등록 + 레거시 gfair 삭제
-async function handleGfairSync(req, res) {
-  if (!supabaseEnabled()) return sendError(res, 503, "Supabase가 설정되지 않았습니다.");
-  try {
-    const seed = localSeedProjects();
-    const gfairProjects = seed.filter(p => /^g-fair-korea-\d{4}-pm$/.test(p.id));
-    if (!gfairProjects.length) {
-      return sendError(res, 404, "시드에서 G-FAIR 프로젝트를 찾을 수 없습니다.");
-    }
-    // 이미 존재하는 G-FAIR는 자료(이미지/파일)를 보존하기 위해 덮어쓰지 않음
-    const existing = await supabaseListProjects();
-    const existingIds = new Set(existing.map(p => p.id));
-    const toInsert = gfairProjects.filter(p => !existingIds.has(p.id));
-
-    if (toInsert.length) {
-      const rows = toInsert.map(projectToDbRow);
-      await supabaseRequest("/rest/v1/projects?on_conflict=id", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates,return=minimal"
-        },
-        body: JSON.stringify(rows)
-      });
-    }
-    // 레거시 단일 gfair 레코드 삭제(있으면)
-    await supabaseRequest(`/rest/v1/projects?id=eq.gfair`, { method: "DELETE" }).catch(() => {});
-
-    return sendJson(res, 200, {
-      ok: true,
-      inserted: toInsert.map(p => p.id),
-      skipped: gfairProjects.filter(p => existingIds.has(p.id)).map(p => p.id)
-    });
-  } catch (error) {
-    console.error("G-FAIR sync failed:", error);
-    return sendError(res, 502, "G-FAIR 동기화에 실패했습니다.");
-  }
-}
-
 async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -1846,12 +1867,6 @@ async function router(req, res) {
     return handleBlockedIpList(req, res);
   }
 
-  // 관리자: G-FAIR 3개 실제 레코드 동기화(가짜 분할 대체)
-  if (req.method === "POST" && pathname === "/api/admin/projects/sync-gfair") {
-    if (!requireAdmin(req, res)) return;
-    return handleGfairSync(req, res);
-  }
-
   if (req.method === "GET" && pathname === "/api/admin/projects") {
     if (!requireAdmin(req, res)) return;
     const projects = (await getProjectsStore())
@@ -1914,6 +1929,34 @@ async function router(req, res) {
       return sendJson(res, 200, updated);
     } catch (error) {
       return sendError(res, 400, error.message);
+    }
+  }
+
+  // 이미지 다중 삭제
+  const bulkDeleteImg = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/images\/bulk-delete$/);
+  if (req.method === "POST" && bulkDeleteImg) {
+    if (!requireAdmin(req, res)) return;
+    try {
+      const body = await collectRequestBody(req, 64 * 1024);
+      const { ids } = JSON.parse(body.toString("utf8") || "{}");
+      const count = await bulkDeleteImages(bulkDeleteImg[1], ids);
+      return sendJson(res, 200, { ok: true, deleted: count });
+    } catch (error) {
+      return sendError(res, 502, "다중 삭제에 실패했습니다.");
+    }
+  }
+
+  // 이미지 순서 변경
+  const reorderImg = pathname.match(/^\/api\/admin\/projects\/([^/]+)\/images\/reorder$/);
+  if (req.method === "POST" && reorderImg) {
+    if (!requireAdmin(req, res)) return;
+    try {
+      const body = await collectRequestBody(req, 64 * 1024);
+      const { order } = JSON.parse(body.toString("utf8") || "{}");
+      const ok = await reorderImages(reorderImg[1], order);
+      return sendJson(res, ok ? 200 : 400, { ok });
+    } catch (error) {
+      return sendError(res, 502, "순서 변경에 실패했습니다.");
     }
   }
 

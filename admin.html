@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260629-gfair-3" />
+<link rel="stylesheet" href="admin.css?v=20260629-imgtools-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -192,7 +192,15 @@
 
           <section class="asset-panel">
             <div>
-              <h3>Images</h3>
+              <div class="image-bulk-bar">
+                <h3>Images</h3>
+                <div class="image-bulk-actions" id="imageBulkBar" hidden>
+                  <label class="img-selectall"><input type="checkbox" id="imgSelectAll"> 전체선택</label>
+                  <span id="imgSelectCount" class="img-select-count"></span>
+                  <button type="button" id="imgDeleteSelected" class="danger">선택 삭제</button>
+                </div>
+              </div>
+              <p class="upload-help">체크박스로 여러 장을 선택해 한 번에 삭제할 수 있고, ⠿ 손잡이를 드래그해 순서를 바꿀 수 있습니다.</p>
               <div id="imageList" class="asset-list"></div>
             </div>
             <div>
@@ -427,6 +435,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-gfair-3"></script>
+<script src="admin.js?v=20260629-imgtools-1"></script>
 </body>
 </html>

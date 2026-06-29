@@ -751,3 +751,45 @@ textarea.admin-input {
 .essay-editor img { max-width: 100%; height: auto; margin: 10px 0; }
 .essay-editor hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
 
+
+/* ===== 이미지 다중선택 + 드래그 순서변경 (Claude 추가) ===== */
+.image-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.image-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.img-selectall {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.img-select-count { font-size: 12px; color: var(--accent); font-weight: 800; }
+#imgDeleteSelected { min-height: 32px; font-size: 12px; padding: 0 12px; }
+
+.asset-image-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.asset-image-item.dragging { opacity: .45; }
+.asset-check { padding-top: 2px; }
+.asset-drag-handle {
+  cursor: grab;
+  color: #aaa;
+  font-size: 18px;
+  line-height: 1;
+  padding-top: 2px;
+  user-select: none;
+}
+.asset-drag-handle:active { cursor: grabbing; }
+.asset-item-body { flex: 1; min-width: 0; }
