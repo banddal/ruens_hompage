@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260629-comment-1" />
+<link rel="stylesheet" href="admin.css?v=20260629-gfair-2" />
 </head>
 <body>
 <main class="admin-shell">
@@ -48,7 +48,10 @@
         <aside class="project-list-panel">
           <div class="panel-head">
             <h2>Projects</h2>
-            <button type="button" id="reloadProjects">새로고침</button>
+            <div class="panel-head-actions">
+              <button type="button" id="syncGfair" title="G-FAIR 2021/2022/2023을 실제 프로젝트로 등록">G-FAIR 등록</button>
+              <button type="button" id="reloadProjects">새로고침</button>
+            </div>
           </div>
           <input id="projectSearch" class="admin-input" type="search" placeholder="프로젝트 검색" />
           <div id="projectList" class="project-list" aria-live="polite"></div>
@@ -427,6 +430,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-front-2"></script>
+<script src="admin.js?v=20260629-gfair-2"></script>
 </body>
 </html>

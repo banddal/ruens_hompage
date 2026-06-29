@@ -750,3 +750,9 @@ textarea.admin-input {
 }
 .essay-editor img { max-width: 100%; height: auto; margin: 10px 0; }
 .essay-editor hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
+
+/* G-FAIR 등록 버튼 영역 (Claude 추가) */
+.panel-head-actions { display: flex; gap: 6px; }
+#syncGfair { background: #b5121b; color: #fff; border-color: #b5121b; }
+#syncGfair:hover { background: #8e0e15; }
+#syncGfair:disabled { opacity: .6; cursor: default; }

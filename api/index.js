@@ -533,7 +533,7 @@ async function getProjectsStore() {
       const projects = await supabaseListProjects();
       if (projects.length) return projects;
       await seedSupabaseProjectsFromContent();
-      return supabaseListProjects();
+      return await supabaseListProjects();
     } catch (error) {
       console.error("Supabase project store failed. Falling back to local seed data:", error);
       return localSeedProjects();
@@ -741,6 +741,15 @@ async function saveAssetStore(project, target, file, fields) {
   };
 
   if (supabaseEnabled()) {
+    await supabaseRequest("/rest/v1/projects?on_conflict=id", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates"
+      },
+      body: JSON.stringify(projectToDbRow(project))
+    });
+
     const storagePath = `projects/${slug}/${folder}/${storedName}`;
     await uploadToSupabaseStorage(storagePath, file);
     const publicUrl = supabasePublicUrl(storagePath);
@@ -1634,6 +1643,45 @@ async function handleBlockedIpList(req, res) {
   }
 }
 
+// 관리자: G-FAIR 3개를 시드에서 Supabase에 실제 레코드로 등록 + 레거시 gfair 삭제
+async function handleGfairSync(req, res) {
+  if (!supabaseEnabled()) return sendError(res, 503, "Supabase가 설정되지 않았습니다.");
+  try {
+    const seed = localSeedProjects();
+    const gfairProjects = seed.filter(p => /^g-fair-korea-\d{4}-pm$/.test(p.id));
+    if (!gfairProjects.length) {
+      return sendError(res, 404, "시드에서 G-FAIR 프로젝트를 찾을 수 없습니다.");
+    }
+    // 이미 존재하는 G-FAIR는 자료(이미지/파일)를 보존하기 위해 덮어쓰지 않음
+    const existing = await supabaseListProjects();
+    const existingIds = new Set(existing.map(p => p.id));
+    const toInsert = gfairProjects.filter(p => !existingIds.has(p.id));
+
+    if (toInsert.length) {
+      const rows = toInsert.map(projectToDbRow);
+      await supabaseRequest("/rest/v1/projects?on_conflict=id", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify(rows)
+      });
+    }
+    // 레거시 단일 gfair 레코드 삭제(있으면)
+    await supabaseRequest(`/rest/v1/projects?id=eq.gfair`, { method: "DELETE" }).catch(() => {});
+
+    return sendJson(res, 200, {
+      ok: true,
+      inserted: toInsert.map(p => p.id),
+      skipped: gfairProjects.filter(p => existingIds.has(p.id)).map(p => p.id)
+    });
+  } catch (error) {
+    console.error("G-FAIR sync failed:", error);
+    return sendError(res, 502, "G-FAIR 동기화에 실패했습니다.");
+  }
+}
+
 async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -1796,6 +1844,12 @@ async function router(req, res) {
   if (req.method === "GET" && pathname === "/api/admin/blocked-ips") {
     if (!requireAdmin(req, res)) return;
     return handleBlockedIpList(req, res);
+  }
+
+  // 관리자: G-FAIR 3개 실제 레코드 동기화(가짜 분할 대체)
+  if (req.method === "POST" && pathname === "/api/admin/projects/sync-gfair") {
+    if (!requireAdmin(req, res)) return;
+    return handleGfairSync(req, res);
   }
 
   if (req.method === "GET" && pathname === "/api/admin/projects") {

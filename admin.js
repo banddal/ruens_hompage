@@ -957,6 +957,23 @@ projectList.addEventListener("click", async event => {
 
 projectSearch.addEventListener("input", renderProjectList);
 $("#reloadProjects").addEventListener("click", () => loadProjects());
+$("#syncGfair")?.addEventListener("click", async () => {
+  if (!window.confirm("G-FAIR 2021/2022/2023을 실제 프로젝트로 등록합니다.\n(이미 등록된 항목은 자료를 보존하며 건너뜁니다.) 진행할까요?")) return;
+  const btn = $("#syncGfair");
+  const prev = btn.textContent;
+  btn.disabled = true; btn.textContent = "등록 중…";
+  try {
+    const result = await apiJson("/api/admin/projects/sync-gfair", { method: "POST" });
+    const added = (result?.inserted || []).length;
+    const skipped = (result?.skipped || []).length;
+    window.alert(`완료: ${added}개 등록${skipped ? `, ${skipped}개는 이미 존재(건너뜀)` : ""}.`);
+    await loadProjects();
+  } catch (error) {
+    window.alert("G-FAIR 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+  } finally {
+    btn.disabled = false; btn.textContent = prev;
+  }
+});
 $("#newProject").addEventListener("click", newProject);
 duplicateProjectButton.addEventListener("click", duplicateProject);
 deleteProjectButton.addEventListener("click", deleteProject);
