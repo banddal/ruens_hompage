@@ -8864,46 +8864,45 @@ footer .footer-desc {
 
 /* ===== Front v5: same deep image-to-gradient background on desktop and mobile ===== */
 html {
-  background: linear-gradient(180deg, #101010 0%, #181818 42%, #4b4141 72%, #efefef 100%) !important;
+  background: linear-gradient(180deg, #101010 0%, #1a1a1a 26%, #4b4141 48%, #efefef 70%) !important;
 }
 
 body {
   background-color: #101010 !important;
-  background-image: linear-gradient(180deg, #101010 0%, #181818 42%, #4b4141 72%, #efefef 100%) !important;
+  background-image: linear-gradient(180deg, #101010 0%, #1a1a1a 26%, #4b4141 48%, #efefef 70%) !important;
 }
 
 body::before {
   display: block !important;
   content: "" !important;
   width: 100% !important;
-  height: clamp(980px, 128vw, 1480px) !important;
+  height: clamp(820px, 96vw, 1180px) !important;
   background-image: var(--bg-image) !important;
   background-repeat: no-repeat !important;
   background-position: center top !important;
-  /* 가로를 꽉 채워 좌우 검은 여백 제거(세로는 비율 유지하며 자연 크롭) */
   background-size: cover !important;
   opacity: .98 !important;
   -webkit-mask-image: linear-gradient(
     180deg,
     #000 0%,
-    #000 66%,
-    rgba(0,0,0,.86) 78%,
-    rgba(0,0,0,.42) 91%,
+    #000 62%,
+    rgba(0,0,0,.7) 80%,
+    rgba(0,0,0,.3) 92%,
     transparent 100%
   ) !important;
   mask-image: linear-gradient(
     180deg,
     #000 0%,
-    #000 66%,
-    rgba(0,0,0,.86) 78%,
-    rgba(0,0,0,.42) 91%,
+    #000 62%,
+    rgba(0,0,0,.7) 80%,
+    rgba(0,0,0,.3) 92%,
     transparent 100%
   ) !important;
 }
 
 @media(max-width: 760px) {
   body::before {
-    height: clamp(980px, 260vw, 1420px) !important;
+    height: clamp(820px, 200vw, 1180px) !important;
     background-size: cover !important;
   }
 }
