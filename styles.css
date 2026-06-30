@@ -8347,7 +8347,7 @@ body::before {
   position: absolute;
   top: 6px;
   bottom: 12px;
-  left: calc(50% + 2px);
+  left: 53.5%;
   border-left: 1px dotted rgba(20,20,20,.28);
 }
 
