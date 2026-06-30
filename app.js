@@ -1289,6 +1289,17 @@ function renderProjectModal(project) {
   $("#projectTitle").textContent = p.title;
   $("#projectDescription").textContent = p.short || p.description || "";
   $("#projectPeriod").textContent = p.period;
+  // 작업 기간: 값이 있을 때만 카드 표시
+  const wdCard = $("#projectWorkDurationCard");
+  const wdText = $("#projectWorkDuration");
+  if (wdCard && wdText) {
+    if (p.workDuration && String(p.workDuration).trim()) {
+      wdText.textContent = p.workDuration;
+      wdCard.style.display = "";
+    } else {
+      wdCard.style.display = "none";
+    }
+  }
   $("#projectShort").textContent = p.description || p.short || "";
   $("#projectRole").textContent = p.role;
   $("#projectOutcome").textContent = p.outcome;
@@ -2133,18 +2144,33 @@ initStoryV6();
     const m = String(period).match(/(\d{4})/);
     return m ? parseInt(m[1], 10) : 0;
   }
+  // periodStart("2022-03")에서 정렬키 추출. 없으면 period 표기에서 연도 추출.
+  function periodSortKey(p) {
+    const ps = String(p.periodStart || "").match(/(\d{4})-(\d{1,2})/);
+    if (ps) return parseInt(ps[1], 10) * 100 + parseInt(ps[2], 10); // YYYYMM
+    const y = parseStartYear(p.period);
+    return y * 100; // 월 정보 없으면 연도만
+  }
+  function projectYear(p) {
+    const ps = String(p.periodStart || "").match(/(\d{4})/);
+    if (ps) return ps[1];
+    const y = parseStartYear(p.period);
+    return y ? String(y) : "기타";
+  }
   function renderPortfolio(filter) {
     if (!pfTable || typeof PROJECTS === "undefined") return;
     const list = (filter && filter !== "all")
       ? PROJECTS.filter(p => p.category === filter)
       : PROJECTS.slice();
-    // 연도(최신순) 그룹화 — period 시작연도 기준
+    // 연도별 그룹화 + 연도 안에서는 월(시작) 기준 정렬
     const groups = {};
     list.forEach(p => {
-      const y = p.period || "기타";
+      const y = projectYear(p);
       (groups[y] = groups[y] || []).push(p);
     });
-    const years = Object.keys(groups).sort((a,b) => parseStartYear(b) - parseStartYear(a));
+    // 각 연도 그룹 내부를 시작 년-월 기준 정렬(최신월 먼저)
+    Object.values(groups).forEach(arr => arr.sort((a, b) => periodSortKey(b) - periodSortKey(a)));
+    const years = Object.keys(groups).sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0));
     pfTable.innerHTML = "";
     years.forEach(year => {
       const g = document.createElement("div");

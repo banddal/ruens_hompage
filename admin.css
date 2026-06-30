@@ -805,3 +805,8 @@ textarea.admin-input {
 #fetchMetaBrunch:hover { background: #00c73c; color: #fff; }
 #fetchMetaNaver { border-color: #03c75a; color: #02a64b; }
 #fetchMetaNaver:hover { background: #03c75a; color: #fff; }
+
+/* 프로젝트 기간 시작~종료 입력 (Claude 추가) */
+.period-range { display: flex; align-items: center; gap: 6px; }
+.period-range input[type="month"] { flex: 1; min-width: 0; }
+.period-tilde { color: #888; flex: 0 0 auto; }

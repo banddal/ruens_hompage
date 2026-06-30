@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260629-brunch-1" />
+<link rel="stylesheet" href="admin.css?v=20260629-period-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -97,7 +97,19 @@
                 </select>
               </label>
               <label>
-                기간
+                프로젝트 기간 (시작 ~ 종료)
+                <span class="period-range">
+                  <input name="periodStart" class="admin-input" type="month" title="시작 년-월" />
+                  <span class="period-tilde">~</span>
+                  <input name="periodEnd" class="admin-input" type="month" title="종료 년-월" />
+                </span>
+              </label>
+              <label>
+                작업 기간 (직접 입력)
+                <input name="workDuration" class="admin-input" placeholder="예: 25일, 2주, 3개월" />
+              </label>
+              <label class="hidden-period-field" style="display:none;">
+                기간(자동/레거시)
                 <input name="period" class="admin-input" />
               </label>
               <label>
@@ -438,6 +450,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-label-1"></script>
+<script src="admin.js?v=20260629-period-1"></script>
 </body>
 </html>

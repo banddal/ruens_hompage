@@ -221,6 +221,24 @@ function renderProjectList() {
   `).join("") : `<div class="asset-empty">표시할 프로젝트가 없습니다.</div>`;
 }
 
+// "2022-03","2022-05" → "2022년 3월 ~ 5월". 같은 연도면 연도 한 번만. 시작만 있으면 "2022년 3월".
+function buildPeriodDisplay(start, end, legacy = "") {
+  const fmt = (ym) => {
+    const m = String(ym || "").match(/(\d{4})-(\d{1,2})/);
+    return m ? { y: m[1], mo: String(parseInt(m[2], 10)) } : null;
+  };
+  const s = fmt(start), e = fmt(end);
+  if (!s && !e) return legacy; // 새 값 없으면 기존 표기 유지
+  if (s && e) {
+    if (s.y === e.y) {
+      return s.mo === e.mo ? `${s.y}년 ${s.mo}월` : `${s.y}년 ${s.mo}월 ~ ${e.mo}월`;
+    }
+    return `${s.y}년 ${s.mo}월 ~ ${e.y}년 ${e.mo}월`;
+  }
+  const one = s || e;
+  return `${one.y}년 ${one.mo}월`;
+}
+
 function fillForm(project) {
   selectedProject = project;
   projectForm.elements.id.value = project.id || "";
@@ -229,6 +247,9 @@ function fillForm(project) {
   projectForm.elements.metric.value = project.metric || "";
   projectForm.elements.category.value = project.category || "Plan";
   projectForm.elements.period.value = project.period || "";
+  if (projectForm.elements.periodStart) projectForm.elements.periodStart.value = project.periodStart || "";
+  if (projectForm.elements.periodEnd) projectForm.elements.periodEnd.value = project.periodEnd || "";
+  if (projectForm.elements.workDuration) projectForm.elements.workDuration.value = project.workDuration || "";
   projectForm.elements.status.value = project.status || "published";
   projectForm.elements.short.value = project.short || "";
   projectForm.elements.description.value = project.description || "";
@@ -250,7 +271,14 @@ function readForm() {
     title: form.title.value.trim(),
     metric: form.metric.value.trim(),
     category: form.category.value,
-    period: form.period.value.trim(),
+    period: buildPeriodDisplay(
+      form.periodStart ? form.periodStart.value : "",
+      form.periodEnd ? form.periodEnd.value : "",
+      form.period ? form.period.value.trim() : ""
+    ),
+    periodStart: form.periodStart ? form.periodStart.value : "",
+    periodEnd: form.periodEnd ? form.periodEnd.value : "",
+    workDuration: form.workDuration ? form.workDuration.value.trim() : "",
     status: form.status.value,
     short: form.short.value.trim(),
     description: form.description.value.trim(),
@@ -670,7 +698,7 @@ const ESSAY_CATEGORY_LABELS = {
   news: "News",
   publicBusiness: "公과 Business",
   worldOutside: "세계 : The outside world",
-  others: "好不好, Like & Others",
+  others: "好不好 , Like & Others",
   thinkingEmotion: "私와 思"
 };
 let essayCache = [];
