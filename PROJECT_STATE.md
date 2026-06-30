@@ -26,6 +26,14 @@
 
 
 
+
+### M. archiving Portfolio 완료시점 기준 정렬 (Claude, 2026-06-30)
+- 요청: archiving Portfolio 블록의 연도 배치/정렬을 완료(종료) 시점 기준으로.
+- 변경: periodSortKey/projectYear의 우선순위를 periodEnd → periodStart → period 순으로 변경(기존은 periodStart 우선).
+  parseStartYear도 마지막 연도 추출(예 2017~2018→2018). 종료없으면 시작, 그것도 없으면 period 폴백(누락방지).
+- 검증: 시작2017/종료2018 프로젝트가 2018그룹 배치, 38개 누락없음.
+- 캐시 app.js 20260630-endsort-1.
+
 ### L. archiving Portfolio 프로젝트 누락 수정 (Claude, 2026-06-30)
 - 증상: union-integration 등 원래 있던 프로젝트가 archiving Portfolio에 안 보임.
 - 원인: hydrateProjectCache의 PROJECTS 머지 객체(merged)에 periodStart/periodEnd가 빠져있었음.

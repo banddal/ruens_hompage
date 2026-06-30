@@ -2205,25 +2205,25 @@ initStoryV6();
   // ── BLOCK 2: Portfolio 표 ──
   const pfTable = $1("#archPfTable");
   function parseStartYear(period) {
-    const m = String(period).match(/(\d{4})/);
-    return m ? parseInt(m[1], 10) : 0;
+    // period 표기에서 마지막 연도(종료 기준) 추출. 예: "2017~2018" → 2018
+    const all = String(period).match(/(\d{4})/g);
+    return all && all.length ? parseInt(all[all.length - 1], 10) : 0;
   }
-  // periodStart("2022-03") 우선, 없으면 periodEnd, 없으면 period 표기에서 연도 추출.
+  // 완료(종료) 시점 기준 정렬키. periodEnd 우선, 없으면 periodStart, 없으면 period 표기.
   function periodSortKey(p) {
-    const ps = String(p.periodStart || "").match(/(\d{4})-(\d{1,2})/);
-    if (ps) return parseInt(ps[1], 10) * 100 + parseInt(ps[2], 10); // YYYYMM
-    // periodStart가 없는(안 잡히던) 프로젝트는 종료 시점으로 폴백
     const pe = String(p.periodEnd || "").match(/(\d{4})-(\d{1,2})/);
-    if (pe) return parseInt(pe[1], 10) * 100 + parseInt(pe[2], 10);
+    if (pe) return parseInt(pe[1], 10) * 100 + parseInt(pe[2], 10); // YYYYMM
+    const ps = String(p.periodStart || "").match(/(\d{4})-(\d{1,2})/);
+    if (ps) return parseInt(ps[1], 10) * 100 + parseInt(ps[2], 10);
     const y = parseStartYear(p.period);
-    return y * 100; // 월 정보 없으면 연도만
+    return y * 100;
   }
+  // 연도 그룹도 완료(종료) 시점 기준. periodEnd → periodStart → period 순 폴백.
   function projectYear(p) {
-    const ps = String(p.periodStart || "").match(/(\d{4})/);
-    if (ps) return ps[1];
-    // periodStart가 없는(안 잡히던) 프로젝트는 종료 시점으로 폴백
     const pe = String(p.periodEnd || "").match(/(\d{4})/);
     if (pe) return pe[1];
+    const ps = String(p.periodStart || "").match(/(\d{4})/);
+    if (ps) return ps[1];
     const y = parseStartYear(p.period);
     return y ? String(y) : "기타";
   }
@@ -2232,13 +2232,13 @@ initStoryV6();
     const list = (filter && filter !== "all")
       ? PROJECTS.filter(p => p.category === filter)
       : PROJECTS.slice();
-    // 연도별 그룹화 + 연도 안에서는 월(시작) 기준 정렬
+    // 연도별 그룹화 + 연도 안에서는 완료(종료) 시점 기준 정렬
     const groups = {};
     list.forEach(p => {
       const y = projectYear(p);
       (groups[y] = groups[y] || []).push(p);
     });
-    // 각 연도 그룹 내부를 시작 년-월 기준 정렬(최신월 먼저)
+    // 각 연도 그룹 내부를 완료(종료) 년-월 기준 정렬(최신 먼저)
     Object.values(groups).forEach(arr => arr.sort((a, b) => periodSortKey(b) - periodSortKey(a)));
     const years = Object.keys(groups).sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0));
     pfTable.innerHTML = "";
