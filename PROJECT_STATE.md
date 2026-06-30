@@ -1,328 +1,268 @@
-# PROJECT_STATE.md — Homo Ruens 포트폴리오
+# PROJECT_STATE.md — Homo Ruens
 
-> **이 문서는 Claude와 Codex가 공유하는 단일 진실 문서(single source of truth)입니다.**
-> 작업을 시작하기 전에 반드시 이 문서를 먼저 읽으세요.
-> 설계·구조·환경변수·협업 흐름이 바뀌면 코드보다 **이 문서를 먼저 갱신**합니다.
-> 사람의 기억이 아니라 이 파일이 두 AI 도구의 공유 메모리입니다.
+> Claude와 Codex가 함께 보는 작업 상태 문서입니다.  
+> 새 라운드를 시작하기 전 이 파일을 먼저 읽고, 라운드가 끝나면 이 파일을 갱신하세요.
 
-마지막 갱신: 2026-06-28 (전체 점검 + Vercel 통합 설계 확정)
+마지막 갱신: 2026-06-30 / 작성: Codex
 
 ---
 
-## ★ 이번 라운드에 한 일 (가장 최근 1회분 — 검증 시 여기부터)
+## 1. 현재 기준
 
-> 이 블록은 **직전 작업 라운드의 변경분만** 펼쳐 보여줍니다.
-> 받는 도구는 이걸 먼저 읽으면 무엇을 검증해야 하는지 바로 알 수 있습니다.
-> 새 라운드가 시작되면, 여기 내용은 9번 작업 로그로 내려가고 이 블록은 최신으로 교체합니다.
-
-- **라운드:** 2026-06-29 (15차) / 작성: Claude
-- **한 줄:** 프로젝트 기간을 "프로젝트기간(시작~종료 년월)" + "작업기간(자유텍스트)" 2개로 분리 + archiving 연도/월 정렬.
-- **⚠️ 진행중. 매 작업마다 갱신.**
-- **요구:** 모달 "프로젝트 기간"을 둘로 — ①프로젝트기간(부터~까지, type=month 년월) ②작업기간(25일/2주 자유입력).
-  모달 표시 "프로젝트기간 2022년3월~5월 / 작업기간:25일". archiving은 시작년월로 연도/월 정렬, 불규칙표기 정리.
-- **구현 5단계:**
-  ① 스키마: period_start/period_end/work_duration 컬럼 추가 + 기존 period→period_start 자동변환 SQL(supabase-schema.sql).
-  ② 백엔드: 4개 매핑함수(publicProject/normalizeProject/dbProjectToProject/projectToDbRow)에 신규필드 추가.
-     DB는 snake_case(period_start), JS는 camelCase(periodStart) 변환.
-  ③ admin: "기간" 1칸 → periodStart(month)+periodEnd(month) 2칸 + workDuration 텍스트칸. 기존 period는 hidden(레거시).
-     buildPeriodDisplay(start,end,legacy)로 저장시 period 표시문자열 자동생성("2022년 3월 ~ 5월").
-  ④ 모달: 작업기간 카드(#projectWorkDurationCard) 추가, workDuration 있을때만 표시.
-  ⑤ archiving: periodSortKey(YYYYMM)로 연도그룹+월정렬. projectYear로 그룹키=연도. 최신순.
-- **검증:** node--check 통과. Playwright — admin 3필드, 모달 작업기간카드, archiving 2026~2015 정렬, 민선8기 2022배치, 에러없음.
-  buildPeriodDisplay 단위테스트(같은연도/같은월/다른연도/시작만/레거시) 통과.
-- **사용자 액션:** supabase-schema.sql 재실행(컬럼3개+기존period 자동변환) + api/app/admin/index/styles 교체 push.
-  캐시 period-1. 이후 admin에서 각 프로젝트 기간을 시작~종료 월로 재입력하면 archiving 월정렬 정확해짐.
-- **15차 후속 수정:** ★사용자에게 실행용 SQL을 안 줘서 DB에 period_start 등 컬럼이 없었음 → admin 저장 안 됨이 그 원인.
-  → `add-period-columns.sql` 신규 제공(컬럼3개 추가 + 기존period 자동변환). 이걸 Supabase에서 실행해야 저장 작동.
-  또한 모달 작업기간 카드: 값있을때만 표시 → **항상 표시(빈값이면 '—')**로 변경(사용자 요청). period도 빈값시 '—'. 캐시 period-2.
-- **15차 후속2(레이아웃):** 모달 작업기간 카드를 프로젝트기간 바로 옆 배치. ★주의: #projectModal .project-facts가
-  styles.css에 10번 중복정의됨 → 실제적용은 마지막 8324행(2열 grid: period|lead / role|short / tags|short / metric|outcome).
-  이걸 3열로 수정(period work lead / role role short / tags tags short / metric metric outcome)해서 work를 period 옆에,
-  오른쪽 lead/short(개요/내용) 침범 안 함. Playwright로 period(x170)·work(x425) 동일행, lead(x681) 우측 분리 확인. 캐시 period-3.
-- **바뀐 파일:** api/index.js, app.js, index.html, styles.css, admin.html, admin.js, admin.css, supabase-schema.sql, add-period-columns.sql.
+- 작업 폴더: `C:\Users\HP\Desktop\새 폴더`
+- 배포 방향: Render 제거, Vercel 중심
+- 운영 도메인 목표: `https://kimsung-won.com`
+- 데이터/파일 저장: Supabase DB + Supabase Storage
+- 주요 파일:
+  - `index.html`, `styles.css`, `app.js`
+  - `admin.html`, `admin.css`, `admin.js`
+  - `api/index.js`
+  - `supabase-schema.sql`
+  - `data.js`, `content-data/projects.json`
 
 ---
 
-## 0. 한 줄 요약
+## 2. 이번 라운드 변경 요약
 
-김성원(Kim Sung Won)의 개인 포트폴리오 사이트 "Homo Ruens".
-정적 프론트엔드 + 서버리스 API + Supabase(DB·Storage) 구조로,
-**단일 도메인(Vercel)으로 통합**하는 것이 현재 목표.
+### H. Essay 에디터 개선
 
----
+관리자 `Essays` 에디터를 실사용 가능한 글쓰기 도구에 가깝게 개선.
 
-## 1. 배포 타깃 (확정)
+변경 내용:
 
-| 항목 | 값 |
-| --- | --- |
-| 통합 호스팅 | **Vercel** (프론트 + API 한 도메인) |
-| 운영 도메인(Production) | **https://kimsung-won.com** (커스텀 도메인) |
-| Vercel 기본 URL | https://ruens-hompage.vercel.app/ |
-| GitHub | https://github.com/banddal/ruens_hompage (브랜치: main) |
-| Supabase URL | https://lzwkhsbfpachkaudszjo.supabase.co |
-| Supabase Storage 버킷 | `portfolio-assets` |
+- 툴바 정리 및 확장
+  - `P`, `H2`, `H3`
+  - `B`, `I`, `U`
+  - `Quote`
+  - `UL`, `OL`
+  - `Link`
+  - `Image`
+  - `Line`
+  - `Clear`
+- 기존 이모지/기호 중심 버튼을 일반 텍스트 버튼으로 정리.
+- 에디터 글꼴을 관리자 굵은 폰트 느낌에서 일반 웹 기본 산세리프 계열로 조정.
+- 에디터 기본 글자 굵기를 낮추고, 제목/강조도 과하게 보이지 않도록 조정.
+- 붙여넣기 이미지 처리 개선.
+  - 네이버/브런치에서 HTML로 복사된 `<img>`는 정리 후 보존.
+  - 클립보드에 이미지 파일이 들어오는 경우 Data URL로 본문에 직접 삽입.
+  - `Image` 버튼으로 로컬 이미지 파일을 선택해 본문에 삽입 가능.
+- `<figure>`, `<figcaption>` 구조 허용.
+- 링크 붙여넣기/삽입 시 `http/https`만 허용하고 `target="_blank"`, `rel="noopener"` 부여.
+- 에세이 미리보기 모달 추가.
+  - 현재 입력 중인 제목/카테고리/날짜/태그/본문을 사이트 모달에 가까운 형태로 확인 가능.
+- 에세이 저장 API 요청 크기 제한을 `1MB`에서 `10MB`로 확대.
+  - 이유: 본문에 이미지가 Data URL로 들어갈 경우 저장 요청이 커질 수 있음.
 
-> ✅ **Render는 더 이상 사용하지 않음.** 과거 상시서버(server.js) 방식으로 Render를
-> 잠시 썼으나, Vercel 서버리스로 통합 완료. kimsung-won.com은 Vercel Production을 가리킴.
-> Render 서비스는 잉여 상태이므로 Suspend/Delete 가능(급하지 않음).
-> 코드 내 Render 흔적(onrender.com 하드코딩 등)은 모두 제거됨.
+수정 파일:
 
----
+- `admin.html`
+- `admin.js`
+- `admin.css`
+- `api/index.js`
 
-## 2. 아키텍처
+검증:
 
-```
-방문자 브라우저
-   │
-   ├─ 정적 파일 (Vercel가 직접 서빙)
-   │     index.html / app.js / styles.css / data.js / admin.html / admin.js / admin.css
-   │     homo_ruens_assets/** (배경·교육·제주·지도 이미지)
-   │
-   └─ /api/*  →  Vercel 서버리스 함수 (api/index.js, 개조 예정)
-          │
-          ├─ Supabase REST  (projects / project_images / project_files / project_memos
-          │                   / essays / essay_comments / blocked_ips 테이블)
-          └─ Supabase Storage (portfolio-assets 버킷, 업로드 파일)
+```powershell
+node --check "C:\Users\HP\Desktop\새 폴더\admin.js"
+node --check "C:\Users\HP\Desktop\새 폴더\api\index.js"
 ```
 
-### 데이터 소스 (현재 이원화 — 정리 필요)
+주의:
 
-- **`data.js`** : 프론트에 하드코딩된 31개 프로젝트 + 에세이/스킬 라벨.
-  백엔드 없이도 기본 렌더링이 되게 하는 fallback 겸 초기 시드.
-- **Supabase `projects` 테이블** : 관리자 페이지(admin)로 추가/수정하는 실데이터.
-- 서버는 Supabase가 비어 있으면 `backend-data/projects.json` →
-  `content-data/projects.json` 순으로 시드를 자동 주입(server.js의 seed 로직).
+- 현재 에세이 이미지는 별도 Storage 업로드가 아니라 본문 HTML 안에 Data URL로 들어갈 수 있음.
+- 큰 이미지를 많이 붙이면 Supabase row 또는 Vercel 요청 제한에 걸릴 수 있음.
+- 장기적으로는 `essay_images` 테이블 + Storage 업로드 방식의 별도 이미지 관리 모달을 만드는 것이 더 안정적.
 
-> ❗ **결정 필요 항목**: "진짜 소스(source of truth)"를 Supabase로 단일화할지,
-> data.js를 계속 fallback으로 둘지. → 5번 미결정 항목 참조.
+### A. Google Analytics 태그 추가
 
----
+`index.html`의 `<head>`에 Google tag 삽입.
 
-## 3. 파일 지도 (무엇이 어디에)
+- 측정 ID: `G-0YRE7D04ZF`
+- 관리자 페이지 `admin.html`에는 삽입하지 않음.
 
-> 파일별 "담당자"는 두지 않습니다. Claude와 Codex는 같은 파일을 번갈아 보며
-> 교차검증하는 관계이기 때문입니다. 대신 파일의 **성격(자주 바뀌는지)** 을 표시해
-> 충돌 위험이 큰 파일을 인지하는 용도로만 씁니다.
+### B. 푸터 이메일 수정
 
-| 파일 / 폴더 | 역할 | 성격 |
-| --- | --- | --- |
-| `index.html` | 메인 페이지 마크업. 끝에서 data.js, app.js 로드 | 자주 변경 |
-| `app.js` | 프론트 전체 로직, API 호출, 갤러리/탭/렌더 | 자주 변경 |
-| `styles.css` | 메인 스타일 (히어로 등 디자인 작업 중) | 자주 변경 |
-| `data.js` | 하드코딩 프로젝트/에세이 데이터 | 가끔 변경 |
-| `admin.html` / `admin.js` / `admin.css` | 관리자 페이지 (로그인·프로젝트 CRUD·업로드) | 가끔 변경 |
-| `server.js` | **(레거시)** 상시 실행 Node http 서버. Vercel 부적합 | 동결(삭제 후보) |
-| `api/index.js` | 서버리스 API 핸들러 | 핵심·신중히 |
-| `vercel.json` | 라우팅/리라이트 설정 | 거의 고정 |
-| `supabase-schema.sql` | DB 스키마 (테이블·버킷·RLS). 재실행 안전 | 거의 고정 |
-| `DEPLOY_VERCEL.md` | Vercel 배포 가이드 | 거의 고정 |
-| `backend-data/*.json` | 서버 로컬 저장본 (Vercel에선 안 씀) | 미사용 |
-| `content-data/*.json` | 시드 데이터 원본 (projects/essays 등) | 가끔 변경 |
-| `homo_ruens_assets/**` | 이미지 자산 | 가끔 변경 |
-| `uploads/**` | (레거시) 로컬 업로드 저장 폴더. Vercel에선 사용 불가 | 미사용 |
+푸터 영문 문구의 분쟁 접수 이메일 수정.
 
----
+- 기존: `help@email.com`
+- 변경: `band17dal@gmail.com`
 
-## 4. Vercel 통합을 위한 작업 보드
+### C. 관리자 Dashboard 추가
 
-상태 표기: ☐ 할 일 / ◐ 진행 중 / ☑ 완료
+관리자 로그인 후 첫 화면을 `Dashboard`로 변경.
 
-### 4-1. 백엔드 서버리스 개조  ☑ (Claude 완료 2026-06-28)
-- ☑ `server.js`의 핵심 로직을 `api/index.js` 단일 서버리스 핸들러로 이전
-- ☑ 의존성 0 유지 (외부 npm 패키지 추가하지 않음 → lockfile 충돌 방지)
-- ☑ 로컬 파일 저장(fs.writeFileSync) fallback 제거, **Supabase Storage 경로만** 사용
-  - writeJson/ensureDir은 throw/no-op 스텁으로 변경, 로컬 쓰기 차단
-  - passwordRecord는 ADMIN_PASSWORD 환경변수 전용으로 단순화
-  - getProjectsStore fallback을 content-data 시드로 변경(빈 화면 방지)
-- ☐ 멀티파트 업로드 파싱이 Vercel `req` 환경에서 동작하는지 **실배포 검증 필요**
-      (스모크 테스트는 통과했으나 실제 multipart 업로드는 Vercel에서 한 번 확인 권장)
+대시보드에 표시되는 항목:
 
-> 스모크 테스트 결과(Supabase 미설정 로컬): /api/health 200,
-> /api/projects 28건(시드), /api/admin/projects 403(보호 정상).
+- 전체 Project 수
+- 전체 Essay 수
+- 전체 Memo 수
+- 전체 Comment 수
+- 방문자수
+- 조회 포스트 수
+- 최신 Memo
+- 최신 Comment
+- 조회 포스트 목록
 
-### 4-2. 라우팅 / 설정  ☑ (Claude 완료 2026-06-28)
-- ☑ `vercel.json` 작성: `/api/(.*)` → `api/index.js` rewrite, 함수 maxDuration 30s,
-      index.html·admin.html no-store 헤더
-- ☑ `.gitignore` 생성: `.env*`, `node_modules`, `uploads/`, `backend-data/*.json` 제외
-- ☑ `.env.example` 생성 (커밋 안전, 양식만)
+연결:
 
-### 4-3. 프론트 주소 정리  ☑ (Claude 완료 2026-06-28)
-- ☑ `app.js`: `DEFAULT_API_ORIGIN`(Render 하드코딩) 제거,
-      `API_BASE` 기본값을 상대경로("")로 변경. `HOMO_RUENS_API_BASE` override만 유지.
-- ☑ `admin.js`: 이미 `/api/...` 상대경로 사용 → 수정 불필요(확인 완료)
+- `보기` 버튼 → `Memos`, `Comments`
+- `분석 보기` 버튼 → `Analytics`
 
-### 4-4. Supabase 준비  ☐
-- ☐ Supabase SQL Editor에서 `supabase-schema.sql` 실행 (사람이 직접)
-- ☐ `content-data/projects.json` 기반 초기 시딩 확인 (`/api/projects` 호출 시 자동)
-- ☐ `portfolio-assets` 버킷 public 설정 확인
+수정 파일:
 
-### 4-5. 문서 갱신 / Render 정리  ☑ (Claude 완료 2026-06-28)
-- ☑ `DEPLOY_VERCEL.md` 작성(Vercel 기준 배포 가이드). 옛 `SUPABASE_DEPLOY.md`(Render 기준) **삭제**.
-- ☑ `server.js`(Render용 상시 서버) **삭제**.
-- ☑ `package.json`의 `"start":"node server.js"` 제거 → `"dev":"vercel dev"`로 교체, 이름 정리.
-- ☑ admin.html의 "Render 환경변수" 문구 → "Vercel 환경변수(ADMIN_PASSWORD)"로 수정.
-- ☑ api/index.js의 `process.env.RENDER` 분기 제거.
-- 결과: **코드·설정에 Render 흔적 0.** (문서엔 "제거함" 기록만 보존)
+- `admin.html`
+- `admin.js`
+- `admin.css`
 
-### 4-6. 대용량 파일 + 공개정책 설계  ☐ (다음 작업, 설계 확정)
-> 정책 = **크기 무관, 공개여부 기준.** 공개허용=승인없이 / 공개불허=승인 후.
-- ☐ Supabase **Pro 플랜** 전환 (50MB 벽 제거, 최대 500GB/파일, egress 250GB 포함). 비용=사용자 부담.
-- ☐ 버킷 2개로 분리: `portfolio-assets`(public, 공개파일·이미지) + **`portfolio-private`**(비공개).
-  파일의 공개여부 플래그 ↔ 버킷이 1:1 매칭 = 곧 다운로드 정책.
-- ☐ **이미지 파이프라인**: 업로드 시 리사이즈(가로~1600px)+썸네일 생성, lazy load, AVIF/WebP.
-  (1GB+ 이미지여도 페이지는 가볍게. CDN이 배포.)
-- ☐ **대용량 업로드**: 브라우저→Supabase 직접 **TUS resumable**(함수 4.5MB 한도 우회, 이어받기).
-  의존성 `@supabase/storage-js` 추가 필요(의존성 0 원칙의 첫 예외 — 7-4 규칙대로 기록).
-- ☐ **비공개 다운로드**: 홈페이지 내 승인 구조 → 승인 시 `createSignedUrl`(예 10분 만료) 발급.
-  요청·승인 상태를 담을 DB 테이블 추가 필요.
+### D. Projects / Essays 관리자 목록 구조 변경
 
----
+기존 좌측 고정 목록을 상단 게시판형 목록으로 변경.
 
-## 5. 미결정 / 사람 결정 필요 항목
+현재 구조:
 
-1. **데이터 단일화**: source of truth를 Supabase로 통일할지, data.js를 계속 둘지. (여전히 미결)
+- 상단: 게시판 프레임
+- 게시판 내부: 자체 스크롤
+- 하단: 에디터
 
-### 해결된 항목 (기록 보존)
-- **백엔드 개조 방식**: A안 확정 — server.js 로직을 의존성 없이 `api/index.js`로 응집.
-- **admin 비밀번호**: **환경변수 `ADMIN_PASSWORD` 전용으로 확정.**
-  화면에서 비번을 "설정"하는 옛 흐름은 서버리스에서 불가(로컬 파일 쓰기 차단).
-  → `handlePasswordSave`는 500 대신 "환경변수로 설정하라" 안내(400) 반환.
-  ⚠️ **함정 기록**: Vercel 환경변수는 **Production 환경 체크**가 안 되면 운영 도메인에서
-  안 보임. ADMIN_PASSWORD가 Preview에만 있어 `authConfigured:false`로 한참 헤맸음.
-  교훈 = 환경변수는 (1) Production 체크 (2) 값 수정 후 Redeploy, 둘 다 해야 적용.
+목록 컬럼:
 
----
+- 게시일자
+- 제목
+- 태그
+- 작성 시간
+- 상태
 
-## 6. 환경변수 (절대 코드/깃에 넣지 말 것)
+정렬 기능:
 
-Vercel 대시보드 → Settings → Environment Variables 에만 등록.
-로컬 개발은 `.env.local` (gitignore 처리됨).
+- Projects:
+  - 기본 순서
+  - 게시일자 최신순
+  - 게시일자 오래된순
+  - 제목 가나다순
+  - 태그 가나다순
+  - 작성 시간 최신순
+- Essays:
+  - 게시일자 최신순
+  - 게시일자 오래된순
+  - 제목 가나다순
+  - 태그 가나다순
+  - 작성 시간 최신순
 
-| 키 | 설명 | 비고 |
-| --- | --- | --- |
-| `SUPABASE_URL` | https://lzwkhsbfpachkaudszjo.supabase.co | 공개돼도 무방 |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role 키 | 🔴 **절대 노출 금지**. 서버 함수에서만 사용 |
-| `SUPABASE_STORAGE_BUCKET` | `portfolio-assets` | |
-| `ADMIN_PASSWORD` | 관리자 로그인 비밀번호 | 최소 10자 |
-| `ADMIN_SECRET` | 세션 서명용 긴 랜덤 문자열 | 미설정 시 ADMIN_PASSWORD로 대체됨 |
+### E. 저장하기 / 수정하기 분리
 
-> service_role 키가 프론트 코드나 git에 들어가면 DB 전체가 뚫립니다.
-> 이 키는 오직 `api/` 서버 함수의 `process.env`에서만 읽습니다.
+관리자에서 의도치 않은 복제를 줄이기 위해 버튼 의미를 분리.
 
----
+- `저장하기`: 새 프로젝트/새 에세이 생성용
+- `수정하기`: 기존 항목 수정용
 
-## 7. Claude ↔ Codex 협업 방식
+현재 동작:
 
-이 프로젝트에서 Claude와 Codex는 **역할이 갈린 게 아니라, 같은 작업을
-번갈아 보며 교차검증(cross-check)하는 두 개의 눈**입니다.
-어느 쪽이 무엇을 할지는 그때그때 토큰·맥락 상황에 따라 유동적입니다.
-따라서 "이 파일은 누구 담당" 같은 고정 규칙은 두지 않습니다.
+- 기존 ID가 있는 항목을 `저장하기`로 저장하려 하면 차단
+- 기존 항목을 수정하려면 `수정하기` 사용
 
-### 7-1. 전달 방식: 붙여넣기
+### F. Portfolio 관리번호 추가
 
-한 도구의 결과물을 **다른 도구에 붙여넣어** 넘깁니다
-(git 동기화로 주고받지 않음). 그래서 다음이 중요합니다.
+프로젝트별 포트폴리오 관리번호 필드 추가.
 
-- 결과물을 줄 때는 **무엇을·왜 바꿨는지 한두 줄 요약**을 같이 붙인다.
-  (받는 쪽이 diff 맥락 없이도 검증할 수 있도록)
-- 파일 전체를 통째로 주고받기보다, **바뀐 블록 + 그 파일에서의 위치**를
-  명시하면 교차검증이 빨라진다.
-- 붙여넣은 코드가 반영된 "현재 진짜 상태"는 항상 **로컬 레포 + 이 문서**가 기준.
-  대화창의 과거 버전이 아니라.
+- 형식: `p0001`, `p0002`, ...
+- 관리자 게시판에 `No.` 열로 표시
+- 프로젝트 에디터에 `포트폴리오 번호` 입력칸 추가
+- API 매핑 추가
+- DB 컬럼 추가
 
-### 7-1b. 새 세션을 Codex(또는 Claude)에게 시작시킬 때 — 무엇을 주나
+수정 위치:
 
-이 문서(PROJECT_STATE.md) "하나만" 주면 부족할 수 있습니다.
-문서는 **지도**일 뿐이고, 실제 코드는 로컬 레포에 있기 때문입니다.
-Codex는 보통 로컬 레포에 직접 접근하므로, 다음 3개를 주면 충분합니다.
+- `supabase-schema.sql`
+  - `projects.portfolio_no text default ''`
+  - 기존 row에 `p0001` 형식 자동 부여 쿼리 추가
+- `api/index.js`
+  - `portfolioNo` ↔ `portfolio_no` 매핑
+- `admin.html`
+  - 포트폴리오 번호 입력 필드
+- `admin.js`
+  - 목록 표시, 폼 read/write
 
-1. **PROJECT_STATE.md** — "지금 어디까지 됐고 왜 이렇게 됐는지"의 지도.
-   특히 맨 위 **★ 이번 라운드** 블록과 **5번(해결된 항목/함정)** 을 먼저 읽으라고 지시.
-2. **이번에 시킬 작업 한 줄** — 무엇을 해주길 원하는지. (예: "data.js를 Supabase로
-   단일화하는 마이그레이션 스크립트를 만들어줘")
-3. **관련 파일** — Codex가 로컬 레포를 보면 생략 가능. 레포 접근이 없으면
-   해당 파일 내용을 붙여넣기.
+주의:
 
-> 한 줄 지시 예시(복붙용):
-> "레포 루트의 PROJECT_STATE.md를 먼저 읽어. 특히 ★ 이번 라운드 블록과 5번 항목.
->  그 맥락 위에서 [이번 작업]을 해줘. 끝나면 변경 요약 + 바뀐 파일/위치를 알려줘."
+- Supabase SQL Editor에서 `supabase-schema.sql` 변경분을 실행해야 `portfolio_no` 저장 가능.
 
-### 7-2. 교차검증 루프
+### G. 이미지 업로드/관리 모달 분리
 
-1. 한 도구가 변경안을 만든다 (코드 + 변경 요약).
-2. 사람이 그것을 다른 도구에 붙여넣고 "검증해줘"라고 한다.
-3. 검증 측은 ① 논리 오류 ② 빠진 케이스 ③ 기존 코드와의 충돌 ④ 보안(키 노출 등)
-   을 본다. 동의하면 그대로, 이견 있으면 대안 제시.
-4. 확정된 내용은 로컬에 반영하고, 문서 맨 위 **"★ 이번 라운드에 한 일"**
-   블록을 이번 변경으로 교체한다. (직전 내용은 9번 작업 로그로 한 줄 내려보낸다.)
+프로젝트 에디터 안에 있던 이미지 업로드 UI를 분리.
 
-### 7-3. "작업 중" 태그 (충돌 방지의 핵심)
+현재 구조:
 
-파일을 누가 맡는다고 미리 정하지 않는 대신, **지금 손대고 있는 대상을
-아래 보드에 태그로 표시**합니다. 같은 대상을 양쪽이 동시에 건드려
-서로의 결과를 덮어쓰는 사고를 막기 위함입니다.
+- 에디터 안에는 `Images` 요약 + `이미지 관리` 버튼만 표시
+- 버튼 클릭 시 이미지 관리 모달 오픈
+- 모달 안에서 이미지 업로드/썸네일 확인/삭제/순서 변경
 
-작업을 시작할 때 8번 "현재 작업 중" 표에 한 줄 추가하고,
-끝나면(=결과를 반영하고 로그를 남기면) 그 줄을 지웁니다.
+모달 기능:
 
-### 7-4. 변하지 않는 규칙 (역할과 무관하게 항상)
+- 다중 이미지 업로드
+- 썸네일 표시
+- 다중 선택 삭제
+- 드래그로 순서 변경
+- `이미지 관리 확정` 버튼
 
-- **환경변수·비밀키는 코드에 하드코딩 금지.** 항상 `process.env`.
-- **의존성(npm 패키지)을 함부로 추가하지 않는다.** 추가가 불가피하면
-  9번 로그에 남기고 상대 도구에 반드시 알린다. (붙여넣기 방식이라
-  lockfile이 자동 동기화되지 않으므로 누락 시 한쪽만 깨진다.)
-- **확정 = 로컬 반영 + 로그 기록.** 머릿속이나 대화창에만 있는 변경은
-  "안 된 것"으로 친다.
+첨부파일 업로드:
+
+- 기존 기능 유지
+- 이미지 영역이 빠진 만큼 에디터 영역을 더 넓게 사용
+
+수정 파일:
+
+- `admin.html`
+- `admin.js`
+- `admin.css`
 
 ---
 
-## 8. 현재 작업 중 (실시간, 끝나면 줄 삭제)
+## 3. 검증 완료
 
-| 대상(파일/기능) | 누가 | 무엇을 | 시작 |
-| --- | --- | --- | --- |
-| (없음) | | | |
+아래 문법 검사를 통과함.
 
-> 예시: `| api/index.js 업로드 | Codex | multipart 파싱 Vercel 대응 | 06-28 |`
+```powershell
+node --check "C:\Users\HP\Desktop\새 폴더\admin.js"
+node --check "C:\Users\HP\Desktop\새 폴더\api\index.js"
+```
 
 ---
 
-## 9. 작업 로그 (최근 → 과거)
+## 4. 다음 작업자가 바로 확인할 것
 
-- 2026-06-29 (15차) · Claude · 프로젝트 기간 2분리(프로젝트기간 시작~종료 + 작업기간) + archiving 연도/월 정렬.
-- 2026-06-29 (14차) · Claude · archiving Portfolio가 Supabase 갱신 미반영하던 버그 수정(refreshArchPortfolio 연결).
-- 2026-06-29 (13차) · Claude · 새 프로젝트 "민선 8기 경기도 정책 제안" 추가(타임라인2022Side+시드+data.js+SQL).
-- 2026-06-29 (12차) · Claude · essay 브런치 추출 안되던 원인(모바일UA고정) 수정 + 네이버/브런치 버튼분리·UA자동선택.
-- 2026-06-29 (11차) · Claude · admin 이미지 100개초과 사라짐 수정(페이지네이션)+다중선택삭제+드래그순서변경.
-- 2026-06-29 (10차) · Claude · archiving 클릭무반응 진짜원인=스와이프 포인터캡처 수정(드래그시에만 캡처).
-- 2026-06-29 (9차) · Claude · archiving 에세이 클릭 무반응 수정(이벤트위임 전환, 8차 핸들러유실 해결).
-- 2026-06-29 (8차) · Claude · archiving↔essay 모달 연결 복구(hydrate후 refreshArchEssays 호출).
-- 2026-06-29 (7차) · Claude · G-FAIR 단순방식 재작업: 6차 복잡코드(버튼/API) 제거 + gfair-migrate.sql로 변경.
-- 2026-06-29 (6차) · Claude · G-FAIR 가짜분할(withGfairKoreaSplit) 제거 + 진짜 3레코드 등록기능(admin 버튼+sync-gfair API).
-- 2026-06-29 (5차) · Claude · 배경 검정영역 단축·좌우꽉채움(cover) + 댓글저장실패 진단(코드정상,원인좁히는중).
-- 2026-06-29 (4차) · Codex · 에세이 댓글 localStorage→Supabase 전환 완료. 라우트 등록(api/index.js),
-  app.js fetch 전환(답글 parentId·비번자가삭제·허니팟), index.html 폼(비번·허니팟),
-  admin Comments탭(목록·삭제·IP차단·해제). 캐시 comment-1. ※사용자: 저장 실패 보고 → Claude 5차서 진단.
+1. Supabase SQL Editor에서 `supabase-schema.sql`의 `portfolio_no` 추가 쿼리 실행 필요.
+2. 관리자 `Projects`에서 기존 프로젝트 선택 후:
+   - `p0001` 형식 번호가 뜨는지 확인
+   - `수정하기`로 저장되는지 확인
+   - `저장하기`로 기존 항목 저장 시 차단되는지 확인
+3. 이미지 관리 모달에서:
+   - 이미지 업로드
+   - 썸네일 표시
+   - 드래그 순서변경
+   - 선택 삭제
+   - 확정 버튼
+   확인 필요.
+4. `portfolio_no`는 아직 프론트의 Portfolio/News 노출 순서 제어에 직접 연결하지 않았음. 다음 라운드에서 연결 가능.
+5. 에세이도 현재 `저장하기/수정하기`는 프론트에서만 의미 분리됨. 서버 API는 기존 `POST /api/admin/essays` upsert 구조 유지.
 
-- 2026-06-29 (4차) · Codex · 에세이 댓글 시스템 완성. api 댓글 라우트 등록, app.js localStorage 댓글 제거 후 Supabase API 전환,
-  댓글/답글/삭제용 비밀번호/허니팟 적용, admin Comments 탭(목록·삭제·IP차단·차단해제) 추가.
-  node --check 4파일 통과, api-index.js와 api/index.js 동일 해시 확인.
-- 2026-06-29 (3차) · Claude→Codex · 에세이 댓글 시스템 백엔드(스키마 2테이블 + 핸들러 13함수,
-  스팸방어·IP차단·비번자가삭제). 라우트·프론트·admin은 Codex 인계. hashPassword 충돌 수정.
-- 2026-06-29 (2차) · Claude · 에세이 본문 서식 에디터(contenteditable 툴바, 외부 라이브러리 0,
-  sanitizeEssayHtml XSS 차단 6종 테스트) + 작성일 자동추출 확대(메타·JSON-LD·time·네이버패턴)
-  + 대표이미지(og:image) 카드 배경(네이버 기본썸네일 isGenericThumbnail로 제외) +
-  네이버 붙여넣기 HTML 정화(cleanPastedHtml) + 카드 호버 리드문 HTML태그 제거(htmlToPlainBlocks).
-- 2026-06-29 (1차) · Claude · 메모(Supabase 의견함, RLS·스팸방어) + 에세이 관리(링크 자동추출
-  브런치/네이버, 본문 에디터, 일괄등록, 전문저장) 구축. 사용자 작동 확인.
-- 2026-06-28 (밤) · Claude · Codex 작업본 병합 + dashboard "최근 완료" 동적화(featured 최대 3개,
-  기간순, private 제외, 모달 재사용). app.js/index.html/styles.css/admin.html 수정.
+---
 
-- 2026-06-28 (저녁) · Claude · Render 완전 제거(server.js·SUPABASE_DEPLOY.md 삭제, package.json/
-  admin.html/api 정리). 서버리스 유지 확정. 대용량/공개정책 설계(4-6) 신설.
-- 2026-06-28 (오후) · Claude · admin 500 디버깅 해결. 원인=ADMIN_PASSWORD가 Preview에만
-  체크 + handlePasswordSave의 writeJson 크래시. handlePasswordSave를 400 안내로 교체.
-  사람이 Production 체크+Redeploy → admin 정상 가동. Render 미사용 확정.
-- 2026-06-28 · Claude · vercel.json·.gitignore·.env.example 생성, app.js API_BASE 상대경로화.
-- 2026-06-28 · Claude · `server.js` → `api/index.js` 서버리스 개조 완료.
-- 2026-06-28 · Claude · 전체 점검 완료, Vercel 통합 설계 확정, 본 문서 생성.
-- (이전) · 프론트엔드 히어로 섹션 디자인 작업 (중앙정렬 레이아웃, 타이포, 백라이트 등).
+## 5. 현재 남은 큰 설계 메모
+
+- 방문자 분석은 자체 `analytics_events` 테이블 + Google Analytics 병행 구조.
+- 관리자 Dashboard는 자체 API들을 모아 보여주는 프론트 집계 방식.
+- Portfolio 노출 순서 제어는 앞으로 `portfolioNo`, `sortOrder`, `dashboardFeatured` 중 무엇을 최종 기준으로 삼을지 결정 필요.
+- 이미지 업로드는 업로드 즉시 저장됨. `이미지 관리 확정`은 UX상 확인 버튼이며 DB commit 버튼은 아님.
+- 프로젝트 본문 저장/수정과 이미지 업로드 저장은 아직 별도 흐름임.
+
+---
+
+## 6. 최근 수정 파일 목록
+
+- `index.html`
+- `admin.html`
+- `admin.js`
+- `admin.css`
+- `api/index.js`
+- `supabase-schema.sql`
+- `PROJECT_STATE.md`

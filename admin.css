@@ -947,10 +947,10 @@ body.modal-open {
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
-  padding: 8px;
+  padding: 9px;
   border: 1px solid var(--line);
   border-bottom: none;
-  background: #fafafa;
+  background: #f7f7f7;
 }
 .essay-editor-toolbar button {
   min-height: 32px;
@@ -959,8 +959,8 @@ body.modal-open {
   background: #fff;
   color: #222;
   border: 1px solid var(--line);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
 }
 .essay-editor-toolbar button:hover { background: #111; color: #fff; border-color: #111; }
 .essay-editor-toolbar .tb-sep {
@@ -970,14 +970,16 @@ body.modal-open {
   margin: 0 4px;
 }
 .essay-editor {
-  min-height: 320px;
+  min-height: 420px;
   max-height: 600px;
   overflow-y: auto;
   border: 1px solid var(--line);
   background: rgba(255,255,255,.92);
-  padding: 16px 18px;
+  padding: 22px 24px;
   line-height: 1.7;
-  font-size: 15px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
   outline: none;
 }
 .essay-editor:focus { border-color: #111; }
@@ -985,16 +987,90 @@ body.modal-open {
   content: attr(data-placeholder);
   color: #aaa;
 }
-.essay-editor h2 { font-size: 22px; margin: 18px 0 8px; letter-spacing: -.03em; }
-.essay-editor h3 { font-size: 18px; margin: 16px 0 6px; letter-spacing: -.02em; }
+.essay-editor p { margin: 0 0 1em; }
+.essay-editor h2 { font-size: 24px; margin: 1.4em 0 .55em; letter-spacing: -.02em; font-weight: 600; }
+.essay-editor h3 { font-size: 19px; margin: 1.2em 0 .5em; letter-spacing: -.01em; font-weight: 600; }
+.essay-editor strong,
+.essay-editor b { font-weight: 600; }
 .essay-editor blockquote {
-  margin: 12px 0;
-  padding: 6px 16px;
-  border-left: 3px solid var(--accent);
+  margin: 16px 0;
+  padding: 8px 16px;
+  border-left: 2px solid rgba(20,20,20,.28);
+  color: #555;
+  background: rgba(20,20,20,.035);
+}
+.essay-editor ul,
+.essay-editor ol { margin: 0 0 1em 1.25em; padding: 0; }
+.essay-editor li { margin: .3em 0; }
+.essay-editor figure {
+  margin: 18px 0;
+}
+.essay-editor img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+.essay-editor figcaption {
+  min-height: 20px;
+  margin-top: 7px;
+  color: #777;
+  font-size: 12px;
+  text-align: center;
+}
+.essay-editor hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
+
+.essay-preview-panel {
+  width: min(980px, calc(100vw - 48px));
+}
+
+.essay-preview-body {
+  min-height: 460px;
+  max-height: calc(100vh - 230px);
+  overflow: auto;
+  padding: 34px 38px;
+  background: #fff;
+  border: 1px solid rgba(20,20,20,.08);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.76;
+  color: #202020;
+}
+
+.essay-preview-body p { margin: 0 0 1.05em; }
+.essay-preview-body h2 { margin: 1.45em 0 .55em; font-size: 25px; font-weight: 600; letter-spacing: -.02em; }
+.essay-preview-body h3 { margin: 1.25em 0 .5em; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.essay-preview-body strong,
+.essay-preview-body b { font-weight: 600; }
+.essay-preview-body blockquote {
+  margin: 18px 0;
+  padding: 10px 18px;
+  border-left: 2px solid rgba(20,20,20,.28);
+  background: rgba(20,20,20,.035);
   color: #555;
 }
-.essay-editor img { max-width: 100%; height: auto; margin: 10px 0; }
-.essay-editor hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
+.essay-preview-body ul,
+.essay-preview-body ol { margin: 0 0 1em 1.25em; padding: 0; }
+.essay-preview-body li { margin: .3em 0; }
+.essay-preview-body figure { margin: 20px 0; }
+.essay-preview-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+.essay-preview-body figcaption {
+  margin-top: 7px;
+  color: #777;
+  font-size: 12px;
+  text-align: center;
+}
+.essay-preview-body hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 24px 0;
+}
 
 
 /* ===== 이미지 다중선택 + 드래그 순서변경 (Claude 추가) ===== */

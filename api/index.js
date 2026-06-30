@@ -1533,7 +1533,7 @@ async function handleEssayDetail(req, res, id) {
 async function handleEssaySave(req, res) {
   let payload;
   try {
-    const body = await collectRequestBody(req, 1024 * 1024); // 본문 큰 경우 대비 1MB
+    const body = await collectRequestBody(req, 10 * 1024 * 1024); // 이미지 포함 본문 대비 10MB
     payload = JSON.parse(body.toString("utf8") || "{}");
   } catch {
     return sendError(res, 400, "잘못된 요청입니다.");

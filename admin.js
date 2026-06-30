@@ -31,6 +31,8 @@ const openImageManagerButton = $("#openImageManager");
 const imageManagerModal = $("#imageManagerModal");
 const imageManagerStatus = $("#imageManagerStatus");
 const imageManagerSummary = $("#imageManagerSummary");
+const essayImageInput = $("#essayImageInput");
+const essayPreviewModal = $("#essayPreviewModal");
 const securityStatusList = $("#securityStatusList");
 const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
@@ -1141,6 +1143,36 @@ function syncEditorBody() {
   return html;
 }
 
+function insertHtmlAtCursor(html) {
+  const editor = $("#essayEditor");
+  if (!editor) return;
+  editor.focus();
+  document.execCommand("insertHTML", false, html);
+  updateBodyCharCount();
+}
+
+function insertEssayImage(src, alt = "") {
+  if (!src) return;
+  insertHtmlAtCursor(`<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"><figcaption></figcaption></figure><p><br></p>`);
+}
+
+function readImageFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("이미지를 읽지 못했습니다."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function insertEssayImageFiles(files) {
+  const imageFiles = Array.from(files || []).filter(file => /^image\//i.test(file.type));
+  for (const file of imageFiles) {
+    const dataUrl = await readImageFileAsDataUrl(file);
+    insertEssayImage(dataUrl, file.name || "essay image");
+  }
+}
+
 function updateBodyCharCount() {
   const el = $("#bodyCharCount");
   const editor = $("#essayEditor");
@@ -1193,12 +1225,22 @@ function cleanEssayBody() {
   updateBodyCharCount();
 }
 
+function stripEditorWeight(root) {
+  root.querySelectorAll("*").forEach(node => {
+    node.style.fontFamily = "";
+    node.style.fontWeight = "";
+    node.style.color = "";
+    node.removeAttribute("class");
+  });
+}
+
 // 서식 에디터 툴바 명령 처리
 function runEditorCommand(cmd) {
   const editor = $("#essayEditor");
   if (!editor) return;
   editor.focus();
   switch (cmd) {
+    case "p": document.execCommand("formatBlock", false, "P"); break;
     case "bold": document.execCommand("bold"); break;
     case "italic": document.execCommand("italic"); break;
     case "underline": document.execCommand("underline"); break;
@@ -1206,18 +1248,39 @@ function runEditorCommand(cmd) {
     case "h3": document.execCommand("formatBlock", false, "H3"); break;
     case "quote": document.execCommand("formatBlock", false, "BLOCKQUOTE"); break;
     case "ul": document.execCommand("insertUnorderedList"); break;
+    case "ol": document.execCommand("insertOrderedList"); break;
+    case "link": {
+      const url = window.prompt("연결할 URL을 입력하세요:");
+      if (url && /^https?:\/\//i.test(url)) document.execCommand("createLink", false, url);
+      break;
+    }
     case "hr": document.execCommand("insertHorizontalRule"); break;
     case "clear":
       document.execCommand("removeFormat");
       document.execCommand("formatBlock", false, "P");
       break;
     case "image": {
-      const url = window.prompt("이미지 주소(URL)를 입력하세요:");
-      if (url && /^https?:\/\//i.test(url)) document.execCommand("insertImage", false, url);
+      essayImageInput?.click();
       break;
     }
   }
   updateBodyCharCount();
+}
+
+function renderEssayPreview() {
+  const data = collectEssayForm();
+  $("#essayPreviewCategory").textContent = ESSAY_CATEGORY_LABELS[data.category] || data.category || "Essay";
+  $("#essayPreviewTitle").textContent = data.title || "제목 없음";
+  $("#essayPreviewMeta").textContent = `Uploaded · ${data.publishedAt || "날짜 미정"}${data.tags.length ? ` · #${data.tags.join(" #")}` : ""}`;
+  const body = data.body || `<p class="memo-admin-empty">본문이 없습니다.</p>`;
+  $("#essayPreviewBody").innerHTML = body;
+  essayPreviewModal?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeEssayPreview() {
+  essayPreviewModal?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
 
 async function saveEssay(event, mode = "create") {
@@ -1502,8 +1565,19 @@ $("#essayEditor")?.addEventListener("input", updateBodyCharCount);
 $("#essayEditor")?.addEventListener("paste", event => {
   event.preventDefault();
   const clipboard = event.clipboardData || window.clipboardData;
+  const clipboardFiles = Array.from(clipboard.files || []);
+  const itemFiles = Array.from(clipboard.items || [])
+    .map(item => item.kind === "file" ? item.getAsFile() : null)
+    .filter(Boolean);
+  const imageFiles = [...clipboardFiles, ...itemFiles]
+    .filter(file => file && /^image\//i.test(file.type));
   const htmlData = clipboard.getData("text/html");
   const textData = clipboard.getData("text/plain");
+
+  if (imageFiles.length && !htmlData) {
+    insertEssayImageFiles(imageFiles);
+    return;
+  }
 
   let cleanHtml;
   if (htmlData) {
@@ -1516,6 +1590,7 @@ $("#essayEditor")?.addEventListener("paste", event => {
       .join("");
   }
   document.execCommand("insertHTML", false, cleanHtml);
+  if (imageFiles.length) insertEssayImageFiles(imageFiles);
   updateBodyCharCount();
 });
 
@@ -1526,7 +1601,7 @@ function escapeAdminHtml(s) {
 // 붙여넣은 HTML에서 의미있는 구조(문단·제목·굵게·기울임·인용·리스트·이미지)만 남기고
 // class/style/span 등 플랫폼 전용 서식 코드를 전부 제거한다.
 function cleanPastedHtml(html) {
-  const allowed = new Set(["P","BR","H2","H3","STRONG","B","EM","I","U","BLOCKQUOTE","UL","OL","LI","HR","IMG","A"]);
+  const allowed = new Set(["P","BR","H2","H3","STRONG","B","EM","I","U","BLOCKQUOTE","UL","OL","LI","HR","IMG","A","FIGURE","FIGCAPTION"]);
   const tmp = document.createElement("div");
   tmp.innerHTML = html;
 
@@ -1546,6 +1621,16 @@ function cleanPastedHtml(html) {
         Array.from(child.attributes).forEach(a => {
           if (!keep.includes(a.name.toLowerCase())) child.removeAttribute(a.name);
         });
+        if (tag === "A") {
+          const href = child.getAttribute("href") || "";
+          if (!/^https?:\/\//i.test(href)) child.removeAttribute("href");
+          child.setAttribute("target", "_blank");
+          child.setAttribute("rel", "noopener");
+        }
+        if (tag === "IMG") {
+          const src = child.getAttribute("src") || "";
+          if (!/^(https?:|data:image\/)/i.test(src)) child.remove();
+        }
       } else if (child.nodeType === Node.COMMENT_NODE) {
         child.remove();
       }
@@ -1560,6 +1645,14 @@ function cleanPastedHtml(html) {
     .trim();
   return out || `<p>${escapeAdminHtml(tmp.textContent || "")}</p>`;
 }
+essayImageInput?.addEventListener("change", event => {
+  insertEssayImageFiles(event.target.files || []);
+  event.target.value = "";
+});
+$("#essayPreviewBtn")?.addEventListener("click", renderEssayPreview);
+$$("[data-close-essay-preview]").forEach(button => {
+  button.addEventListener("click", closeEssayPreview);
+});
 $("#essayToolbar")?.addEventListener("click", event => {
   const btn = event.target.closest("[data-cmd]");
   if (btn) { event.preventDefault(); runEditorCommand(btn.dataset.cmd); }

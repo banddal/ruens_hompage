@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260630-image-manager-1" />
+<link rel="stylesheet" href="admin.css?v=20260630-essay-editor-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -405,23 +405,29 @@
               본문 (서식 편집)
             </label>
             <div class="essay-editor-toolbar" id="essayToolbar">
-              <button type="button" data-cmd="bold" title="굵게"><b>B</b></button>
-              <button type="button" data-cmd="italic" title="기울임"><i>I</i></button>
-              <button type="button" data-cmd="underline" title="밑줄"><u>U</u></button>
+              <button type="button" data-cmd="p" title="본문">P</button>
+              <button type="button" data-cmd="h2" title="큰 제목">H2</button>
+              <button type="button" data-cmd="h3" title="작은 제목">H3</button>
               <span class="tb-sep"></span>
-              <button type="button" data-cmd="h2" title="소제목">H2</button>
-              <button type="button" data-cmd="h3" title="작은 소제목">H3</button>
-              <button type="button" data-cmd="quote" title="인용">❝</button>
-              <button type="button" data-cmd="ul" title="목록">• 목록</button>
+              <button type="button" data-cmd="bold" title="굵게">B</button>
+              <button type="button" data-cmd="italic" title="기울임">I</button>
+              <button type="button" data-cmd="underline" title="밑줄">U</button>
               <span class="tb-sep"></span>
-              <button type="button" data-cmd="hr" title="구분선">─</button>
-              <button type="button" data-cmd="image" title="이미지 삽입">🖼 이미지</button>
-              <button type="button" data-cmd="clear" title="서식 지우기">✕ 서식</button>
+              <button type="button" data-cmd="quote" title="인용">Quote</button>
+              <button type="button" data-cmd="ul" title="글머리 목록">UL</button>
+              <button type="button" data-cmd="ol" title="번호 목록">OL</button>
+              <span class="tb-sep"></span>
+              <button type="button" data-cmd="link" title="링크 삽입">Link</button>
+              <button type="button" data-cmd="image" title="이미지 삽입">Image</button>
+              <button type="button" data-cmd="hr" title="구분선">Line</button>
+              <button type="button" data-cmd="clear" title="서식 지우기">Clear</button>
+              <input type="file" id="essayImageInput" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
             </div>
             <div id="essayEditor" class="essay-editor" contenteditable="true" data-placeholder="여기에 본문을 작성하거나 붙여넣고, 위 버튼으로 서식을 적용하세요. 비워두면 카드 클릭 시 원본 링크로 이동합니다."></div>
             <textarea name="body" id="essayBody" class="hidden"></textarea>
             <div class="essay-body-tools">
               <button type="button" id="cleanBodyBtn" class="ghost">붙여넣기 정리(서식 제거)</button>
+              <button type="button" id="essayPreviewBtn" class="ghost">미리보기</button>
               <span id="bodyCharCount" class="status-text"></span>
             </div>
 
@@ -455,6 +461,21 @@
         </section>
       </section>
     </section>
+
+    <div id="essayPreviewModal" class="admin-modal hidden" role="dialog" aria-modal="true" aria-labelledby="essayPreviewTitle">
+      <div class="admin-modal-backdrop" data-close-essay-preview></div>
+      <section class="admin-modal-panel essay-preview-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" id="essayPreviewCategory">Essay Preview</p>
+            <h2 id="essayPreviewTitle">미리보기</h2>
+            <p id="essayPreviewMeta" class="security-copy"></p>
+          </div>
+          <button type="button" class="ghost" data-close-essay-preview>닫기</button>
+        </div>
+        <article id="essayPreviewBody" class="essay-preview-body"></article>
+      </section>
+    </div>
 
     <section id="memosPanel" class="admin-tab-panel memos-panel hidden">
       <section class="security-card">
@@ -562,6 +583,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260630-image-manager-1"></script>
+<script src="admin.js?v=20260630-essay-editor-1"></script>
 </body>
 </html>
