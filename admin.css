@@ -963,6 +963,34 @@ body.modal-open {
   font-weight: 600;
 }
 .essay-editor-toolbar button:hover { background: #111; color: #fff; border-color: #111; }
+.essay-toolbar-select,
+.essay-color-control {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #222;
+  font-size: 12px;
+  font-weight: 600;
+}
+.essay-toolbar-select {
+  width: 104px;
+  padding: 0 8px;
+}
+.essay-color-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+.essay-color-control input {
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
 .essay-editor-toolbar .tb-sep {
   width: 1px;
   height: 22px;

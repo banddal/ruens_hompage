@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260630-essay-editor-1" />
+<link rel="stylesheet" href="admin.css?v=20260630-essay-editor-2" />
 </head>
 <body>
 <main class="admin-shell">
@@ -412,6 +412,18 @@
               <button type="button" data-cmd="bold" title="굵게">B</button>
               <button type="button" data-cmd="italic" title="기울임">I</button>
               <button type="button" data-cmd="underline" title="밑줄">U</button>
+              <select id="essayWeightSelect" class="essay-toolbar-select" title="폰트 굵기">
+                <option value="">Weight</option>
+                <option value="300">Light</option>
+                <option value="400">Regular</option>
+                <option value="500">Medium</option>
+                <option value="600">SemiBold</option>
+                <option value="700">Bold</option>
+              </select>
+              <label class="essay-color-control" title="글자 색상">
+                Color
+                <input type="color" id="essayColorInput" value="#202020" />
+              </label>
               <span class="tb-sep"></span>
               <button type="button" data-cmd="quote" title="인용">Quote</button>
               <button type="button" data-cmd="ul" title="글머리 목록">UL</button>
@@ -583,6 +595,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260630-essay-editor-1"></script>
+<script src="admin.js?v=20260630-essay-editor-2"></script>
 </body>
 </html>

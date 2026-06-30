@@ -33,6 +33,7 @@ const imageManagerStatus = $("#imageManagerStatus");
 const imageManagerSummary = $("#imageManagerSummary");
 const essayImageInput = $("#essayImageInput");
 const essayPreviewModal = $("#essayPreviewModal");
+let savedEssayRange = null;
 const securityStatusList = $("#securityStatusList");
 const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
@@ -1156,6 +1157,60 @@ function insertEssayImage(src, alt = "") {
   insertHtmlAtCursor(`<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"><figcaption></figcaption></figure><p><br></p>`);
 }
 
+function selectionInsideEssayEditor() {
+  const editor = $("#essayEditor");
+  const selection = window.getSelection();
+  if (!editor || !selection || !selection.rangeCount) return false;
+  const range = selection.getRangeAt(0);
+  return editor.contains(range.commonAncestorContainer);
+}
+
+function saveEssaySelection() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !selectionInsideEssayEditor()) return;
+  savedEssayRange = selection.getRangeAt(0).cloneRange();
+}
+
+function restoreEssaySelection() {
+  const editor = $("#essayEditor");
+  if (!editor || !savedEssayRange) return false;
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(savedEssayRange);
+  return true;
+}
+
+function applyEssayInlineStyle(property, value) {
+  const editor = $("#essayEditor");
+  if (!editor || !value) return;
+  editor.focus();
+  restoreEssaySelection();
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !selectionInsideEssayEditor()) return;
+  const range = selection.getRangeAt(0);
+  const span = document.createElement("span");
+  span.style[property] = value;
+
+  if (range.collapsed) {
+    span.appendChild(document.createTextNode("\u200b"));
+    range.insertNode(span);
+    const nextRange = document.createRange();
+    nextRange.setStart(span.firstChild, 1);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+  } else {
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    selection.removeAllRanges();
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(span);
+    selection.addRange(nextRange);
+  }
+  saveEssaySelection();
+  updateBodyCharCount();
+}
+
 function readImageFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1560,6 +1615,16 @@ $("#fetchMetaBrunch")?.addEventListener("click", () => fetchEssayMeta("brunch"))
 $("#cleanBodyBtn")?.addEventListener("click", cleanEssayBody);
 $("#essayBody")?.addEventListener("input", updateBodyCharCount);
 $("#essayEditor")?.addEventListener("input", updateBodyCharCount);
+$("#essayEditor")?.addEventListener("mouseup", saveEssaySelection);
+$("#essayEditor")?.addEventListener("keyup", saveEssaySelection);
+$("#essayEditor")?.addEventListener("blur", saveEssaySelection);
+$("#essayWeightSelect")?.addEventListener("change", event => {
+  applyEssayInlineStyle("fontWeight", event.target.value);
+  event.target.value = "";
+});
+$("#essayColorInput")?.addEventListener("input", event => {
+  applyEssayInlineStyle("color", event.target.value);
+});
 
 // 붙여넣기: 네이버/브런치의 복잡한 서식 HTML을 깨끗하게 정리해서 삽입
 $("#essayEditor")?.addEventListener("paste", event => {
