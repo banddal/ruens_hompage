@@ -58,6 +58,11 @@
   - 글자 색상 선택 기능 추가.
   - 기존 `B`(볼드), `I`(기울임), `U`(밑줄) 버튼 유지.
   - 툴바 선택 시 본문 선택 영역이 풀리지 않도록 selection range 보존 로직 추가.
+- 2026-06-30 추가 보강 2:
+  - 다른 앱/브라우저에서 복사한 이미지 파일 붙여넣기 처리 확장.
+  - MIME 타입이 비어 있어도 파일명이 이미지 확장자이면 이미지로 처리.
+  - 이미지 URL 텍스트를 붙여넣으면 자동으로 이미지 삽입.
+  - 에디터에 이미지 파일을 드래그앤드롭해도 본문에 삽입.
 
 수정 파일:
 
@@ -78,6 +83,38 @@ node --check "C:\Users\HP\Desktop\새 폴더\api\index.js"
 - 현재 에세이 이미지는 별도 Storage 업로드가 아니라 본문 HTML 안에 Data URL로 들어갈 수 있음.
 - 큰 이미지를 많이 붙이면 Supabase row 또는 Vercel 요청 제한에 걸릴 수 있음.
 - 장기적으로는 `essay_images` 테이블 + Storage 업로드 방식의 별도 이미지 관리 모달을 만드는 것이 더 안정적.
+
+### I. Essay 모달 이미지 깨짐 수정
+
+사용자가 `20220409/우리의 젊음들` 에세이에 이미지를 붙여 테스트한 결과,
+관리자 에디터에서는 이미지가 보이나 실제 사이트 에세이 모달에서는 깨진 이미지와 파일명만 보이는 문제가 확인됨.
+
+원인:
+
+- 관리자 에디터는 붙여넣은 이미지를 `data:image/jpeg;base64,...` 형태로 본문에 저장할 수 있음.
+- 프론트 `app.js`의 `sanitizeEssayHtml()`가 기존에 `data:` 스킴 전체를 위험하다고 판단해 `img src`를 제거함.
+- 결과적으로 모달에서는 `<img alt="KakaoTalk_...jpg">`만 남아 깨진 이미지처럼 표시됨.
+
+수정:
+
+- `app.js`
+  - 에세이 HTML 새니타이저에서 이미지 `src`는 `https://`, `http://`, `data:image/`만 허용.
+  - 링크 `href`는 `http/https`만 허용.
+  - 에디터에서 추가한 색상/굵기용 `<span style="">` 중 안전한 스타일만 통과.
+    - `color`
+    - `font-weight`
+    - `font-style`
+    - `text-decoration`
+- `styles.css`
+  - 에세이 모달 내 `figure`, `figcaption`, figure 이미지 정렬 스타일 추가.
+- `index.html`
+  - `app.js`, `styles.css` 캐시 버전 갱신: `20260630-essay-image-1`
+
+검증:
+
+```powershell
+node --check "C:\Users\HP\Desktop\새 폴더\app.js"
+```
 
 ### A. Google Analytics 태그 추가
 

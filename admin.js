@@ -1220,8 +1220,19 @@ function readImageFileAsDataUrl(file) {
   });
 }
 
+function isEssayImageFile(file) {
+  if (!file) return false;
+  return /^image\//i.test(file.type || "") || /\.(png|jpe?g|webp|gif|avif)$/i.test(file.name || "");
+}
+
+function looksLikeImageUrl(value) {
+  const url = String(value || "").trim();
+  return /^https?:\/\/\S+\.(png|jpe?g|webp|gif|avif)(\?\S*)?$/i.test(url)
+    || /^data:image\/(png|jpe?g|webp|gif|avif);base64,/i.test(url);
+}
+
 async function insertEssayImageFiles(files) {
-  const imageFiles = Array.from(files || []).filter(file => /^image\//i.test(file.type));
+  const imageFiles = Array.from(files || []).filter(isEssayImageFile);
   for (const file of imageFiles) {
     const dataUrl = await readImageFileAsDataUrl(file);
     insertEssayImage(dataUrl, file.name || "essay image");
@@ -1635,7 +1646,7 @@ $("#essayEditor")?.addEventListener("paste", event => {
     .map(item => item.kind === "file" ? item.getAsFile() : null)
     .filter(Boolean);
   const imageFiles = [...clipboardFiles, ...itemFiles]
-    .filter(file => file && /^image\//i.test(file.type));
+    .filter(isEssayImageFile);
   const htmlData = clipboard.getData("text/html");
   const textData = clipboard.getData("text/plain");
 
@@ -1647,6 +1658,9 @@ $("#essayEditor")?.addEventListener("paste", event => {
   let cleanHtml;
   if (htmlData) {
     cleanHtml = cleanPastedHtml(htmlData);
+  } else if (looksLikeImageUrl(textData)) {
+    insertEssayImage(textData.trim(), "pasted image");
+    return;
   } else {
     // HTML이 없으면 평문을 문단으로
     cleanHtml = (textData || "")
@@ -1657,6 +1671,21 @@ $("#essayEditor")?.addEventListener("paste", event => {
   document.execCommand("insertHTML", false, cleanHtml);
   if (imageFiles.length) insertEssayImageFiles(imageFiles);
   updateBodyCharCount();
+});
+
+$("#essayEditor")?.addEventListener("dragover", event => {
+  const files = Array.from(event.dataTransfer?.files || []);
+  if (files.some(isEssayImageFile)) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }
+});
+
+$("#essayEditor")?.addEventListener("drop", event => {
+  const files = Array.from(event.dataTransfer?.files || []);
+  if (!files.some(isEssayImageFile)) return;
+  event.preventDefault();
+  insertEssayImageFiles(files);
 });
 
 function escapeAdminHtml(s) {
