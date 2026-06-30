@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260630-dashboard-1" />
+<link rel="stylesheet" href="admin.css?v=20260630-board-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -83,14 +83,24 @@
     </section>
 
     <section id="projectsPanel" class="admin-tab-panel hidden">
-      <section class="admin-grid">
-        <aside class="project-list-panel">
+      <section class="admin-stack">
+        <aside class="project-list-panel board-panel">
           <div class="panel-head">
             <h2>Projects</h2>
             <button type="button" id="reloadProjects">새로고침</button>
           </div>
-          <input id="projectSearch" class="admin-input" type="search" placeholder="프로젝트 검색" />
-          <div id="projectList" class="project-list" aria-live="polite"></div>
+          <div class="board-tools">
+            <input id="projectSearch" class="admin-input" type="search" placeholder="프로젝트 검색" />
+            <select id="projectSort" class="admin-input" aria-label="프로젝트 정렬">
+              <option value="sortOrder">기본 순서</option>
+              <option value="periodDesc">게시일자 최신순</option>
+              <option value="periodAsc">게시일자 오래된순</option>
+              <option value="titleAsc">제목 가나다순</option>
+              <option value="tagsAsc">태그 가나다순</option>
+              <option value="updatedDesc">작성 시간 최신순</option>
+            </select>
+          </div>
+          <div id="projectList" class="project-list admin-board" aria-live="polite"></div>
         </aside>
 
         <section class="editor-panel">
@@ -209,7 +219,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="primary">프로젝트 저장</button>
+              <button type="submit" class="primary">저장하기</button>
+              <button type="button" id="updateProject" class="ghost">수정하기</button>
               <button type="button" id="deleteProject" class="danger">프로젝트 삭제</button>
               <span id="saveStatus" class="status-text"></span>
             </div>
@@ -264,22 +275,31 @@
     </section>
 
     <section id="essaysPanel" class="admin-tab-panel essays-panel hidden">
-      <section class="admin-grid">
-        <aside class="project-list-panel">
+      <section class="admin-stack">
+        <aside class="project-list-panel board-panel">
           <div class="panel-head">
             <h2>Essays</h2>
             <button type="button" id="reloadEssays">새로고침</button>
           </div>
-          <select id="essayFilterCategory" class="admin-input">
-            <option value="">전체 카테고리</option>
-            <option value="news">News</option>
-            <option value="publicBusiness">公과 Business</option>
-            <option value="worldOutside">세계</option>
-            <option value="others">好不好</option>
-            <option value="thinkingEmotion">私와 思</option>
-          </select>
-          <input id="essaySearch" class="admin-input" type="search" placeholder="에세이 검색" />
-          <div id="essayList" class="project-list" aria-live="polite"></div>
+          <div class="board-tools three">
+            <select id="essayFilterCategory" class="admin-input">
+              <option value="">전체 카테고리</option>
+              <option value="news">News</option>
+              <option value="publicBusiness">公과 Business</option>
+              <option value="worldOutside">세계</option>
+              <option value="others">好不好</option>
+              <option value="thinkingEmotion">私와 思</option>
+            </select>
+            <input id="essaySearch" class="admin-input" type="search" placeholder="에세이 검색" />
+            <select id="essaySort" class="admin-input" aria-label="에세이 정렬">
+              <option value="publishedDesc">게시일자 최신순</option>
+              <option value="publishedAsc">게시일자 오래된순</option>
+              <option value="titleAsc">제목 가나다순</option>
+              <option value="tagsAsc">태그 가나다순</option>
+              <option value="updatedDesc">작성 시간 최신순</option>
+            </select>
+          </div>
+          <div id="essayList" class="project-list admin-board essay-board" aria-live="polite"></div>
         </aside>
 
         <section class="editor-panel">
@@ -383,7 +403,8 @@
             </label>
 
             <div class="form-actions">
-              <button type="submit" class="primary">에세이 저장</button>
+              <button type="submit" class="primary">저장하기</button>
+              <button type="button" id="updateEssay" class="ghost">수정하기</button>
               <button type="button" id="deleteEssay" class="danger">삭제</button>
               <span id="essaySaveStatus" class="status-text"></span>
             </div>
@@ -513,6 +534,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260630-dashboard-1"></script>
+<script src="admin.js?v=20260630-board-1"></script>
 </body>
 </html>
