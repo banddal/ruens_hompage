@@ -169,6 +169,13 @@ button:hover {
   margin-top: 18px;
 }
 
+.admin-stack {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+  align-items: start;
+}
+
 .project-list-panel,
 .editor-panel {
   background: var(--panel);
@@ -184,8 +191,16 @@ button:hover {
   overflow: auto;
 }
 
+.project-list-panel.board-panel {
+  position: static;
+  max-height: none;
+  overflow: hidden;
+}
+
 .editor-panel {
   padding: 22px;
+  position: relative;
+  z-index: 0;
 }
 
 .panel-head {
@@ -230,6 +245,27 @@ button:hover {
   margin-top: 12px;
 }
 
+.board-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 10px;
+  align-items: center;
+}
+
+.board-tools.three {
+  grid-template-columns: 190px minmax(0, 1fr) 220px;
+}
+
+.admin-board {
+  display: grid;
+  gap: 0;
+  max-height: min(420px, 46vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(20,20,20,.1);
+  background: rgba(255,255,255,.72);
+}
+
 .project-item {
   display: block;
   width: 100%;
@@ -262,6 +298,88 @@ button:hover {
   color: inherit;
   opacity: .68;
   font-size: 11px;
+}
+
+.board-row.project-item {
+  display: grid;
+  grid-template-columns: 132px minmax(220px, 1.25fr) minmax(150px, .8fr) 132px 92px;
+  gap: 12px;
+  align-items: center;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(20,20,20,.08);
+  background: rgba(255,255,255,.82);
+  color: #111;
+  appearance: none;
+}
+
+.board-row.board-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 132px minmax(220px, 1.25fr) minmax(150px, .8fr) 132px 92px;
+  gap: 12px;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(20,20,20,.12);
+  background: rgba(248,248,248,.96);
+  color: #777;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.board-row.project-item:last-child {
+  border-bottom: 0;
+}
+
+.board-row.project-item:hover,
+.board-row.project-item.active {
+  color: #111;
+  background: rgba(175,0,0,.065);
+}
+
+.board-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.board-title strong,
+.board-title small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-title strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.board-title small {
+  margin-top: 2px;
+  color: #777;
+  font-size: 11px;
+}
+
+.board-date,
+.board-written,
+.board-status {
+  color: #666;
+  font-size: 11px;
+}
+
+.board-tags {
+  color: #333;
 }
 
 .project-form {
@@ -562,6 +680,8 @@ textarea.admin-input {
 
 @media (max-width: 900px) {
   .admin-grid,
+  .board-tools,
+  .board-tools.three,
   .upload-grid,
   .asset-panel,
   .auth-panel,
@@ -574,6 +694,17 @@ textarea.admin-input {
   .project-list-panel {
     position: static;
     max-height: none;
+  }
+
+  .board-row.project-item {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    align-items: start;
+    padding: 13px 12px;
+  }
+
+  .board-row.board-head {
+    display: none;
   }
 
   .admin-hero {

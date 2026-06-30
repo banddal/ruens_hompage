@@ -17,6 +17,7 @@ const logoutButton = $("#logoutButton");
 const projectPanelTitle = $(".project-list-panel .panel-head h2");
 const projectList = $("#projectList");
 const projectSearch = $("#projectSearch");
+const projectSort = $("#projectSort");
 const projectForm = $("#projectForm");
 const imageUploadForm = $("#imageUploadForm");
 const fileUploadForm = $("#fileUploadForm");
@@ -25,6 +26,7 @@ const fileList = $("#fileList");
 const saveStatus = $("#saveStatus");
 const duplicateProjectButton = $("#duplicateProject");
 const deleteProjectButton = $("#deleteProject");
+const updateProjectButton = $("#updateProject");
 const securityStatusList = $("#securityStatusList");
 const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
@@ -76,6 +78,36 @@ function setStatus(target, message) {
 
 function projectLabel(project) {
   return [project.metric, project.period].filter(Boolean).join(" · ");
+}
+
+function compactText(value, fallback = "-") {
+  const text = Array.isArray(value) ? value.join(", ") : String(value || "");
+  return text.trim() || fallback;
+}
+
+function adminDateValue(item) {
+  return item?.updated_at || item?.updatedAt || item?.created_at || item?.createdAt || item?.publishedAt || item?.periodStart || item?.period || "";
+}
+
+function sortDateValue(value) {
+  const raw = String(value || "");
+  const ym = raw.match(/(\d{4})[-년.\s]*(\d{1,2})?/);
+  if (ym) return Number(`${ym[1]}${String(ym[2] || "12").padStart(2, "0")}`);
+  const time = Date.parse(raw);
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortTextValue(value) {
+  return compactText(value, "").toLowerCase();
+}
+
+function projectDateLabel(project) {
+  return project.period || project.periodStart || project.periodEnd || "-";
+}
+
+function adminWrittenLabel(item) {
+  const value = adminDateValue(item);
+  return value ? String(value).slice(0, 16).replace("T", " ") : "-";
 }
 
 function isDashboardFeatured(project) {
@@ -190,7 +222,7 @@ async function submitAuth(event) {
     });
     renderSecurityStatus(status);
     showAdminPanel();
-    await loadProjects();
+    switchTab("dashboard");
   } catch (error) {
     setStatus(authStatus, error.message);
   }
@@ -205,7 +237,8 @@ async function logout() {
 
 function renderProjectList() {
   const query = projectSearch.value.trim().toLowerCase();
-  const filtered = projects.filter(project => {
+  const sortMode = projectSort?.value || "sortOrder";
+  let filtered = projects.filter(project => {
     const haystack = [
       project.id,
       project.slug,
@@ -213,19 +246,45 @@ function renderProjectList() {
       project.metric,
       project.category,
       project.period,
+      project.short,
+      project.description,
       ...(project.tags || [])
     ].join(" ").toLowerCase();
     return !query || haystack.includes(query);
+  });
+
+  filtered = filtered.slice().sort((a, b) => {
+    if (sortMode === "periodDesc") return sortDateValue(projectDateLabel(b)) - sortDateValue(projectDateLabel(a));
+    if (sortMode === "periodAsc") return sortDateValue(projectDateLabel(a)) - sortDateValue(projectDateLabel(b));
+    if (sortMode === "titleAsc") return sortTextValue(a.title || a.id).localeCompare(sortTextValue(b.title || b.id), "ko");
+    if (sortMode === "tagsAsc") return sortTextValue(a.tags).localeCompare(sortTextValue(b.tags), "ko");
+    if (sortMode === "updatedDesc") return sortDateValue(adminDateValue(b)) - sortDateValue(adminDateValue(a));
+    return Number(a.sortOrder || 9999) - Number(b.sortOrder || 9999);
   });
 
   projectPanelTitle.textContent = query
     ? `Projects (${filtered.length}/${projects.length})`
     : `Projects (${projects.length})`;
 
-  projectList.innerHTML = filtered.length ? filtered.map(project => `
-    <button type="button" class="project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${escapeHtml(project.id)}">
-      <strong>${escapeHtml(project.title || project.id)}</strong>
-      <small>${isDashboardFeatured(project) ? "Dashboard · " : ""}${escapeHtml(projectLabel(project) || project.category || "")}</small>
+  const header = `
+    <div class="board-row board-head" aria-hidden="true">
+      <span>게시일자</span>
+      <span>제목</span>
+      <span>태그</span>
+      <span>작성 시간</span>
+      <span>상태</span>
+    </div>`;
+
+  projectList.innerHTML = filtered.length ? header + filtered.map(project => `
+    <button type="button" class="board-row project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${escapeHtml(project.id)}">
+      <span class="board-cell board-date">${escapeHtml(projectDateLabel(project))}</span>
+      <span class="board-cell board-title">
+        <strong>${escapeHtml(project.title || project.id)}</strong>
+        <small>${escapeHtml(project.metric || project.category || "")}</small>
+      </span>
+      <span class="board-cell board-tags">${escapeHtml(compactText(project.tags))}</span>
+      <span class="board-cell board-written">${escapeHtml(adminWrittenLabel(project))}</span>
+      <span class="board-cell board-status">${isDashboardFeatured(project) ? "Dashboard" : escapeHtml(project.status || "published")}</span>
     </button>
   `).join("") : `<div class="asset-empty">표시할 프로젝트가 없습니다.</div>`;
 }
@@ -524,15 +583,28 @@ function duplicateProject() {
   setStatus(saveStatus, "복제 초안이 만들어졌습니다. ID를 입력한 뒤 저장해주세요.");
 }
 
-async function saveProject(event) {
-  event.preventDefault();
+async function saveProject(event, mode = "create") {
+  if (event) event.preventDefault();
   const payload = readForm();
   if (!payload.id || !payload.title) {
     setStatus(saveStatus, "ID와 제목이 필요합니다.");
     return;
   }
 
-  const existing = selectedProject?.id;
+  if (mode === "create") {
+    const duplicated = projects.some(project => project.id === payload.id);
+    if (duplicated) {
+      setStatus(saveStatus, "이미 있는 프로젝트입니다. 기존 항목은 수정하기 버튼을 눌러주세요.");
+      return;
+    }
+  }
+
+  if (mode === "update" && !selectedProject?.id) {
+    setStatus(saveStatus, "수정할 기존 프로젝트를 먼저 선택해주세요.");
+    return;
+  }
+
+  const existing = mode === "update" ? selectedProject.id : "";
   const url = existing ? `/api/admin/projects/${encodeURIComponent(existing)}` : "/api/admin/projects";
   const method = existing ? "PUT" : "POST";
   const saved = await apiJson(url, {
@@ -540,7 +612,7 @@ async function saveProject(event) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  setStatus(saveStatus, "저장되었습니다.");
+  setStatus(saveStatus, existing ? "수정되었습니다." : "새 프로젝트가 저장되었습니다.");
   await loadProjects(saved.id);
 }
 
@@ -919,23 +991,53 @@ async function loadEssays() {
 function renderEssayAdminList() {
   const list = $("#essayList");
   if (!list) return;
+  const currentId = $("#essayForm")?.elements.id.value || "";
   const cat = $("#essayFilterCategory")?.value || "";
   const q = ($("#essaySearch")?.value || "").trim().toLowerCase();
+  const sortMode = $("#essaySort")?.value || "publishedDesc";
   let items = essayCache.slice();
   if (cat) items = items.filter(e => e.category === cat);
   if (q) items = items.filter(e =>
-    (e.title || "").toLowerCase().includes(q) || (e.summary || "").toLowerCase().includes(q)
+    [
+      e.title,
+      e.summary,
+      e.category,
+      e.publishedAt,
+      ...(e.tags || [])
+    ].join(" ").toLowerCase().includes(q)
   );
+  items = items.slice().sort((a, b) => {
+    if (sortMode === "publishedAsc") return sortDateValue(a.publishedAt) - sortDateValue(b.publishedAt);
+    if (sortMode === "titleAsc") return sortTextValue(a.title || a.id).localeCompare(sortTextValue(b.title || b.id), "ko");
+    if (sortMode === "tagsAsc") return sortTextValue(a.tags).localeCompare(sortTextValue(b.tags), "ko");
+    if (sortMode === "updatedDesc") return sortDateValue(adminDateValue(b)) - sortDateValue(adminDateValue(a));
+    return sortDateValue(b.publishedAt) - sortDateValue(a.publishedAt);
+  });
   if (!items.length) {
     list.innerHTML = `<p class="memo-admin-empty">에세이가 없습니다.</p>`;
     return;
   }
-  list.innerHTML = items.map(e => {
+  const header = `
+    <div class="board-row board-head" aria-hidden="true">
+      <span>게시일자</span>
+      <span>제목</span>
+      <span>태그</span>
+      <span>작성 시간</span>
+      <span>상태</span>
+    </div>`;
+
+  list.innerHTML = header + items.map(e => {
     const hasBody = e.body && e.body.trim().length > 0;
     return `
-      <button type="button" class="project-item" data-essay-id="${escapeMemo(e.id)}">
-        <strong>${escapeMemo(e.title || e.id)}</strong>
-        <small>${escapeMemo(ESSAY_CATEGORY_LABELS[e.category] || e.category)} · ${hasBody ? "본문 있음" : "링크만"}</small>
+      <button type="button" class="board-row project-item${currentId === e.id ? " active" : ""}" data-essay-id="${escapeMemo(e.id)}">
+        <span class="board-cell board-date">${escapeMemo(e.publishedAt || "-")}</span>
+        <span class="board-cell board-title">
+          <strong>${escapeMemo(e.title || e.id)}</strong>
+          <small>${escapeMemo(ESSAY_CATEGORY_LABELS[e.category] || e.category || "-")} · ${hasBody ? "본문 있음" : "링크만"}</small>
+        </span>
+        <span class="board-cell board-tags">${escapeMemo(compactText(e.tags))}</span>
+        <span class="board-cell board-written">${escapeMemo(adminWrittenLabel(e))}</span>
+        <span class="board-cell board-status">${escapeMemo(e.status || "published")}</span>
       </button>`;
   }).join("");
 }
@@ -964,6 +1066,7 @@ function fillEssayForm(essay) {
   form.elements.body.value = body;
   form.elements.tags.value = Array.isArray(essay?.tags) ? essay.tags.join(", ") : "";
   updateBodyCharCount();
+  if (essayCache.length) renderEssayAdminList();
 }
 
 function collectEssayForm() {
@@ -1077,11 +1180,19 @@ function runEditorCommand(cmd) {
   updateBodyCharCount();
 }
 
-async function saveEssay(event) {
-  event.preventDefault();
+async function saveEssay(event, mode = "create") {
+  if (event) event.preventDefault();
   const data = collectEssayForm();
   if (!data.title) {
     $("#essaySaveStatus").textContent = "제목을 입력해 주세요.";
+    return;
+  }
+  if (mode === "create" && data.id && essayCache.some(essay => essay.id === data.id)) {
+    $("#essaySaveStatus").textContent = "이미 있는 에세이입니다. 기존 글은 수정하기 버튼을 눌러주세요.";
+    return;
+  }
+  if (mode === "update" && !data.id) {
+    $("#essaySaveStatus").textContent = "수정할 기존 에세이를 먼저 선택해주세요.";
     return;
   }
   $("#essaySaveStatus").textContent = "저장 중…";
@@ -1091,7 +1202,7 @@ async function saveEssay(event) {
     body: JSON.stringify(data)
   }).catch(() => null);
   if (saved) {
-    $("#essaySaveStatus").textContent = "저장되었습니다.";
+    $("#essaySaveStatus").textContent = mode === "update" ? "수정되었습니다." : "새 에세이가 저장되었습니다.";
     loadEssays();
   } else {
     $("#essaySaveStatus").textContent = "저장에 실패했습니다.";
@@ -1290,11 +1401,13 @@ projectList.addEventListener("click", async event => {
 });
 
 projectSearch.addEventListener("input", renderProjectList);
+projectSort?.addEventListener("change", renderProjectList);
 $("#reloadProjects").addEventListener("click", () => loadProjects());
 $("#newProject").addEventListener("click", newProject);
 duplicateProjectButton.addEventListener("click", duplicateProject);
 deleteProjectButton.addEventListener("click", deleteProject);
-projectForm.addEventListener("submit", saveProject);
+updateProjectButton?.addEventListener("click", event => saveProject(event, "update"));
+projectForm.addEventListener("submit", event => saveProject(event, "create"));
 imageUploadForm.addEventListener("submit", event => uploadAsset(event, "images"));
 fileUploadForm.addEventListener("submit", event => uploadAsset(event, "files"));
 imageList.addEventListener("click", event => {
@@ -1332,6 +1445,7 @@ $("#reloadAnalytics")?.addEventListener("click", () => loadAnalytics());
 $("#reloadEssays")?.addEventListener("click", () => loadEssays());
 $("#essayFilterCategory")?.addEventListener("change", renderEssayAdminList);
 $("#essaySearch")?.addEventListener("input", renderEssayAdminList);
+$("#essaySort")?.addEventListener("change", renderEssayAdminList);
 $("#newEssay")?.addEventListener("click", () => { fillEssayForm(null); $("#essaySaveStatus").textContent = ""; });
 $("#fetchMetaNaver")?.addEventListener("click", () => fetchEssayMeta("naver"));
 $("#fetchMetaBrunch")?.addEventListener("click", () => fetchEssayMeta("brunch"));
@@ -1405,7 +1519,8 @@ $("#essayToolbar")?.addEventListener("click", event => {
   const btn = event.target.closest("[data-cmd]");
   if (btn) { event.preventDefault(); runEditorCommand(btn.dataset.cmd); }
 });
-$("#essayForm")?.addEventListener("submit", saveEssay);
+$("#essayForm")?.addEventListener("submit", event => saveEssay(event, "create"));
+$("#updateEssay")?.addEventListener("click", event => saveEssay(event, "update"));
 $("#deleteEssay")?.addEventListener("click", deleteEssayCurrent);
 $("#bulkSubmitBtn")?.addEventListener("click", bulkRegisterEssays);
 $("#essayList")?.addEventListener("click", event => {
