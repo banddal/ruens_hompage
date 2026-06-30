@@ -32,6 +32,10 @@ const confirmPassword = $("#confirmPassword");
 const passwordStatus = $("#passwordStatus");
 const siteSettingsForm = $("#siteSettingsForm");
 const siteSettingsStatus = $("#siteSettingsStatus");
+const analyticsSummary = $("#analyticsSummary");
+const analyticsContentList = $("#analyticsContentList");
+const analyticsDailyList = $("#analyticsDailyList");
+const analyticsUpdatedAt = $("#analyticsUpdatedAt");
 const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 function splitTags(value) {
@@ -691,6 +695,84 @@ function switchTab(name) {
   }
   if (name === "essays") loadEssays();
   if (name === "site") loadSiteSettings();
+  if (name === "analytics") loadAnalytics();
+}
+
+function analyticsNumber(value) {
+  return Number(value || 0).toLocaleString("ko-KR");
+}
+
+function analyticsTypeLabel(value) {
+  if (value === "project") return "Portfolio";
+  if (value === "essay") return "Essay";
+  return value || "Content";
+}
+
+function renderAnalyticsSummary(summary = {}) {
+  if (!analyticsSummary) return;
+  const cards = [
+    ["총 방문", summary.totalVisits],
+    ["오늘 방문", summary.todayVisits],
+    ["최근 7일", summary.last7Visits],
+    ["고유 방문자", summary.uniqueVisitors],
+    ["콘텐츠 조회", summary.contentViews]
+  ];
+  analyticsSummary.innerHTML = cards.map(([label, value]) => `
+    <article class="analytics-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${analyticsNumber(value)}</strong>
+    </article>
+  `).join("");
+}
+
+function renderAnalyticsContent(items = []) {
+  if (!analyticsContentList) return;
+  if (!items.length) {
+    analyticsContentList.innerHTML = `<p class="memo-admin-empty">아직 콘텐츠 조회 기록이 없습니다.</p>`;
+    return;
+  }
+  analyticsContentList.innerHTML = items.map(item => `
+    <article class="analytics-row">
+      <div>
+        <strong>${escapeHtml(item.title || item.contentId || "-")}</strong>
+        <span>${escapeHtml(analyticsTypeLabel(item.contentType))} · ${escapeHtml(item.contentId || "-")}</span>
+      </div>
+      <b>${analyticsNumber(item.views)}</b>
+    </article>
+  `).join("");
+}
+
+function renderAnalyticsDaily(items = []) {
+  if (!analyticsDailyList) return;
+  if (!items.length) {
+    analyticsDailyList.innerHTML = `<p class="memo-admin-empty">아직 방문 기록이 없습니다.</p>`;
+    return;
+  }
+  analyticsDailyList.innerHTML = items.slice().reverse().map(item => `
+    <article class="analytics-row">
+      <div>
+        <strong>${escapeHtml(item.date || "-")}</strong>
+        <span>고유 ${analyticsNumber(item.uniqueVisitors)}명</span>
+      </div>
+      <b>${analyticsNumber(item.visits)}</b>
+    </article>
+  `).join("");
+}
+
+async function loadAnalytics() {
+  if (!analyticsSummary || !analyticsContentList || !analyticsDailyList) return;
+  analyticsSummary.innerHTML = `<p class="memo-admin-empty">분석 데이터를 불러오는 중…</p>`;
+  analyticsContentList.innerHTML = "";
+  analyticsDailyList.innerHTML = "";
+  try {
+    const data = await apiJson("/api/admin/analytics");
+    renderAnalyticsSummary(data.summary || {});
+    renderAnalyticsContent(data.content || []);
+    renderAnalyticsDaily(data.daily || []);
+    if (analyticsUpdatedAt) analyticsUpdatedAt.textContent = `(${new Date().toLocaleString("ko-KR")})`;
+  } catch (error) {
+    analyticsSummary.innerHTML = `<p class="memo-admin-empty">분석 데이터를 불러오지 못했습니다.</p>`;
+  }
 }
 
 // ===== 에세이 관리 (관리자 전용) =====
@@ -1122,6 +1204,7 @@ $$(".admin-tab").forEach(button => {
 $("#reloadMemos")?.addEventListener("click", () => loadMemos());
 $("#reloadComments")?.addEventListener("click", () => loadComments());
 $("#reloadBlockedIps")?.addEventListener("click", () => loadBlockedIps());
+$("#reloadAnalytics")?.addEventListener("click", () => loadAnalytics());
 
 // 에세이 이벤트 연결
 $("#reloadEssays")?.addEventListener("click", () => loadEssays());

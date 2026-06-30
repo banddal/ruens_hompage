@@ -810,3 +810,94 @@ textarea.admin-input {
 .period-range { display: flex; align-items: center; gap: 6px; }
 .period-range input[type="month"] { flex: 1; min-width: 0; }
 .period-tilde { color: #888; flex: 0 0 auto; }
+
+/* 방문·조회 분석 */
+.analytics-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.analytics-card {
+  padding: 16px 14px;
+  background: rgba(20,20,20,.035);
+  border: 1px solid rgba(20,20,20,.08);
+}
+
+.analytics-card span {
+  display: block;
+  color: #777;
+  font-size: 11px;
+  font-weight: 850;
+  margin-bottom: 7px;
+}
+
+.analytics-card strong {
+  display: block;
+  color: #111;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.analytics-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.analytics-layout h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: -.03em;
+}
+
+.analytics-list {
+  display: grid;
+  gap: 8px;
+}
+
+.analytics-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 14px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(20,20,20,.08);
+}
+
+.analytics-row strong,
+.analytics-row span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-row strong {
+  color: #111;
+  font-size: 13px;
+}
+
+.analytics-row span {
+  color: #777;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.analytics-row b {
+  color: #111;
+  font-size: 18px;
+  letter-spacing: -.04em;
+}
+
+@media(max-width: 900px) {
+  .analytics-summary,
+  .analytics-layout {
+    grid-template-columns: 1fr;
+  }
+}

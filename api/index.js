@@ -1034,6 +1034,138 @@ function clientIp(req) {
   return req.socket?.remoteAddress || "unknown";
 }
 
+function analyticsVisitorHash(req) {
+  const ip = clientIp(req);
+  const ua = req.headers["user-agent"] || "";
+  const day = new Date().toISOString().slice(0, 10);
+  const salt = process.env.ANALYTICS_SALT || sessionSecret();
+  return crypto.createHash("sha256").update(`${day}|${ip}|${ua}|${salt}`).digest("hex");
+}
+
+function cleanAnalyticsText(value, max = 240) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+async function handleAnalyticsTrack(req, res) {
+  if (!supabaseEnabled()) return sendJson(res, 200, { ok: false, disabled: true });
+
+  let payload;
+  try {
+    const body = await collectRequestBody(req, 16 * 1024);
+    payload = JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    return sendError(res, 400, "Invalid JSON body.");
+  }
+
+  const eventType = payload.eventType === "content_view" ? "content_view" : "page_view";
+  const contentType = eventType === "content_view"
+    ? cleanAnalyticsText(payload.contentType || "content", 40)
+    : "page";
+  const contentId = eventType === "content_view"
+    ? cleanAnalyticsText(payload.contentId || "", 160)
+    : "";
+
+  if (eventType === "content_view" && !contentId) {
+    return sendError(res, 400, "contentId is required.");
+  }
+
+  const row = {
+    event_type: eventType,
+    content_type: contentType,
+    content_id: contentId,
+    title: cleanAnalyticsText(payload.title || "", 220),
+    path: cleanAnalyticsText(payload.path || req.headers.referer || "", 420),
+    referrer: cleanAnalyticsText(payload.referrer || req.headers.referer || "", 420),
+    visitor_hash: analyticsVisitorHash(req)
+  };
+
+  try {
+    await supabaseRequest("/rest/v1/analytics_events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify(row)
+    });
+    return sendJson(res, 201, { ok: true });
+  } catch (error) {
+    console.error("Analytics track failed:", error);
+    return sendJson(res, 200, { ok: false });
+  }
+}
+
+async function handleAdminAnalytics(req, res) {
+  if (!supabaseEnabled()) {
+    return sendJson(res, 200, {
+      summary: { totalVisits: 0, todayVisits: 0, last7Visits: 0, uniqueVisitors: 0, contentViews: 0 },
+      daily: [],
+      content: []
+    });
+  }
+
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const rows = await supabaseRequest(
+    `/rest/v1/analytics_events?select=event_type,content_type,content_id,title,path,visitor_hash,created_at&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=5000`
+  );
+  const events = Array.isArray(rows) ? rows : [];
+  const today = new Date().toISOString().slice(0, 10);
+  const last7Cut = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const pageEvents = events.filter(row => row.event_type === "page_view");
+  const contentEvents = events.filter(row => row.event_type === "content_view");
+  const uniqueVisitors = new Set(pageEvents.map(row => row.visitor_hash).filter(Boolean));
+  const todayVisits = pageEvents.filter(row => String(row.created_at || "").slice(0, 10) === today).length;
+  const last7Visits = pageEvents.filter(row => Date.parse(row.created_at || 0) >= last7Cut).length;
+
+  const dailyMap = new Map();
+  pageEvents.forEach(row => {
+    const day = String(row.created_at || "").slice(0, 10) || "unknown";
+    if (!dailyMap.has(day)) dailyMap.set(day, { date: day, visits: 0, unique: new Set() });
+    const item = dailyMap.get(day);
+    item.visits += 1;
+    if (row.visitor_hash) item.unique.add(row.visitor_hash);
+  });
+  const daily = Array.from(dailyMap.values())
+    .map(item => ({ date: item.date, visits: item.visits, uniqueVisitors: item.unique.size }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-14);
+
+  const contentMap = new Map();
+  contentEvents.forEach(row => {
+    const key = `${row.content_type || "content"}:${row.content_id || ""}`;
+    if (!contentMap.has(key)) {
+      contentMap.set(key, {
+        contentType: row.content_type || "content",
+        contentId: row.content_id || "",
+        title: row.title || row.content_id || "",
+        views: 0,
+        lastViewedAt: row.created_at || ""
+      });
+    }
+    const item = contentMap.get(key);
+    item.views += 1;
+    if (!item.title && row.title) item.title = row.title;
+    if (String(row.created_at || "") > String(item.lastViewedAt || "")) {
+      item.lastViewedAt = row.created_at || "";
+      if (row.title) item.title = row.title;
+    }
+  });
+  const content = Array.from(contentMap.values())
+    .sort((a, b) => b.views - a.views || String(b.lastViewedAt).localeCompare(String(a.lastViewedAt)));
+
+  return sendJson(res, 200, {
+    summary: {
+      totalVisits: pageEvents.length,
+      todayVisits,
+      last7Visits,
+      uniqueVisitors: uniqueVisitors.size,
+      contentViews: contentEvents.length
+    },
+    daily,
+    content
+  });
+}
+
 // 방문자: 메모 작성 (POST /api/memos)
 async function handleMemoCreate(req, res) {
   if (!supabaseEnabled()) {
@@ -1809,6 +1941,10 @@ async function router(req, res) {
     return sendJson(res, 200, publicProject(project));
   }
 
+  if (req.method === "POST" && pathname === "/api/analytics/track") {
+    return handleAnalyticsTrack(req, res);
+  }
+
   // 방문자: 메모 작성 (공개 경로, 인증 불필요, 스팸 방어 포함)
   if (req.method === "POST" && pathname === "/api/memos") {
     return handleMemoCreate(req, res);
@@ -1895,6 +2031,11 @@ async function router(req, res) {
   if (req.method === "GET" && pathname === "/api/admin/blocked-ips") {
     if (!requireAdmin(req, res)) return;
     return handleBlockedIpList(req, res);
+  }
+
+  if (req.method === "GET" && pathname === "/api/admin/analytics") {
+    if (!requireAdmin(req, res)) return;
+    return handleAdminAnalytics(req, res);
   }
 
   if (req.method === "GET" && pathname === "/api/admin/projects") {

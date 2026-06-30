@@ -180,6 +180,28 @@ function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
+function trackAnalytics(payload, { onceKey = "" } = {}) {
+  try {
+    if (onceKey) {
+      const key = `hr-analytics:${onceKey}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    }
+    fetch(apiUrl("/api/analytics/track"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: `${location.pathname}${location.search}${location.hash}`,
+        referrer: document.referrer || "",
+        ...payload
+      }),
+      keepalive: true
+    }).catch(() => {});
+  } catch (error) {
+    // 분석 실패는 사용자 화면을 막지 않는다.
+  }
+}
+
 async function loadSiteSettings() {
   const noticeLine = $("#siteNoticeLine");
   const noticeText = $("#siteNoticeText");
@@ -779,6 +801,7 @@ function refreshSectionJump() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  trackAnalytics({ eventType: "page_view", title: document.title || "Homo Ruens" });
   loadSiteSettings();
   initSectionJump();
   positionSectionJump();
@@ -973,6 +996,12 @@ function renderEssayCommentNode(comment, depth) {
 
 function openEssayModal(card) {
   activeEssayId = card.dataset.essayId;
+  trackAnalytics({
+    eventType: "content_view",
+    contentType: "essay",
+    contentId: activeEssayId,
+    title: card.dataset.title || ""
+  }, { onceKey: `essay:${activeEssayId}` });
   $("#essayModalCategory").textContent = card.dataset.category || "Essay";
   $("#essayModalTitle").textContent = card.dataset.title || "";
   $("#essayModalMeta").textContent = `Uploaded · ${card.dataset.date || "날짜 미정"}`;
@@ -1354,6 +1383,12 @@ function renderProjectModal(project) {
 async function openProjectModal(projectId) {
   const fallback = getCachedProject(projectId);
   if (!fallback) return;
+  trackAnalytics({
+    eventType: "content_view",
+    contentType: "project",
+    contentId: fallback.id || projectId,
+    title: fallback.title || projectId
+  }, { onceKey: `project:${fallback.id || projectId}` });
   renderProjectModal({
     ...fallback,
     description: fallback.description || "백엔드 프로젝트 데이터를 불러오는 중입니다."

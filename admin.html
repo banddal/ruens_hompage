@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260629-period-1" />
+<link rel="stylesheet" href="admin.css?v=20260630-analytics-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -39,6 +39,7 @@
       <button type="button" class="admin-tab" data-admin-tab="essays">Essays</button>
       <button type="button" class="admin-tab" data-admin-tab="memos">Memos</button>
       <button type="button" class="admin-tab" data-admin-tab="comments">Comments</button>
+      <button type="button" class="admin-tab" data-admin-tab="analytics">Analytics</button>
       <button type="button" class="admin-tab" data-admin-tab="site">Site</button>
       <button type="button" class="admin-tab" data-admin-tab="security">Security</button>
     </nav>
@@ -407,6 +408,30 @@
       </section>
     </section>
 
+    <section id="analyticsPanel" class="admin-tab-panel analytics-panel hidden">
+      <section class="security-card">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Analytics</p>
+            <h2>방문·조회 분석 <span id="analyticsUpdatedAt" class="memo-count"></span></h2>
+          </div>
+          <button type="button" id="reloadAnalytics">새로고침</button>
+        </div>
+        <p class="security-copy">방문자 수와 프로젝트·에세이 모달 조회수를 보여줍니다. IP 원문은 저장하지 않고 일 단위 해시로만 집계합니다.</p>
+        <div id="analyticsSummary" class="analytics-summary" aria-live="polite"></div>
+        <div class="analytics-layout">
+          <section>
+            <h3>콘텐츠별 조회수</h3>
+            <div id="analyticsContentList" class="analytics-list" aria-live="polite"></div>
+          </section>
+          <section>
+            <h3>최근 14일 방문</h3>
+            <div id="analyticsDailyList" class="analytics-list compact" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+    </section>
+
     <section id="sitePanel" class="admin-tab-panel site-panel hidden">
       <section class="security-card">
         <p class="eyebrow">Site Notice</p>
@@ -450,6 +475,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260629-period-1"></script>
+<script src="admin.js?v=20260630-analytics-1"></script>
 </body>
 </html>

@@ -277,3 +277,30 @@ create table if not exists public.site_settings (
 
 alter table public.site_settings enable row level security;
 -- 정책 없음 → service_role(백엔드)만 접근 가능. 공개 노출은 /api/site-settings가 담당.
+
+-- =========================================================
+-- analytics_events: 방문/콘텐츠 조회 이벤트(관리자 분석용)
+-- =========================================================
+create table if not exists public.analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null,          -- page_view / content_view
+  content_type text default '',      -- project / essay / page
+  content_id text default '',
+  title text default '',
+  path text default '',
+  referrer text default '',
+  visitor_hash text default '',      -- IP 원문 대신 일 단위 해시 저장
+  created_at timestamptz not null default now()
+);
+
+create index if not exists analytics_events_created_idx
+  on public.analytics_events (created_at desc);
+
+create index if not exists analytics_events_content_idx
+  on public.analytics_events (content_type, content_id, created_at desc);
+
+create index if not exists analytics_events_type_idx
+  on public.analytics_events (event_type, created_at desc);
+
+alter table public.analytics_events enable row level security;
+-- 정책 없음 → service_role(백엔드)만 접근 가능. 방문자는 /api/analytics/track API만 사용.
