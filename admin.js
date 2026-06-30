@@ -36,6 +36,11 @@ const analyticsSummary = $("#analyticsSummary");
 const analyticsContentList = $("#analyticsContentList");
 const analyticsDailyList = $("#analyticsDailyList");
 const analyticsUpdatedAt = $("#analyticsUpdatedAt");
+const dashboardSummary = $("#dashboardSummary");
+const dashboardLatestMemo = $("#dashboardLatestMemo");
+const dashboardLatestComment = $("#dashboardLatestComment");
+const dashboardTopPosts = $("#dashboardTopPosts");
+const dashboardUpdatedAt = $("#dashboardUpdatedAt");
 const DASHBOARD_RECENT_TAG = "__dashboard_recent";
 
 function splitTags(value) {
@@ -163,7 +168,7 @@ async function loadSecurityStatus() {
   renderSecurityStatus(status);
   if (status.authenticated) {
     showAdminPanel();
-    await loadProjects();
+    await loadDashboard();
   } else {
     showAuthPanel();
   }
@@ -688,6 +693,8 @@ function switchTab(name) {
   $$(".admin-tab-panel").forEach(panel => {
     panel.classList.toggle("hidden", panel.id !== `${name}Panel`);
   });
+  if (name === "dashboard") loadDashboard();
+  if (name === "projects") loadProjects();
   if (name === "memos") loadMemos();
   if (name === "comments") {
     loadComments();
@@ -696,6 +703,117 @@ function switchTab(name) {
   if (name === "essays") loadEssays();
   if (name === "site") loadSiteSettings();
   if (name === "analytics") loadAnalytics();
+}
+
+function dashboardNumber(value) {
+  return Number(value || 0).toLocaleString("ko-KR");
+}
+
+function dashboardDateLabel(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function sortRecentItems(items = []) {
+  return items.slice().sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0));
+}
+
+function renderDashboardSummary({ projectCount = 0, essayCount = 0, memoCount = 0, commentCount = 0, analytics = {} } = {}) {
+  if (!dashboardSummary) return;
+  const cards = [
+    ["Projects", projectCount],
+    ["Essays", essayCount],
+    ["Memos", memoCount],
+    ["Comments", commentCount],
+    ["방문자", analytics?.summary?.totalVisits],
+    ["조회 포스트", analytics?.summary?.contentViews]
+  ];
+  dashboardSummary.innerHTML = cards.map(([label, value]) => `
+    <article class="dashboard-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${dashboardNumber(value)}</strong>
+    </article>
+  `).join("");
+}
+
+function renderDashboardLatest(target, item, type) {
+  if (!target) return;
+  if (!item) {
+    target.innerHTML = `<p class="memo-admin-empty">아직 ${type === "memo" ? "메모" : "댓글"}이 없습니다.</p>`;
+    return;
+  }
+  const title = type === "memo"
+    ? item.title || "제목 없음"
+    : `${item.writer || "익명"}${item.parent_id ? " · 답글" : ""}`;
+  const meta = type === "memo"
+    ? `${item.writer || "익명"} · ${dashboardDateLabel(item.created_at)}`
+    : `${item.essay_id || "-"} · ${dashboardDateLabel(item.created_at)}`;
+  target.innerHTML = `
+    <strong>${escapeHtml(title)}</strong>
+    <span>${escapeHtml(meta)}</span>
+    <p>${escapeHtml(item.body || "")}</p>
+  `;
+}
+
+function renderDashboardTopPosts(items = []) {
+  if (!dashboardTopPosts) return;
+  const topItems = items.slice(0, 6);
+  if (!topItems.length) {
+    dashboardTopPosts.innerHTML = `<p class="memo-admin-empty">아직 포스트 조회 기록이 없습니다.</p>`;
+    return;
+  }
+  dashboardTopPosts.innerHTML = topItems.map(item => `
+    <article class="dashboard-post-row">
+      <div>
+        <strong>${escapeHtml(item.title || item.contentId || "-")}</strong>
+        <span>${escapeHtml(analyticsTypeLabel(item.contentType))} · ${escapeHtml(item.contentId || "-")}</span>
+      </div>
+      <b>${dashboardNumber(item.views)}</b>
+    </article>
+  `).join("");
+}
+
+async function loadDashboard() {
+  if (!dashboardSummary) return;
+  dashboardSummary.innerHTML = `<p class="memo-admin-empty">대시보드를 불러오는 중…</p>`;
+  if (dashboardLatestMemo) dashboardLatestMemo.innerHTML = "";
+  if (dashboardLatestComment) dashboardLatestComment.innerHTML = "";
+  if (dashboardTopPosts) dashboardTopPosts.innerHTML = "";
+
+  const [projectResult, essayResult, memoResult, commentResult, analyticsResult] = await Promise.allSettled([
+    apiJson("/api/admin/projects"),
+    apiJson("/api/essays"),
+    apiJson("/api/admin/memos"),
+    apiJson("/api/admin/comments"),
+    apiJson("/api/admin/analytics")
+  ]);
+
+  const projectItems = projectResult.status === "fulfilled" && Array.isArray(projectResult.value) ? projectResult.value : [];
+  const essayItems = essayResult.status === "fulfilled" && Array.isArray(essayResult.value) ? essayResult.value : [];
+  const memoItems = memoResult.status === "fulfilled" && Array.isArray(memoResult.value) ? memoResult.value : [];
+  const commentItems = commentResult.status === "fulfilled" && Array.isArray(commentResult.value) ? commentResult.value : [];
+  const analytics = analyticsResult.status === "fulfilled" ? analyticsResult.value : {};
+
+  if (projectItems.length) projects = projectItems;
+
+  renderDashboardSummary({
+    projectCount: projectItems.length,
+    essayCount: essayItems.length,
+    memoCount: memoItems.length,
+    commentCount: commentItems.length,
+    analytics
+  });
+  renderDashboardLatest(dashboardLatestMemo, sortRecentItems(memoItems)[0], "memo");
+  renderDashboardLatest(dashboardLatestComment, sortRecentItems(commentItems)[0], "comment");
+  renderDashboardTopPosts(Array.isArray(analytics?.content) ? analytics.content : []);
+  if (dashboardUpdatedAt) dashboardUpdatedAt.textContent = `(${new Date().toLocaleString("ko-KR")})`;
 }
 
 function analyticsNumber(value) {
@@ -1200,6 +1318,10 @@ passwordForm.addEventListener("submit", savePassword);
 siteSettingsForm?.addEventListener("submit", saveSiteSettings);
 $$(".admin-tab").forEach(button => {
   button.addEventListener("click", () => switchTab(button.dataset.adminTab));
+});
+$("#reloadDashboard")?.addEventListener("click", () => loadDashboard());
+$$(".dashboard-jump").forEach(button => {
+  button.addEventListener("click", () => switchTab(button.dataset.jumpTab));
 });
 $("#reloadMemos")?.addEventListener("click", () => loadMemos());
 $("#reloadComments")?.addEventListener("click", () => loadComments());

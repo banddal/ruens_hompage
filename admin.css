@@ -811,6 +811,152 @@ textarea.admin-input {
 .period-range input[type="month"] { flex: 1; min-width: 0; }
 .period-tilde { color: #888; flex: 0 0 auto; }
 
+/* 관리자 첫 화면 대시보드 */
+.dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.dashboard-metric,
+.dashboard-card {
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(20,20,20,.08);
+}
+
+.dashboard-metric {
+  padding: 16px 14px;
+}
+
+.dashboard-metric span {
+  display: block;
+  color: #777;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  margin-bottom: 8px;
+}
+
+.dashboard-metric strong {
+  display: block;
+  color: #111;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.055em;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.dashboard-card {
+  padding: 17px;
+}
+
+.dashboard-card.wide {
+  grid-column: 1 / -1;
+}
+
+.dashboard-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.dashboard-card-head h3 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -.045em;
+}
+
+.dashboard-card-head button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.dashboard-latest {
+  min-height: 108px;
+}
+
+.dashboard-latest strong,
+.dashboard-latest span,
+.dashboard-latest p {
+  display: block;
+}
+
+.dashboard-latest strong {
+  color: #111;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.dashboard-latest span {
+  margin-top: 5px;
+  color: #777;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dashboard-latest p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 12px 0 0;
+  color: #333;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.dashboard-post-list {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-post-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 13px;
+  background: rgba(20,20,20,.03);
+  border: 1px solid rgba(20,20,20,.06);
+}
+
+.dashboard-post-row strong,
+.dashboard-post-row span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-post-row strong {
+  color: #111;
+  font-size: 13px;
+}
+
+.dashboard-post-row span {
+  margin-top: 3px;
+  color: #777;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dashboard-post-row b {
+  color: var(--accent);
+  font-size: 18px;
+  letter-spacing: -.04em;
+}
+
 /* 방문·조회 분석 */
 .analytics-summary {
   display: grid;
@@ -896,6 +1042,8 @@ textarea.admin-input {
 }
 
 @media(max-width: 900px) {
+  .dashboard-summary,
+  .dashboard-grid,
   .analytics-summary,
   .analytics-layout {
     grid-template-columns: 1fr;

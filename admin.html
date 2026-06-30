@@ -4,15 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260630-analytics-1" />
+<link rel="stylesheet" href="admin.css?v=20260630-dashboard-1" />
 </head>
 <body>
 <main class="admin-shell">
   <header class="admin-hero">
     <div>
       <p class="eyebrow">Portfolio Admin</p>
-      <h1>프로젝트와 첨부파일 관리</h1>
-      <p>Portfolio 프로젝트의 글, 이미지, PDF/PPT/HWP 첨부파일을 백엔드 JSON DB에 저장합니다.</p>
+      <h1>홈페이지 콘텐츠 관리</h1>
+      <p>프로젝트, 에세이, 메모, 댓글, 방문·조회 데이터를 한 곳에서 관리합니다.</p>
     </div>
     <div class="admin-hero-actions">
       <a class="site-link" href="/">사이트 보기</a>
@@ -35,7 +35,8 @@
 
   <div id="adminContent" class="hidden">
     <nav class="admin-tabs" aria-label="관리자 메뉴">
-      <button type="button" class="admin-tab active" data-admin-tab="projects">Projects</button>
+      <button type="button" class="admin-tab active" data-admin-tab="dashboard">Dashboard</button>
+      <button type="button" class="admin-tab" data-admin-tab="projects">Projects</button>
       <button type="button" class="admin-tab" data-admin-tab="essays">Essays</button>
       <button type="button" class="admin-tab" data-admin-tab="memos">Memos</button>
       <button type="button" class="admin-tab" data-admin-tab="comments">Comments</button>
@@ -44,7 +45,44 @@
       <button type="button" class="admin-tab" data-admin-tab="security">Security</button>
     </nav>
 
-    <section id="projectsPanel" class="admin-tab-panel">
+    <section id="dashboardPanel" class="admin-tab-panel dashboard-panel">
+      <section class="security-card">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h2>관리자 대시보드 <span id="dashboardUpdatedAt" class="memo-count"></span></h2>
+          </div>
+          <button type="button" id="reloadDashboard">새로고침</button>
+        </div>
+        <p class="security-copy">프로젝트, 에세이, 메모, 댓글, 방문·조회 데이터를 한 화면에서 확인합니다.</p>
+        <div id="dashboardSummary" class="dashboard-summary" aria-live="polite"></div>
+        <div class="dashboard-grid">
+          <article class="dashboard-card">
+            <div class="dashboard-card-head">
+              <h3>최신 메모</h3>
+              <button type="button" class="ghost dashboard-jump" data-jump-tab="memos">보기</button>
+            </div>
+            <div id="dashboardLatestMemo" class="dashboard-latest" aria-live="polite"></div>
+          </article>
+          <article class="dashboard-card">
+            <div class="dashboard-card-head">
+              <h3>최신 댓글</h3>
+              <button type="button" class="ghost dashboard-jump" data-jump-tab="comments">보기</button>
+            </div>
+            <div id="dashboardLatestComment" class="dashboard-latest" aria-live="polite"></div>
+          </article>
+          <article class="dashboard-card wide">
+            <div class="dashboard-card-head">
+              <h3>조회 포스트</h3>
+              <button type="button" class="ghost dashboard-jump" data-jump-tab="analytics">분석 보기</button>
+            </div>
+            <div id="dashboardTopPosts" class="dashboard-post-list" aria-live="polite"></div>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section id="projectsPanel" class="admin-tab-panel hidden">
       <section class="admin-grid">
         <aside class="project-list-panel">
           <div class="panel-head">
@@ -475,6 +513,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260630-analytics-1"></script>
+<script src="admin.js?v=20260630-dashboard-1"></script>
 </body>
 </html>
