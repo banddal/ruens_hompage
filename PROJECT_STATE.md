@@ -35,7 +35,11 @@
 - **15차 후속 수정:** ★사용자에게 실행용 SQL을 안 줘서 DB에 period_start 등 컬럼이 없었음 → admin 저장 안 됨이 그 원인.
   → `add-period-columns.sql` 신규 제공(컬럼3개 추가 + 기존period 자동변환). 이걸 Supabase에서 실행해야 저장 작동.
   또한 모달 작업기간 카드: 값있을때만 표시 → **항상 표시(빈값이면 '—')**로 변경(사용자 요청). period도 빈값시 '—'. 캐시 period-2.
-- **바뀐 파일:** api/index.js, app.js, index.html, styles.css, admin.html, admin.js, admin.css, supabase-schema.sql, add-period-columns.sql(신규).
+- **15차 후속2(레이아웃):** 모달 작업기간 카드를 프로젝트기간 바로 옆 배치. ★주의: #projectModal .project-facts가
+  styles.css에 10번 중복정의됨 → 실제적용은 마지막 8324행(2열 grid: period|lead / role|short / tags|short / metric|outcome).
+  이걸 3열로 수정(period work lead / role role short / tags tags short / metric metric outcome)해서 work를 period 옆에,
+  오른쪽 lead/short(개요/내용) 침범 안 함. Playwright로 period(x170)·work(x425) 동일행, lead(x681) 우측 분리 확인. 캐시 period-3.
+- **바뀐 파일:** api/index.js, app.js, index.html, styles.css, admin.html, admin.js, admin.css, supabase-schema.sql, add-period-columns.sql.
 
 ---
 

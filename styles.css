@@ -6916,16 +6916,17 @@ footer .footer-desc {
 
 #projectModal .project-facts {
   display: grid !important;
-  grid-template-columns: 1fr 1fr 2fr 2fr;
+  grid-template-columns: 1fr 1fr 1fr 2fr 2fr;
   grid-template-areas:
-    "period metric role tags"
-    "short short short outcome";
+    "period work metric role tags"
+    "short short short short outcome";
   gap: 10px;
   padding: 0 !important;
   background: transparent !important;
 }
 
 #projectModal .fact-period { grid-area: period; }
+#projectModal .fact-workduration { grid-area: work; }
 #projectModal .fact-metric { grid-area: metric; }
 #projectModal .fact-role { grid-area: role; }
 #projectModal .fact-tags { grid-area: tags; }
@@ -8323,17 +8324,19 @@ body::before {
 #projectModal .project-facts {
   position: relative !important;
   display: grid !important;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 0.52fr) minmax(0, 0.52fr) minmax(0, 1fr) !important;
   grid-template-areas:
-    "period lead"
-    "role short"
-    "tags short"
-    "metric outcome" !important;
-  column-gap: 56px !important;
+    "period work lead"
+    "role role short"
+    "tags tags short"
+    "metric metric outcome" !important;
+  column-gap: 32px !important;
   grid-auto-rows: minmax(32px, auto) !important;
   row-gap: 6px !important;
   padding: 6px 16px 12px !important;
 }
+
+#projectModal .fact-workduration { grid-area: work !important; }
 
 #projectModal .fact-lead {
   grid-area: lead;
