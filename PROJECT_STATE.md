@@ -24,6 +24,36 @@
 
 ## 2. 이번 라운드 변경 요약
 
+### J. 노동/실태조사 프로젝트 11개 분할 (Claude, 2026-06-30)
+
+G-FAIR(21/22/23) 분할과 동일 방식으로, 4개 프로젝트를 연도별로 분할(기존 유지 + 신규 7개 추가 = 11개).
+
+분할 결과:
+- 단체협상: collective-agreement(2020·기존) + collective-agreement-2017(2017-18) + collective-agreement-2022
+- 경기도 갑질: harassment-survey(2018·기존) + harassment-survey-2020 + harassment-survey-2022
+- 경과원 갑질: gbsa-harassment-survey(2020·기존) + gbsa-harassment-survey-2018 + gbsa-harassment-survey-2022
+- 성과평가: performance-eval(2021·기존) + performance-eval-2020
+
+처리한 곳:
+- `data.js`, `content-data/projects.json`: 기존4개 period/period_start/end 확정 + 신규7개 추가.
+- `split-labor-projects.sql`: 기존4 update + 신규7 insert(tags/skill_tags 제외=타입회피, on conflict do update).
+- `index.html` CV Leadership & Passion: 11개 lead-dot 버튼 배치.
+  - 소속 정정: 경과원갑질(gbsa)→경과원노조 컬럼4, 경기도갑질(harassment)→총연합 컬럼5 (기존에 반대로 박혀있던 것 수정).
+  - 경과원 노조위원장 행을 2022(span제거)로 줄이고, **2021행 신설**해 performance-eval(2021) 배치.
+  - 위원장(2022): collective-2022+gbsa-2022 / 위원장대행(2020): collective+gbsa+performance-eval-2020 / 사무국장(2017-): collective-2017+gbsa-2018
+  - 총연합 부위원장(2022): harassment-2022 / 감사(2020): harassment-2020 / 사무국장(2018): harassment
+- archiving Portfolio는 PROJECTS 자동 read → 11개가 연도별 자동 배치(검증완료).
+- 캐시: app.js `20260630-split-1`.
+
+검증: Playwright — CV 신규버튼 4종 모달 정상, archiving 11개 연도배치 정확(2017/2018/2020/2021/2022), node--check 통과.
+
+사용자 액션: index.html+data.js+projects.json 교체 push + split-labor-projects.sql 1회 실행.
+
+미결정(2): portfolio 탭 s1/s2/s3 타임라인에 11개를 넣을지 → 공간 과다 우려로 사용자가 의견 요청. 아래 Claude 의견 참고.
+
+---
+
+
 ### H. Essay 에디터 개선
 
 관리자 `Essays` 에디터를 실사용 가능한 글쓰기 도구에 가깝게 개선.
