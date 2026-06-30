@@ -32,7 +32,10 @@
   buildPeriodDisplay 단위테스트(같은연도/같은월/다른연도/시작만/레거시) 통과.
 - **사용자 액션:** supabase-schema.sql 재실행(컬럼3개+기존period 자동변환) + api/app/admin/index/styles 교체 push.
   캐시 period-1. 이후 admin에서 각 프로젝트 기간을 시작~종료 월로 재입력하면 archiving 월정렬 정확해짐.
-- **바뀐 파일:** api/index.js, app.js, index.html, styles.css, admin.html, admin.js, admin.css, supabase-schema.sql.
+- **15차 후속 수정:** ★사용자에게 실행용 SQL을 안 줘서 DB에 period_start 등 컬럼이 없었음 → admin 저장 안 됨이 그 원인.
+  → `add-period-columns.sql` 신규 제공(컬럼3개 추가 + 기존period 자동변환). 이걸 Supabase에서 실행해야 저장 작동.
+  또한 모달 작업기간 카드: 값있을때만 표시 → **항상 표시(빈값이면 '—')**로 변경(사용자 요청). period도 빈값시 '—'. 캐시 period-2.
+- **바뀐 파일:** api/index.js, app.js, index.html, styles.css, admin.html, admin.js, admin.css, supabase-schema.sql, add-period-columns.sql(신규).
 
 ---
 

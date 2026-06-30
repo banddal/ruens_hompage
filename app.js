@@ -1288,17 +1288,11 @@ function renderProjectModal(project) {
   $("#projectCategory").textContent = p.category;
   $("#projectTitle").textContent = p.title;
   $("#projectDescription").textContent = p.short || p.description || "";
-  $("#projectPeriod").textContent = p.period;
-  // 작업 기간: 값이 있을 때만 카드 표시
-  const wdCard = $("#projectWorkDurationCard");
+  $("#projectPeriod").textContent = p.period || "—";
+  // 작업 기간: 항상 카드 표시, 비어있으면 '—'
   const wdText = $("#projectWorkDuration");
-  if (wdCard && wdText) {
-    if (p.workDuration && String(p.workDuration).trim()) {
-      wdText.textContent = p.workDuration;
-      wdCard.style.display = "";
-    } else {
-      wdCard.style.display = "none";
-    }
+  if (wdText) {
+    wdText.textContent = (p.workDuration && String(p.workDuration).trim()) ? p.workDuration : "—";
   }
   $("#projectShort").textContent = p.description || p.short || "";
   $("#projectRole").textContent = p.role;
