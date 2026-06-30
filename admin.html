@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Homo Ruens Admin</title>
-<link rel="stylesheet" href="admin.css?v=20260630-board-1" />
+<link rel="stylesheet" href="admin.css?v=20260630-image-manager-1" />
 </head>
 <body>
 <main class="admin-shell">
@@ -124,7 +124,11 @@
               </label>
             </div>
 
-            <div class="form-row two">
+            <div class="form-row three">
+              <label>
+                포트폴리오 번호
+                <input name="portfolioNo" class="admin-input" placeholder="p0001" />
+              </label>
               <label>
                 제목
                 <input name="title" class="admin-input" required />
@@ -226,17 +230,7 @@
             </div>
           </form>
 
-          <section class="upload-grid">
-            <form id="imageUploadForm" class="upload-card">
-              <h3>이미지 업로드</h3>
-              <p class="upload-help">모달의 큰 포트폴리오 이미지 갤러리에 표시됩니다. 제목은 사진명, 캡션은 사진 설명으로 사용됩니다.</p>
-              <input name="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple required />
-              <input name="title" class="admin-input" placeholder="사진명 예: 초기 화면 기획" />
-              <input name="caption" class="admin-input" placeholder="사진 설명 예: MVP 화면 구성 및 기능 우선순위" />
-              <input name="alt" class="admin-input" placeholder="대체 텍스트" />
-              <button type="submit">이미지 추가</button>
-            </form>
-
+          <section class="upload-grid file-only">
             <form id="fileUploadForm" class="upload-card">
               <h3>첨부파일 업로드</h3>
               <p class="upload-help">모달 하단 첨부파일 영역에 표시됩니다. 공개 다운로드만 바로 내려받기 버튼이 노출됩니다.</p>
@@ -253,17 +247,12 @@
           </section>
 
           <section class="asset-panel">
-            <div>
-              <div class="image-bulk-bar">
+            <div class="image-manager-summary">
+              <div>
                 <h3>Images</h3>
-                <div class="image-bulk-actions" id="imageBulkBar" hidden>
-                  <label class="img-selectall"><input type="checkbox" id="imgSelectAll"> 전체선택</label>
-                  <span id="imgSelectCount" class="img-select-count"></span>
-                  <button type="button" id="imgDeleteSelected" class="danger">선택 삭제</button>
-                </div>
+                <p id="imageManagerSummary" class="upload-help">이미지 모달에서 업로드, 썸네일 확인, 순서 변경을 관리합니다.</p>
               </div>
-              <p class="upload-help">체크박스로 여러 장을 선택해 한 번에 삭제할 수 있고, ⠿ 손잡이를 드래그해 순서를 바꿀 수 있습니다.</p>
-              <div id="imageList" class="asset-list"></div>
+              <button type="button" id="openImageManager">이미지 관리</button>
             </div>
             <div>
               <h3>Files</h3>
@@ -273,6 +262,45 @@
         </section>
       </section>
     </section>
+
+    <div id="imageManagerModal" class="admin-modal hidden" role="dialog" aria-modal="true" aria-labelledby="imageManagerTitle">
+      <div class="admin-modal-backdrop" data-close-image-manager></div>
+      <section class="admin-modal-panel image-manager-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Project Images</p>
+            <h2 id="imageManagerTitle">이미지 업로드와 순서 관리</h2>
+            <p class="security-copy">이미지는 업로드 즉시 저장됩니다. 썸네일을 확인하고 드래그해서 표시 순서를 조정한 뒤 확정하세요.</p>
+          </div>
+          <button type="button" class="ghost" data-close-image-manager>닫기</button>
+        </div>
+
+        <form id="imageUploadForm" class="upload-card image-upload-modal-form">
+          <h3>이미지 업로드</h3>
+          <input name="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple required />
+          <input name="title" class="admin-input" placeholder="사진명 예: 초기 화면 기획" />
+          <input name="caption" class="admin-input" placeholder="사진 설명 예: MVP 화면 구성 및 기능 우선순위" />
+          <input name="alt" class="admin-input" placeholder="대체 텍스트" />
+          <button type="submit">이미지 추가</button>
+        </form>
+
+        <div class="image-bulk-bar">
+          <h3>Images</h3>
+          <div class="image-bulk-actions" id="imageBulkBar" hidden>
+            <label class="img-selectall"><input type="checkbox" id="imgSelectAll"> 전체선택</label>
+            <span id="imgSelectCount" class="img-select-count"></span>
+            <button type="button" id="imgDeleteSelected" class="danger">선택 삭제</button>
+          </div>
+        </div>
+        <p class="upload-help">체크박스로 여러 장을 선택해 한 번에 삭제할 수 있고, 썸네일 카드를 드래그해 순서를 바꿀 수 있습니다.</p>
+        <div id="imageList" class="asset-list image-manager-list"></div>
+
+        <div class="form-actions image-manager-actions">
+          <button type="button" class="primary" id="confirmImageManager">이미지 관리 확정</button>
+          <span id="imageManagerStatus" class="status-text"></span>
+        </div>
+      </section>
+    </div>
 
     <section id="essaysPanel" class="admin-tab-panel essays-panel hidden">
       <section class="admin-stack">
@@ -534,6 +562,6 @@
     </section>
   </div>
 </main>
-<script src="admin.js?v=20260630-board-1"></script>
+<script src="admin.js?v=20260630-image-manager-1"></script>
 </body>
 </html>

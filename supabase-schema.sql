@@ -5,6 +5,7 @@ on conflict (id) do update set public = true;
 create table if not exists public.projects (
   id text primary key,
   slug text unique not null,
+  portfolio_no text default '',
   category text not null default 'Plan',
   metric text default '',
   title text not null,
@@ -25,6 +26,7 @@ create table if not exists public.projects (
 );
 
 alter table public.projects add column if not exists slug text;
+alter table public.projects add column if not exists portfolio_no text default '';
 alter table public.projects add column if not exists category text not null default 'Plan';
 alter table public.projects add column if not exists metric text default '';
 alter table public.projects add column if not exists title text;
@@ -45,6 +47,14 @@ alter table public.projects add column if not exists updated_at timestamptz not 
 
 update public.projects set slug = id where slug is null or slug = '';
 update public.projects set title = id where title is null or title = '';
+update public.projects
+set portfolio_no = 'p' || lpad(numbered.row_number::text, 4, '0')
+from (
+  select id, row_number() over (order by sort_order asc, created_at asc, id asc) as row_number
+  from public.projects
+) numbered
+where public.projects.id = numbered.id
+  and (public.projects.portfolio_no is null or public.projects.portfolio_no = '');
 
 do $$
 begin

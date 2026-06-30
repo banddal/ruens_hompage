@@ -297,6 +297,7 @@ function normalizeProject(project, index = 0) {
   return {
     id,
     slug: safeSegment(project.slug || id),
+    portfolioNo: project.portfolioNo || project.portfolio_no || `p${String(index + 1).padStart(4, "0")}`,
     category: project.category || "Plan",
     metric: project.metric || "",
     title: project.title || id,
@@ -369,6 +370,7 @@ function dbProjectToProject(row, images = [], files = []) {
   return normalizeProject({
     id: row.id,
     slug: row.slug,
+    portfolioNo: row.portfolio_no || "",
     category: row.category,
     metric: row.metric,
     title: row.title,
@@ -399,6 +401,7 @@ function projectToDbRow(project) {
   return {
     id: normalized.id,
     slug: normalized.slug,
+    portfolio_no: normalized.portfolioNo,
     category: normalized.category,
     metric: normalized.metric,
     title: normalized.title,

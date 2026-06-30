@@ -27,6 +27,10 @@ const saveStatus = $("#saveStatus");
 const duplicateProjectButton = $("#duplicateProject");
 const deleteProjectButton = $("#deleteProject");
 const updateProjectButton = $("#updateProject");
+const openImageManagerButton = $("#openImageManager");
+const imageManagerModal = $("#imageManagerModal");
+const imageManagerStatus = $("#imageManagerStatus");
+const imageManagerSummary = $("#imageManagerSummary");
 const securityStatusList = $("#securityStatusList");
 const passwordForm = $("#passwordForm");
 const newPassword = $("#newPassword");
@@ -69,6 +73,7 @@ function writeCheckedValues(name, values) {
 }
 
 function setStatus(target, message) {
+  if (!target) return;
   target.textContent = message;
   window.clearTimeout(target._timer);
   target._timer = window.setTimeout(() => {
@@ -103,6 +108,11 @@ function sortTextValue(value) {
 
 function projectDateLabel(project) {
   return project.period || project.periodStart || project.periodEnd || "-";
+}
+
+function projectPortfolioNo(project) {
+  const fallback = Number(project?.sortOrder || 0) || (projects.findIndex(item => item.id === project?.id) + 1);
+  return project?.portfolioNo || project?.portfolio_no || `p${String(Math.max(fallback, 1)).padStart(4, "0")}`;
 }
 
 function adminWrittenLabel(item) {
@@ -268,6 +278,7 @@ function renderProjectList() {
 
   const header = `
     <div class="board-row board-head" aria-hidden="true">
+      <span>No.</span>
       <span>게시일자</span>
       <span>제목</span>
       <span>태그</span>
@@ -277,6 +288,7 @@ function renderProjectList() {
 
   projectList.innerHTML = filtered.length ? header + filtered.map(project => `
     <button type="button" class="board-row project-item${selectedProject?.id === project.id ? " active" : ""}" data-project-id="${escapeHtml(project.id)}">
+      <span class="board-cell board-no">${escapeHtml(projectPortfolioNo(project))}</span>
       <span class="board-cell board-date">${escapeHtml(projectDateLabel(project))}</span>
       <span class="board-cell board-title">
         <strong>${escapeHtml(project.title || project.id)}</strong>
@@ -311,6 +323,7 @@ function fillForm(project) {
   selectedProject = project;
   projectForm.elements.id.value = project.id || "";
   projectForm.elements.slug.value = project.slug || project.id || "";
+  if (projectForm.elements.portfolioNo) projectForm.elements.portfolioNo.value = projectPortfolioNo(project);
   projectForm.elements.title.value = project.title || "";
   projectForm.elements.metric.value = project.metric || "";
   projectForm.elements.category.value = project.category || "Plan";
@@ -336,6 +349,7 @@ function readForm() {
   return {
     id: form.id.value.trim(),
     slug: form.slug.value.trim() || form.id.value.trim(),
+    portfolioNo: form.portfolioNo ? form.portfolioNo.value.trim() : "",
     title: form.title.value.trim(),
     metric: form.metric.value.trim(),
     category: form.category.value,
@@ -367,6 +381,12 @@ function renderAssets(project) {
   const images = project?.images || [];
   const files = project?.files || [];
 
+  if (imageManagerSummary) {
+    imageManagerSummary.textContent = images.length
+      ? `등록된 이미지 ${images.length}개. 이미지 관리 모달에서 썸네일 확인과 순서 변경을 할 수 있습니다.`
+      : "등록된 이미지가 없습니다. 이미지 관리 모달에서 업로드하세요.";
+  }
+
   imageList.innerHTML = images.length ? images.map(item => `
     <div class="asset-item asset-image-item" draggable="true" data-asset-id="${escapeHtml(item.id || "")}">
       <label class="asset-check">
@@ -374,6 +394,7 @@ function renderAssets(project) {
       </label>
       <span class="asset-drag-handle" title="드래그하여 순서 변경" aria-hidden="true">⠿</span>
       <div class="asset-item-body">
+        ${assetUrl(item) ? `<img class="asset-thumb" src="${escapeHtml(assetUrl(item))}" alt="${escapeHtml(item.alt || item.title || "Portfolio image")}" loading="lazy">` : ""}
         <strong>${escapeHtml(item.title || item.originalFilename || "Image")}</strong>
         <span>${escapeHtml(item.caption || item.alt || "")}</span>
         <div class="asset-meta">
@@ -542,6 +563,7 @@ function newProject() {
     id: "",
     slug: "",
     title: "",
+    portfolioNo: `p${String(projects.length + 1).padStart(4, "0")}`,
     metric: "",
     category: "Plan",
     period: "",
@@ -571,6 +593,7 @@ function duplicateProject() {
     ...selectedProject,
     id: "",
     slug: "",
+    portfolioNo: `p${String(projects.length + 1).padStart(4, "0")}`,
     title: `${selectedProject.title || "Project"} copy`,
     status: "draft",
     dashboardFeatured: false,
@@ -618,8 +641,9 @@ async function saveProject(event, mode = "create") {
 
 async function uploadAsset(event, type) {
   event.preventDefault();
+  const statusTarget = type === "images" ? (imageManagerStatus || saveStatus) : saveStatus;
   if (!selectedProject?.id) {
-    setStatus(saveStatus, "먼저 프로젝트를 선택하거나 저장해주세요.");
+    setStatus(statusTarget, "먼저 프로젝트를 선택하거나 저장해주세요.");
     return;
   }
 
@@ -627,7 +651,7 @@ async function uploadAsset(event, type) {
   const fileInput = form.elements.file;
   const files = Array.from(fileInput.files || []);
   if (!files.length) {
-    setStatus(saveStatus, "업로드할 파일을 선택해주세요.");
+    setStatus(statusTarget, "업로드할 파일을 선택해주세요.");
     return;
   }
 
@@ -649,17 +673,17 @@ async function uploadAsset(event, type) {
         data.append("visibility", form.elements.visibility?.value || "request");
       }
       data.append("sortOrder", String((selectedProject[type]?.length || 0) + index + 1));
-      setStatus(saveStatus, `${index + 1}/${files.length} 업로드 중입니다.`);
+      setStatus(statusTarget, `${index + 1}/${files.length} 업로드 중입니다.`);
       await apiJson(`/api/admin/projects/${encodeURIComponent(selectedProject.id)}/${endpoint}`, {
         method: "POST",
         body: data
       });
     }
     form.reset();
-    setStatus(saveStatus, type === "images" ? `${files.length}개 이미지가 추가되었습니다.` : `${files.length}개 첨부파일이 추가되었습니다.`);
+    setStatus(statusTarget, type === "images" ? `${files.length}개 이미지가 추가되었습니다.` : `${files.length}개 첨부파일이 추가되었습니다.`);
     await loadProjects(selectedProject.id);
   } catch (error) {
-    setStatus(saveStatus, `업로드 실패: ${error.message}`);
+    setStatus(statusTarget, `업로드 실패: ${error.message}`);
     console.error("Upload failed", error);
   } finally {
     submitButton.disabled = false;
@@ -696,6 +720,22 @@ async function updateAssetVisibility(type, assetId, visibility) {
   });
   setStatus(saveStatus, "공개 상태가 저장되었습니다.");
   await loadProjects(selectedProject.id);
+}
+
+function openImageManager() {
+  if (!selectedProject?.id) {
+    setStatus(saveStatus, "이미지를 관리하려면 먼저 프로젝트를 선택하거나 저장해주세요.");
+    return;
+  }
+  imageManagerModal?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  renderAssets(selectedProject);
+}
+
+function closeImageManager({ confirmed = false } = {}) {
+  imageManagerModal?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  if (confirmed) setStatus(saveStatus, "이미지 관리가 확정되었습니다. 필요한 경우 프로젝트를 수정하기로 저장하세요.");
 }
 
 async function savePassword(event) {
@@ -1408,6 +1448,11 @@ duplicateProjectButton.addEventListener("click", duplicateProject);
 deleteProjectButton.addEventListener("click", deleteProject);
 updateProjectButton?.addEventListener("click", event => saveProject(event, "update"));
 projectForm.addEventListener("submit", event => saveProject(event, "create"));
+openImageManagerButton?.addEventListener("click", openImageManager);
+$("#confirmImageManager")?.addEventListener("click", () => closeImageManager({ confirmed: true }));
+$$("[data-close-image-manager]").forEach(button => {
+  button.addEventListener("click", () => closeImageManager());
+});
 imageUploadForm.addEventListener("submit", event => uploadAsset(event, "images"));
 fileUploadForm.addEventListener("submit", event => uploadAsset(event, "files"));
 imageList.addEventListener("click", event => {

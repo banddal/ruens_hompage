@@ -302,7 +302,7 @@ button:hover {
 
 .board-row.project-item {
   display: grid;
-  grid-template-columns: 132px minmax(220px, 1.25fr) minmax(150px, .8fr) 132px 92px;
+  grid-template-columns: 76px 132px minmax(220px, 1.25fr) minmax(150px, .8fr) 132px 92px;
   gap: 12px;
   align-items: center;
   min-height: 54px;
@@ -319,7 +319,7 @@ button:hover {
   top: 0;
   z-index: 1;
   display: grid;
-  grid-template-columns: 132px minmax(220px, 1.25fr) minmax(150px, .8fr) 132px 92px;
+  grid-template-columns: 76px 132px minmax(220px, 1.25fr) minmax(150px, .8fr) 132px 92px;
   gap: 12px;
   align-items: center;
   min-height: 36px;
@@ -372,10 +372,16 @@ button:hover {
 }
 
 .board-date,
+.board-no,
 .board-written,
 .board-status {
   color: #666;
   font-size: 11px;
+}
+
+.board-no {
+  color: var(--accent);
+  font-weight: 950;
 }
 
 .board-tags {
@@ -467,6 +473,10 @@ textarea.admin-input {
   margin-top: 24px;
 }
 
+.upload-grid.file-only {
+  grid-template-columns: 1fr;
+}
+
 .upload-card {
   display: grid;
   gap: 10px;
@@ -547,10 +557,34 @@ textarea.admin-input {
   margin-top: 18px;
 }
 
+.image-manager-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: rgba(250,250,250,.9);
+}
+
+.image-manager-summary h3 {
+  margin: 0 0 7px;
+}
+
 .asset-list {
   display: grid;
   gap: 8px;
   margin-top: 10px;
+}
+
+.asset-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin-bottom: 9px;
+  border: 1px solid rgba(20,20,20,.08);
+  background: #f4f4f4;
 }
 
 .asset-empty,
@@ -637,6 +671,86 @@ textarea.admin-input {
 
 .security-panel {
   margin-top: 18px;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.42);
+}
+
+.admin-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100vw - 48px));
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+  padding: 24px;
+  background: rgba(255,255,255,.97);
+  border: 1px solid rgba(20,20,20,.18);
+  box-shadow: 0 22px 80px rgba(0,0,0,.22);
+}
+
+.image-manager-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.image-upload-modal-form {
+  grid-template-columns: minmax(180px, .9fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, .9fr) auto;
+  align-items: end;
+}
+
+.image-upload-modal-form h3 {
+  grid-column: 1 / -1;
+}
+
+.image-manager-list {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  max-height: min(520px, 48vh);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(20,20,20,.1);
+  background: rgba(250,250,250,.88);
+}
+
+.image-manager-list .asset-image-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-content: start;
+  gap: 8px;
+}
+
+.image-manager-list .asset-drag-handle {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.image-manager-list .asset-check {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.image-manager-list .asset-item-body {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.image-manager-actions {
+  justify-content: flex-end;
 }
 
 .security-layout {
