@@ -24,6 +24,23 @@
 
 ## 2. 이번 라운드 변경 요약
 
+
+
+### L. archiving Portfolio 프로젝트 누락 수정 (Claude, 2026-06-30)
+- 증상: union-integration 등 원래 있던 프로젝트가 archiving Portfolio에 안 보임.
+- 원인: hydrateProjectCache의 PROJECTS 머지 객체(merged)에 periodStart/periodEnd가 빠져있었음.
+  → Supabase에서 온 프로젝트(admin에서 기간 입력한 것)는 머지 시 periodStart 유실 → 연도 못 구해 그룹핑에서 누락.
+- 수정:
+  - merged에 periodStart(sp.periodStart||sp.period_start), periodEnd, workDuration 추가.
+  - archiving projectYear/periodSortKey에 폴백 추가: periodStart 없으면 periodEnd로 폴백(안 잡히던 것 구제). 기존 동작은 유지.
+- 검증: Playwright — union-integration에 periodStart 주입 후 머지/재렌더 → 2023년에 정상 표시.
+- 캐시 app.js 20260630-archfix-2.
+
+### K. CV Leadership 버튼 오배치 수정 (Claude, 2026-06-30)
+- 경기도경제과학진흥원·과장 행에 잘못 붙어있던 performance-eval(성과평가) 버튼 삭제(원래 G-FAIR 3개만 있어야 함, archiving은 정상이었음).
+- G-FAIR KOREA PM 연도 역순 수정: 과장 행 슬롯이 위→아래로 2024/2023/2022/2021인데 G-FAIR이 2021(위)~2023(아래)로 거꾸로 박혀있던 것을 2023(위)→2022→2021(아래)로 정정. Playwright로 각 PM 버튼 y좌표가 해당 연도 라벨과 일치 확인.
+- 캐시 app.js 20260630-split-2.
+
 ### J. 노동/실태조사 프로젝트 11개 분할 (Claude, 2026-06-30)
 
 G-FAIR(21/22/23) 분할과 동일 방식으로, 4개 프로젝트를 연도별로 분할(기존 유지 + 신규 7개 추가 = 11개).

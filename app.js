@@ -71,6 +71,28 @@ function sanitizeEssayHtml(html) {
     "P","BR","HR","STRONG","B","EM","I","U","S","DEL",
     "H2","H3","H4","BLOCKQUOTE","UL","OL","LI","A","IMG","FIGURE","FIGCAPTION","SPAN"
   ]);
+  const sanitizeInlineStyle = (styleValue = "") => {
+    const safe = [];
+    String(styleValue).split(";").forEach(rule => {
+      const [rawName, rawValue] = rule.split(":");
+      const name = String(rawName || "").trim().toLowerCase();
+      const value = String(rawValue || "").trim();
+      if (!name || !value) return;
+      if (name === "color" && (/^#[0-9a-f]{3,8}$/i.test(value) || /^rgba?\([\d\s,.%]+\)$/i.test(value))) {
+        safe.push(`${name}: ${value}`);
+      }
+      if (name === "font-weight" && /^(300|400|500|600|700|bold|normal)$/i.test(value)) {
+        safe.push(`${name}: ${value}`);
+      }
+      if (name === "font-style" && /^(italic|normal)$/i.test(value)) {
+        safe.push(`${name}: ${value}`);
+      }
+      if (name === "text-decoration" && /^(underline|line-through|none)$/i.test(value)) {
+        safe.push(`${name}: ${value}`);
+      }
+    });
+    return safe.join("; ");
+  };
   const template = document.createElement("template");
   template.innerHTML = String(html || "");
 
@@ -88,17 +110,27 @@ function sanitizeEssayHtml(html) {
         // 속성 정리: 허용된 것만 남김
         const keepAttrs = tag === "A" ? ["href"]
           : tag === "IMG" ? ["src", "alt"]
+          : tag === "SPAN" ? ["style"]
           : [];
         Array.from(child.attributes).forEach(attr => {
           if (!keepAttrs.includes(attr.name.toLowerCase())) {
             child.removeAttribute(attr.name);
           }
         });
+        if (child.hasAttribute("style")) {
+          const safeStyle = sanitizeInlineStyle(child.getAttribute("style"));
+          if (safeStyle) child.setAttribute("style", safeStyle);
+          else child.removeAttribute("style");
+        }
         // href/src에서 javascript: 등 위험 스킴 차단
-        ["href", "src"].forEach(a => {
-          const val = child.getAttribute(a);
-          if (val && /^\s*(javascript|data|vbscript):/i.test(val)) child.removeAttribute(a);
-        });
+        if (tag === "A") {
+          const href = child.getAttribute("href");
+          if (href && !/^\s*https?:\/\//i.test(href)) child.removeAttribute("href");
+        }
+        if (tag === "IMG") {
+          const src = child.getAttribute("src");
+          if (src && !/^\s*(https?:\/\/|data:image\/)/i.test(src)) child.removeAttribute("src");
+        }
         if (tag === "A") {
           child.setAttribute("target", "_blank");
           child.setAttribute("rel", "noopener");
@@ -1236,6 +1268,9 @@ async function hydrateProjectCache() {
             metric: sp.metric || "",
             title: sp.title || "",
             period: sp.period || "",
+            periodStart: sp.periodStart || sp.period_start || "",
+            periodEnd: sp.periodEnd || sp.period_end || "",
+            workDuration: sp.workDuration || sp.work_duration || "",
             short: sp.short || "",
             description: sp.description || "",
             role: sp.role || "",
@@ -2173,16 +2208,22 @@ initStoryV6();
     const m = String(period).match(/(\d{4})/);
     return m ? parseInt(m[1], 10) : 0;
   }
-  // periodStart("2022-03")에서 정렬키 추출. 없으면 period 표기에서 연도 추출.
+  // periodStart("2022-03") 우선, 없으면 periodEnd, 없으면 period 표기에서 연도 추출.
   function periodSortKey(p) {
     const ps = String(p.periodStart || "").match(/(\d{4})-(\d{1,2})/);
     if (ps) return parseInt(ps[1], 10) * 100 + parseInt(ps[2], 10); // YYYYMM
+    // periodStart가 없는(안 잡히던) 프로젝트는 종료 시점으로 폴백
+    const pe = String(p.periodEnd || "").match(/(\d{4})-(\d{1,2})/);
+    if (pe) return parseInt(pe[1], 10) * 100 + parseInt(pe[2], 10);
     const y = parseStartYear(p.period);
     return y * 100; // 월 정보 없으면 연도만
   }
   function projectYear(p) {
     const ps = String(p.periodStart || "").match(/(\d{4})/);
     if (ps) return ps[1];
+    // periodStart가 없는(안 잡히던) 프로젝트는 종료 시점으로 폴백
+    const pe = String(p.periodEnd || "").match(/(\d{4})/);
+    if (pe) return pe[1];
     const y = parseStartYear(p.period);
     return y ? String(y) : "기타";
   }
