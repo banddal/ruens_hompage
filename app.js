@@ -212,8 +212,24 @@ function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
+const OWNER_FLAG_KEY = "hr-owner";
+
+// ?notrack=1 → 이 브라우저를 집계에서 영구 제외 / ?track=1 → 제외 해제
+(() => {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get("notrack") === "1") localStorage.setItem(OWNER_FLAG_KEY, "1");
+    if (params.get("track") === "1") localStorage.removeItem(OWNER_FLAG_KEY);
+  } catch { /* ignore */ }
+})();
+
+function isOwnerBrowser() {
+  try { return localStorage.getItem(OWNER_FLAG_KEY) === "1"; } catch { return false; }
+}
+
 function trackAnalytics(payload, { onceKey = "" } = {}) {
   try {
+    if (isOwnerBrowser()) return; // 관리자 브라우저는 집계 제외
     if (onceKey) {
       const key = `hr-analytics:${onceKey}`;
       if (sessionStorage.getItem(key)) return;

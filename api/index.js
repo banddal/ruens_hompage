@@ -1049,8 +1049,23 @@ function cleanAnalyticsText(value, max = 240) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+function isOwnerRequest(req) {
+  // 1) admin 세션 쿠키가 유효하면 소유자 트래픽으로 간주 (index.html과 같은 도메인이므로 쿠키가 함께 전송됨)
+  if (verifySession(req)) return true;
+  // 2) OWNER_IPS 환경변수(쉼표 구분)에 등록된 IP는 제외
+  const ownerIps = String(process.env.OWNER_IPS || "")
+    .split(",")
+    .map(v => v.trim())
+    .filter(Boolean);
+  if (ownerIps.length && ownerIps.includes(clientIp(req))) return true;
+  return false;
+}
+
 async function handleAnalyticsTrack(req, res) {
   if (!supabaseEnabled()) return sendJson(res, 200, { ok: false, disabled: true });
+
+  // 소유자(관리자) 트래픽은 기록하지 않는다.
+  if (isOwnerRequest(req)) return sendJson(res, 200, { ok: true, skipped: "owner" });
 
   let payload;
   try {
@@ -1098,41 +1113,104 @@ async function handleAnalyticsTrack(req, res) {
   }
 }
 
-async function handleAdminAnalytics(req, res) {
-  if (!supabaseEnabled()) {
-    return sendJson(res, 200, {
-      summary: { totalVisits: 0, todayVisits: 0, last7Visits: 0, uniqueVisitors: 0, contentViews: 0 },
-      daily: [],
-      content: []
-    });
-  }
+function classifyReferrer(referrer, requestHost = "") {
+  const raw = String(referrer || "").trim();
+  if (!raw) return "직접 유입";
+  let host = "";
+  try { host = new URL(raw).hostname.toLowerCase(); } catch { return "직접 유입"; }
+  const selfHosts = ["kimsung-won.com", "www.kimsung-won.com"];
+  if (requestHost) selfHosts.push(requestHost.toLowerCase());
+  if (selfHosts.some(h => host === h)) return "내부 이동";
+  if (host.includes("google.")) return "Google";
+  if (host.includes("naver.com") || host.includes("naver.me")) return "Naver";
+  if (host.includes("brunch.co.kr")) return "Brunch";
+  if (host.includes("linkedin.com") || host === "lnkd.in") return "LinkedIn";
+  if (host.includes("instagram.com")) return "Instagram";
+  if (host.includes("facebook.com") || host === "fb.me") return "Facebook";
+  if (host.includes("kakao")) return "Kakao";
+  if (host === "t.co" || host.includes("twitter.com") || host === "x.com") return "X(Twitter)";
+  if (host.includes("daum.net")) return "Daum";
+  if (host.includes("bing.com")) return "Bing";
+  if (host.includes("duckduckgo.com")) return "DuckDuckGo";
+  if (host.includes("chatgpt.com") || host.includes("openai.com")) return "ChatGPT";
+  if (host.includes("claude.ai")) return "Claude";
+  return host.replace(/^www\./, "");
+}
 
+async function handleAdminAnalytics(req, res) {
+  const emptyPayload = {
+    summary: {
+      totalVisits: 0, todayVisits: 0, last7Visits: 0,
+      uniqueVisitors: 0, todayUnique: 0, last7Unique: 0,
+      contentViews: 0, todayContentViews: 0
+    },
+    daily: [],
+    content: [],
+    referrers: [],
+    truncated: false
+  };
+  if (!supabaseEnabled()) return sendJson(res, 200, emptyPayload);
+
+  const FETCH_LIMIT = 10000;
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const rows = await supabaseRequest(
-    `/rest/v1/analytics_events?select=event_type,content_type,content_id,title,path,visitor_hash,created_at&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=5000`
+    `/rest/v1/analytics_events?select=event_type,content_type,content_id,title,path,referrer,visitor_hash,created_at&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${FETCH_LIMIT}`
   );
   const events = Array.isArray(rows) ? rows : [];
+  const requestHost = String(req.headers.host || "").split(":")[0];
   const today = new Date().toISOString().slice(0, 10);
   const last7Cut = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
   const pageEvents = events.filter(row => row.event_type === "page_view");
   const contentEvents = events.filter(row => row.event_type === "content_view");
-  const uniqueVisitors = new Set(pageEvents.map(row => row.visitor_hash).filter(Boolean));
-  const todayVisits = pageEvents.filter(row => String(row.created_at || "").slice(0, 10) === today).length;
-  const last7Visits = pageEvents.filter(row => Date.parse(row.created_at || 0) >= last7Cut).length;
 
+  // ---- 요약: 순방문자(UV)와 뷰 수를 분리 집계 ----
+  const uniqueAll = new Set();
+  const uniqueToday = new Set();
+  const uniqueLast7 = new Set();
+  let todayVisits = 0;
+  let last7Visits = 0;
+  pageEvents.forEach(row => {
+    const day = String(row.created_at || "").slice(0, 10);
+    const hash = row.visitor_hash || "";
+    if (hash) uniqueAll.add(hash);
+    if (day === today) {
+      todayVisits += 1;
+      if (hash) uniqueToday.add(hash);
+    }
+    if (Date.parse(row.created_at || 0) >= last7Cut && hash) uniqueLast7.add(hash);
+    if (Date.parse(row.created_at || 0) >= last7Cut) last7Visits += 1;
+  });
+  const todayContentViews = contentEvents
+    .filter(row => String(row.created_at || "").slice(0, 10) === today).length;
+
+  // ---- 일자별 집계: UV / 페이지뷰 / 게시글뷰 ----
   const dailyMap = new Map();
+  const dailyOf = day => {
+    if (!dailyMap.has(day)) dailyMap.set(day, { date: day, visits: 0, contentViews: 0, unique: new Set() });
+    return dailyMap.get(day);
+  };
   pageEvents.forEach(row => {
     const day = String(row.created_at || "").slice(0, 10) || "unknown";
-    if (!dailyMap.has(day)) dailyMap.set(day, { date: day, visits: 0, unique: new Set() });
-    const item = dailyMap.get(day);
+    const item = dailyOf(day);
     item.visits += 1;
     if (row.visitor_hash) item.unique.add(row.visitor_hash);
   });
+  contentEvents.forEach(row => {
+    const day = String(row.created_at || "").slice(0, 10) || "unknown";
+    dailyOf(day).contentViews += 1;
+  });
   const daily = Array.from(dailyMap.values())
-    .map(item => ({ date: item.date, visits: item.visits, uniqueVisitors: item.unique.size }))
+    .map(item => ({
+      date: item.date,
+      visits: item.visits,
+      contentViews: item.contentViews,
+      uniqueVisitors: item.unique.size
+    }))
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-14);
+    .slice(-30);
 
+  // ---- 콘텐츠별: 조회수 / 순독자 / 유입 경로 분해 ----
   const contentMap = new Map();
   contentEvents.forEach(row => {
     const key = `${row.content_type || "content"}:${row.content_id || ""}`;
@@ -1142,11 +1220,16 @@ async function handleAdminAnalytics(req, res) {
         contentId: row.content_id || "",
         title: row.title || row.content_id || "",
         views: 0,
+        readers: new Set(),
+        referrerMap: new Map(),
         lastViewedAt: row.created_at || ""
       });
     }
     const item = contentMap.get(key);
     item.views += 1;
+    if (row.visitor_hash) item.readers.add(row.visitor_hash);
+    const source = classifyReferrer(row.referrer, requestHost);
+    item.referrerMap.set(source, (item.referrerMap.get(source) || 0) + 1);
     if (!item.title && row.title) item.title = row.title;
     if (String(row.created_at || "") > String(item.lastViewedAt || "")) {
       item.lastViewedAt = row.created_at || "";
@@ -1154,18 +1237,45 @@ async function handleAdminAnalytics(req, res) {
     }
   });
   const content = Array.from(contentMap.values())
+    .map(item => ({
+      contentType: item.contentType,
+      contentId: item.contentId,
+      title: item.title,
+      views: item.views,
+      uniqueReaders: item.readers.size,
+      lastViewedAt: item.lastViewedAt,
+      referrers: Array.from(item.referrerMap.entries())
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8)
+    }))
     .sort((a, b) => b.views - a.views || String(b.lastViewedAt).localeCompare(String(a.lastViewedAt)));
+
+  // ---- 사이트 전체 유입 경로 (page_view 기준) ----
+  const referrerMap = new Map();
+  pageEvents.forEach(row => {
+    const source = classifyReferrer(row.referrer, requestHost);
+    referrerMap.set(source, (referrerMap.get(source) || 0) + 1);
+  });
+  const referrers = Array.from(referrerMap.entries())
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count);
 
   return sendJson(res, 200, {
     summary: {
       totalVisits: pageEvents.length,
       todayVisits,
       last7Visits,
-      uniqueVisitors: uniqueVisitors.size,
-      contentViews: contentEvents.length
+      uniqueVisitors: uniqueAll.size,
+      todayUnique: uniqueToday.size,
+      last7Unique: uniqueLast7.size,
+      contentViews: contentEvents.length,
+      todayContentViews
     },
     daily,
-    content
+    content,
+    referrers,
+    truncated: events.length >= FETCH_LIMIT
   });
 }
 

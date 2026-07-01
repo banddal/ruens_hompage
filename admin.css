@@ -1390,6 +1390,100 @@ body.modal-open {
   letter-spacing: -.04em;
 }
 
+/* 요약 카드 7개 대응 */
+.analytics-summary {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.analytics-card--uv strong { color: #a01212; }
+
+/* 게시글 행: 클릭하면 유입 경로 펼침 */
+.analytics-row--expandable {
+  display: block;
+  padding: 0;
+}
+
+.analytics-row--expandable summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.analytics-row--expandable summary::-webkit-details-marker { display: none; }
+
+.analytics-row--expandable[open] summary {
+  border-bottom: 1px dashed rgba(20,20,20,.12);
+}
+
+.analytics-ref-list {
+  margin: 0;
+  padding: 10px 14px 12px;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.analytics-ref-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: #444;
+}
+
+.analytics-ref-list li b {
+  font-size: 13px;
+}
+
+.analytics-ref-empty span { color: #999; }
+
+/* 일자별 3열(순방문/페이지뷰/게시글뷰) — .analytics-row span의 display:block보다 우선 */
+.analytics-row span.analytics-daily-cols {
+  display: grid;
+  grid-template-columns: repeat(3, 62px);
+  gap: 12px;
+  text-align: right;
+  overflow: visible;
+  margin-top: 0;
+}
+
+.analytics-daily-cols i {
+  font-style: normal;
+  font-size: 12.5px;
+  color: #111;
+  letter-spacing: -.03em;
+}
+
+.analytics-daily-head {
+  background: rgba(20,20,20,.045);
+}
+
+.analytics-daily-head .analytics-daily-cols i {
+  font-size: 10px;
+  font-weight: 850;
+  color: #777;
+}
+
+.analytics-sub-head {
+  margin-top: 18px !important;
+}
+
+.analytics-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #999;
+}
+
+.analytics-share {
+  font-style: normal;
+  font-size: 11px;
+  color: #999;
+}
+
 @media(max-width: 900px) {
   .dashboard-summary,
   .dashboard-grid,

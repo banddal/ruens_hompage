@@ -364,3 +364,23 @@ node --check "C:\Users\HP\Desktop\새 폴더\api\index.js"
 - `api/index.js`
 - `supabase-schema.sql`
 - `PROJECT_STATE.md`
+
+---
+
+## 7. 2026-07-02: Analytics 개편
+
+**목표**: 순방문자/뷰 분리, 일자별 집계, 게시글별 유입 경로, 관리자 트래픽 제외.
+
+- `api/index.js`
+  - `isOwnerRequest()`: admin 세션 쿠키 유효 또는 `OWNER_IPS` env(쉼표 구분 IP) 매칭 시 `/api/analytics/track`에서 기록 스킵.
+  - `classifyReferrer()`: referrer를 소스 그룹(직접 유입/내부 이동/Google/Naver/Brunch/LinkedIn/…)으로 정규화.
+  - `handleAdminAnalytics()` 전면 개편: summary에 todayUnique/last7Unique/todayContentViews 추가, daily 30일(UV/PV/게시글뷰), content에 uniqueReaders + referrers[] 추가, 사이트 전체 referrers[] 추가, FETCH_LIMIT 10000 + truncated 플래그.
+- `app.js`: `hr-owner` localStorage 플래그 있으면 trackAnalytics 전체 스킵. `?notrack=1`로 플래그 세팅, `?track=1`로 해제.
+- `admin.js`: 로그인/세션 확인 성공 시 `markOwnerBrowser()`로 `hr-owner` 자동 세팅. 요약 카드 7종, 일자별 3열(UV/PV/글조회), 게시글 행 클릭 시 유입 경로 펼침(details), 전체 유입 경로 목록(비중 %).
+- `admin.html`: Analytics 패널 구조 갱신(유입 경로 섹션, 안내 문구).
+- `admin.css`: `.analytics-row--expandable`, `.analytics-ref-list`, `.analytics-daily-cols`(주의: `.analytics-row span`의 display:block보다 특이도 높여야 함 → `span.analytics-daily-cols`).
+
+**주의사항**
+- visitor_hash가 `일자|IP|UA|salt` 해시라 UV는 "일 단위 순방문"임. 90일 uniqueVisitors는 일별 순방문의 합산 성격(같은 사람이 이틀 오면 2로 집계). 진짜 기간 UV가 필요하면 해시에서 day 제거 필요(프라이버시 트레이드오프).
+- 관리자 제외는 (1) admin 로그인한 브라우저의 localStorage 플래그 (2) 서버측 admin 세션 쿠키 (3) OWNER_IPS env 3중. 새 기기는 admin 로그인 한 번 또는 `?notrack=1` 접속으로 제외 등록.
+- 스키마 변경 없음 (`analytics_events` 기존 컬럼 그대로 사용).

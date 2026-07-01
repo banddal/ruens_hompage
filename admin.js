@@ -208,10 +208,16 @@ function renderSecurityStatus(status) {
   `).join("");
 }
 
+function markOwnerBrowser() {
+  // index.html의 trackAnalytics가 이 플래그를 보고 집계를 스킵한다.
+  try { localStorage.setItem("hr-owner", "1"); } catch { /* ignore */ }
+}
+
 async function loadSecurityStatus() {
   const status = await apiJson("/api/admin/security/status");
   renderSecurityStatus(status);
   if (status.authenticated) {
+    markOwnerBrowser();
     showAdminPanel();
     await loadDashboard();
   } else {
@@ -234,6 +240,7 @@ async function submitAuth(event) {
       body: JSON.stringify({ password })
     });
     renderSecurityStatus(status);
+    markOwnerBrowser();
     showAdminPanel();
     switchTab("dashboard");
   } catch (error) {
@@ -944,14 +951,16 @@ function analyticsTypeLabel(value) {
 function renderAnalyticsSummary(summary = {}) {
   if (!analyticsSummary) return;
   const cards = [
-    ["총 방문", summary.totalVisits],
-    ["오늘 방문", summary.todayVisits],
-    ["최근 7일", summary.last7Visits],
-    ["고유 방문자", summary.uniqueVisitors],
-    ["콘텐츠 조회", summary.contentViews]
+    ["오늘 순방문자", summary.todayUnique, "uv"],
+    ["오늘 페이지뷰", summary.todayVisits, "pv"],
+    ["오늘 게시글 조회", summary.todayContentViews, "cv"],
+    ["최근 7일 순방문자", summary.last7Unique, "uv"],
+    ["최근 7일 페이지뷰", summary.last7Visits, "pv"],
+    ["90일 누적 페이지뷰", summary.totalVisits, "pv"],
+    ["90일 게시글 조회", summary.contentViews, "cv"]
   ];
-  analyticsSummary.innerHTML = cards.map(([label, value]) => `
-    <article class="analytics-card">
+  analyticsSummary.innerHTML = cards.map(([label, value, kind]) => `
+    <article class="analytics-card analytics-card--${kind}">
       <span>${escapeHtml(label)}</span>
       <strong>${analyticsNumber(value)}</strong>
     </article>
@@ -964,15 +973,28 @@ function renderAnalyticsContent(items = []) {
     analyticsContentList.innerHTML = `<p class="memo-admin-empty">아직 콘텐츠 조회 기록이 없습니다.</p>`;
     return;
   }
-  analyticsContentList.innerHTML = items.map(item => `
-    <article class="analytics-row">
-      <div>
-        <strong>${escapeHtml(item.title || item.contentId || "-")}</strong>
-        <span>${escapeHtml(analyticsTypeLabel(item.contentType))} · ${escapeHtml(item.contentId || "-")}</span>
-      </div>
-      <b>${analyticsNumber(item.views)}</b>
-    </article>
-  `).join("");
+  analyticsContentList.innerHTML = items.map(item => {
+    const referrers = Array.isArray(item.referrers) ? item.referrers : [];
+    const referrerRows = referrers.length
+      ? referrers.map(ref => `
+          <li><span>${escapeHtml(ref.source || "-")}</span><b>${analyticsNumber(ref.count)}</b></li>
+        `).join("")
+      : `<li class="analytics-ref-empty"><span>유입 경로 기록 없음</span></li>`;
+    return `
+    <details class="analytics-row analytics-row--expandable">
+      <summary>
+        <div>
+          <strong>${escapeHtml(item.title || item.contentId || "-")}</strong>
+          <span>${escapeHtml(analyticsTypeLabel(item.contentType))} · 순독자 ${analyticsNumber(item.uniqueReaders)}명</span>
+        </div>
+        <b>${analyticsNumber(item.views)}</b>
+      </summary>
+      <ul class="analytics-ref-list" aria-label="유입 경로">
+        ${referrerRows}
+      </ul>
+    </details>
+  `;
+  }).join("");
 }
 
 function renderAnalyticsDaily(items = []) {
@@ -981,13 +1003,35 @@ function renderAnalyticsDaily(items = []) {
     analyticsDailyList.innerHTML = `<p class="memo-admin-empty">아직 방문 기록이 없습니다.</p>`;
     return;
   }
-  analyticsDailyList.innerHTML = items.slice().reverse().map(item => `
+  analyticsDailyList.innerHTML = `
+    <article class="analytics-row analytics-daily-head">
+      <div><strong>일자</strong></div>
+      <span class="analytics-daily-cols"><i>UV</i><i>PV</i><i>글조회</i></span>
+    </article>
+  ` + items.slice().reverse().map(item => `
     <article class="analytics-row">
-      <div>
-        <strong>${escapeHtml(item.date || "-")}</strong>
-        <span>고유 ${analyticsNumber(item.uniqueVisitors)}명</span>
-      </div>
-      <b>${analyticsNumber(item.visits)}</b>
+      <div><strong>${escapeHtml(item.date || "-")}</strong></div>
+      <span class="analytics-daily-cols">
+        <i>${analyticsNumber(item.uniqueVisitors)}</i>
+        <i>${analyticsNumber(item.visits)}</i>
+        <i>${analyticsNumber(item.contentViews)}</i>
+      </span>
+    </article>
+  `).join("");
+}
+
+function renderAnalyticsReferrers(items = []) {
+  const box = document.querySelector("#analyticsReferrerList");
+  if (!box) return;
+  if (!items.length) {
+    box.innerHTML = `<p class="memo-admin-empty">아직 유입 기록이 없습니다.</p>`;
+    return;
+  }
+  const total = items.reduce((sum, item) => sum + Number(item.count || 0), 0) || 1;
+  box.innerHTML = items.map(item => `
+    <article class="analytics-row">
+      <div><strong>${escapeHtml(item.source || "-")}</strong></div>
+      <b>${analyticsNumber(item.count)} <em class="analytics-share">(${Math.round((item.count / total) * 100)}%)</em></b>
     </article>
   `).join("");
 }
@@ -1002,6 +1046,7 @@ async function loadAnalytics() {
     renderAnalyticsSummary(data.summary || {});
     renderAnalyticsContent(data.content || []);
     renderAnalyticsDaily(data.daily || []);
+    renderAnalyticsReferrers(data.referrers || []);
     if (analyticsUpdatedAt) analyticsUpdatedAt.textContent = `(${new Date().toLocaleString("ko-KR")})`;
   } catch (error) {
     analyticsSummary.innerHTML = `<p class="memo-admin-empty">분석 데이터를 불러오지 못했습니다.</p>`;
