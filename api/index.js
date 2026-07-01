@@ -1061,11 +1061,27 @@ function isOwnerRequest(req) {
   return false;
 }
 
+function deviceFromUA(ua) {
+  const s = String(ua || "");
+  if (!s) return "";
+  if (/iPad|Tablet|SM-T/i.test(s)) return "tablet";
+  if (/Mobi|Android|iPhone/i.test(s)) return "mobile";
+  return "desktop";
+}
+
+function isBotUA(ua) {
+  return /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse|monitor/i.test(String(ua || ""));
+}
+
+const ANALYTICS_EVENT_TYPES = new Set(["page_view", "content_view", "content_view_end", "section_view"]);
+const MAX_DURATION_MS = 30 * 60 * 1000; // 30분 상한(탭 방치 컷)
+
 async function handleAnalyticsTrack(req, res) {
   if (!supabaseEnabled()) return sendJson(res, 200, { ok: false, disabled: true });
 
-  // 소유자(관리자) 트래픽은 기록하지 않는다.
+  // 소유자(관리자) 트래픽과 봇은 기록하지 않는다.
   if (isOwnerRequest(req)) return sendJson(res, 200, { ok: true, skipped: "owner" });
+  if (isBotUA(req.headers["user-agent"])) return sendJson(res, 200, { ok: true, skipped: "bot" });
 
   let payload;
   try {
@@ -1075,16 +1091,25 @@ async function handleAnalyticsTrack(req, res) {
     return sendError(res, 400, "Invalid JSON body.");
   }
 
-  const eventType = payload.eventType === "content_view" ? "content_view" : "page_view";
-  const contentType = eventType === "content_view"
+  const eventType = ANALYTICS_EVENT_TYPES.has(payload.eventType) ? payload.eventType : "page_view";
+  const isContentEvent = eventType === "content_view" || eventType === "content_view_end";
+  const contentType = isContentEvent
     ? cleanAnalyticsText(payload.contentType || "content", 40)
-    : "page";
-  const contentId = eventType === "content_view"
-    ? cleanAnalyticsText(payload.contentId || "", 160)
-    : "";
+    : (eventType === "section_view" ? "section" : "page");
+  const contentId = eventType === "page_view"
+    ? ""
+    : cleanAnalyticsText(payload.contentId || "", 160);
 
-  if (eventType === "content_view" && !contentId) {
+  if (eventType !== "page_view" && !contentId) {
     return sendError(res, 400, "contentId is required.");
+  }
+
+  const meta = {};
+  if (eventType === "content_view_end") {
+    const duration = Math.min(Math.max(Number(payload.durationMs) || 0, 0), MAX_DURATION_MS);
+    const depth = Math.min(Math.max(Number(payload.scrollDepth) || 0, 0), 100);
+    if (duration > 0) meta.durationMs = Math.round(duration);
+    meta.scrollDepth = Math.round(depth);
   }
 
   const row = {
@@ -1094,7 +1119,11 @@ async function handleAnalyticsTrack(req, res) {
     title: cleanAnalyticsText(payload.title || "", 220),
     path: cleanAnalyticsText(payload.path || req.headers.referer || "", 420),
     referrer: cleanAnalyticsText(payload.referrer || req.headers.referer || "", 420),
-    visitor_hash: analyticsVisitorHash(req)
+    visitor_hash: analyticsVisitorHash(req),
+    client_id: cleanAnalyticsText(payload.clientId || "", 64),
+    session_id: cleanAnalyticsText(payload.sessionId || "", 64),
+    device: deviceFromUA(req.headers["user-agent"]),
+    meta
   };
 
   try {
@@ -1137,129 +1166,281 @@ function classifyReferrer(referrer, requestHost = "") {
   return host.replace(/^www\./, "");
 }
 
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function kstDay(iso) {
+  const ts = Date.parse(iso || 0);
+  if (!Number.isFinite(ts)) return "unknown";
+  return new Date(ts + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function kstHourSlot(iso) {
+  const ts = Date.parse(iso || 0);
+  if (!Number.isFinite(ts)) return null;
+  const d = new Date(ts + KST_OFFSET_MS);
+  return { dow: d.getUTCDay(), hour: d.getUTCHours() }; // 0=일요일
+}
+
+function extractSearchTerm(referrer) {
+  try {
+    const url = new URL(String(referrer || ""));
+    const host = url.hostname;
+    const q = url.searchParams;
+    if (host.includes("naver")) return (q.get("query") || "").trim();
+    if (host.includes("google")) return (q.get("q") || "").trim();
+    if (host.includes("bing")) return (q.get("q") || "").trim();
+    if (host.includes("daum")) return (q.get("q") || "").trim();
+    if (host.includes("duckduckgo")) return (q.get("q") || "").trim();
+  } catch { /* ignore */ }
+  return "";
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 async function handleAdminAnalytics(req, res) {
   const emptyPayload = {
-    summary: {
-      totalVisits: 0, todayVisits: 0, last7Visits: 0,
-      uniqueVisitors: 0, todayUnique: 0, last7Unique: 0,
-      contentViews: 0, todayContentViews: 0
-    },
-    daily: [],
-    content: [],
-    referrers: [],
-    truncated: false
+    summary: {}, daily: [], content: [], referrers: [], searchTerms: [],
+    devices: [], sections: [], heatmap: [], truncated: false
   };
   if (!supabaseEnabled()) return sendJson(res, 200, emptyPayload);
 
   const FETCH_LIMIT = 10000;
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const rows = await supabaseRequest(
-    `/rest/v1/analytics_events?select=event_type,content_type,content_id,title,path,referrer,visitor_hash,created_at&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${FETCH_LIMIT}`
+    `/rest/v1/analytics_events?select=event_type,content_type,content_id,title,path,referrer,visitor_hash,client_id,session_id,device,meta,created_at&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${FETCH_LIMIT}`
   );
   const events = Array.isArray(rows) ? rows : [];
   const requestHost = String(req.headers.host || "").split(":")[0];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = kstDay(new Date().toISOString());
   const last7Cut = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-  const pageEvents = events.filter(row => row.event_type === "page_view");
-  const contentEvents = events.filter(row => row.event_type === "content_view");
+  const pageEvents = events.filter(r => r.event_type === "page_view");
+  const contentEvents = events.filter(r => r.event_type === "content_view");
+  const endEvents = events.filter(r => r.event_type === "content_view_end");
+  const sectionEvents = events.filter(r => r.event_type === "section_view");
 
-  // ---- 요약: 순방문자(UV)와 뷰 수를 분리 집계 ----
+  const visitorKey = r => r.client_id || r.visitor_hash || "";
+
+  // ---- 재방문: client_id 기준 활동일 집합 ----
+  const clientDays = new Map(); // client_id -> Set(day)
+  pageEvents.forEach(r => {
+    const cid = r.client_id || "";
+    if (!cid) return;
+    if (!clientDays.has(cid)) clientDays.set(cid, new Set());
+    clientDays.get(cid).add(kstDay(r.created_at));
+  });
+  const clientFirstDay = new Map();
+  clientDays.forEach((days, cid) => {
+    clientFirstDay.set(cid, Array.from(days).sort()[0]);
+  });
+  const trackedClients = clientDays.size;
+  const returningClients = Array.from(clientDays.values()).filter(days => days.size >= 2).length;
+  const returningRate = trackedClients ? Math.round((returningClients / trackedClients) * 100) : 0;
+
+  // ---- 요약 ----
   const uniqueAll = new Set();
   const uniqueToday = new Set();
   const uniqueLast7 = new Set();
   let todayVisits = 0;
   let last7Visits = 0;
-  pageEvents.forEach(row => {
-    const day = String(row.created_at || "").slice(0, 10);
-    const hash = row.visitor_hash || "";
-    if (hash) uniqueAll.add(hash);
+  pageEvents.forEach(r => {
+    const day = kstDay(r.created_at);
+    const key = visitorKey(r);
+    if (key) uniqueAll.add(key);
     if (day === today) {
       todayVisits += 1;
-      if (hash) uniqueToday.add(hash);
+      if (key) uniqueToday.add(key);
     }
-    if (Date.parse(row.created_at || 0) >= last7Cut && hash) uniqueLast7.add(hash);
-    if (Date.parse(row.created_at || 0) >= last7Cut) last7Visits += 1;
+    if (Date.parse(r.created_at || 0) >= last7Cut) {
+      last7Visits += 1;
+      if (key) uniqueLast7.add(key);
+    }
   });
-  const todayContentViews = contentEvents
-    .filter(row => String(row.created_at || "").slice(0, 10) === today).length;
+  const todayContentViews = contentEvents.filter(r => kstDay(r.created_at) === today).length;
 
-  // ---- 일자별 집계: UV / 페이지뷰 / 게시글뷰 ----
+  // 체류시간·완독률 (content_view_end 기반)
+  const durations = endEvents.map(r => Number(r.meta?.durationMs) || 0).filter(v => v > 0);
+  const depthSamples = endEvents.map(r => Number(r.meta?.scrollDepth)).filter(v => Number.isFinite(v));
+  const completionRate = depthSamples.length
+    ? Math.round((depthSamples.filter(v => v >= 90).length / depthSamples.length) * 100)
+    : null;
+  const medianDurationMs = median(durations);
+
+  // 세션: 이탈률(글 조회 없이 떠난 세션), 세션당 글 조회
+  const sessionMap = new Map(); // sid -> {pages, contents}
+  events.forEach(r => {
+    const sid = r.session_id || "";
+    if (!sid) return;
+    if (!sessionMap.has(sid)) sessionMap.set(sid, { pages: 0, contents: 0 });
+    const s = sessionMap.get(sid);
+    if (r.event_type === "page_view") s.pages += 1;
+    if (r.event_type === "content_view") s.contents += 1;
+  });
+  const sessions = sessionMap.size;
+  const bouncedSessions = Array.from(sessionMap.values()).filter(s => s.contents === 0).length;
+  const bounceRate = sessions ? Math.round((bouncedSessions / sessions) * 100) : null;
+  const contentsPerSession = sessions
+    ? Math.round((Array.from(sessionMap.values()).reduce((sum, s) => sum + s.contents, 0) / sessions) * 10) / 10
+    : null;
+
+  // ---- 일자별: UV/PV/글조회 + 신규/재방문 ----
   const dailyMap = new Map();
   const dailyOf = day => {
-    if (!dailyMap.has(day)) dailyMap.set(day, { date: day, visits: 0, contentViews: 0, unique: new Set() });
+    if (!dailyMap.has(day)) {
+      dailyMap.set(day, { date: day, visits: 0, contentViews: 0, unique: new Set(), newClients: new Set(), returningClients: new Set() });
+    }
     return dailyMap.get(day);
   };
-  pageEvents.forEach(row => {
-    const day = String(row.created_at || "").slice(0, 10) || "unknown";
+  pageEvents.forEach(r => {
+    const day = kstDay(r.created_at);
     const item = dailyOf(day);
     item.visits += 1;
-    if (row.visitor_hash) item.unique.add(row.visitor_hash);
+    const key = visitorKey(r);
+    if (key) item.unique.add(key);
+    const cid = r.client_id || "";
+    if (cid) {
+      if (clientFirstDay.get(cid) === day) item.newClients.add(cid);
+      else item.returningClients.add(cid);
+    }
   });
-  contentEvents.forEach(row => {
-    const day = String(row.created_at || "").slice(0, 10) || "unknown";
-    dailyOf(day).contentViews += 1;
-  });
+  contentEvents.forEach(r => { dailyOf(kstDay(r.created_at)).contentViews += 1; });
   const daily = Array.from(dailyMap.values())
     .map(item => ({
       date: item.date,
       visits: item.visits,
       contentViews: item.contentViews,
-      uniqueVisitors: item.unique.size
+      uniqueVisitors: item.unique.size,
+      newVisitors: item.newClients.size,
+      returningVisitors: item.returningClients.size
     }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-30);
 
-  // ---- 콘텐츠별: 조회수 / 순독자 / 유입 경로 분해 ----
+  // ---- 요일×시간 히트맵 (KST, page_view 기준) ----
+  const heat = Array.from({ length: 7 }, () => Array(24).fill(0));
+  pageEvents.forEach(r => {
+    const slot = kstHourSlot(r.created_at);
+    if (slot) heat[slot.dow][slot.hour] += 1;
+  });
+
+  // ---- 콘텐츠별 상세 ----
+  const spark14Days = [];
+  for (let i = 13; i >= 0; i--) {
+    spark14Days.push(kstDay(new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString()));
+  }
+  const sparkIndex = new Map(spark14Days.map((d, i) => [d, i]));
+
   const contentMap = new Map();
-  contentEvents.forEach(row => {
-    const key = `${row.content_type || "content"}:${row.content_id || ""}`;
+  const contentKeyOf = r => `${r.content_type || "content"}:${r.content_id || ""}`;
+  const contentOf = r => {
+    const key = contentKeyOf(r);
     if (!contentMap.has(key)) {
       contentMap.set(key, {
-        contentType: row.content_type || "content",
-        contentId: row.content_id || "",
-        title: row.title || row.content_id || "",
+        contentType: r.content_type || "content",
+        contentId: r.content_id || "",
+        title: r.title || r.content_id || "",
         views: 0,
         readers: new Set(),
         referrerMap: new Map(),
-        lastViewedAt: row.created_at || ""
+        searchTermMap: new Map(),
+        durations: [],
+        depths: [],
+        spark: Array(14).fill(0),
+        lastViewedAt: ""
       });
     }
-    const item = contentMap.get(key);
+    return contentMap.get(key);
+  };
+  contentEvents.forEach(r => {
+    const item = contentOf(r);
     item.views += 1;
-    if (row.visitor_hash) item.readers.add(row.visitor_hash);
-    const source = classifyReferrer(row.referrer, requestHost);
+    const key = visitorKey(r);
+    if (key) item.readers.add(key);
+    const source = classifyReferrer(r.referrer, requestHost);
     item.referrerMap.set(source, (item.referrerMap.get(source) || 0) + 1);
-    if (!item.title && row.title) item.title = row.title;
-    if (String(row.created_at || "") > String(item.lastViewedAt || "")) {
-      item.lastViewedAt = row.created_at || "";
-      if (row.title) item.title = row.title;
+    const term = extractSearchTerm(r.referrer);
+    if (term) item.searchTermMap.set(term, (item.searchTermMap.get(term) || 0) + 1);
+    const si = sparkIndex.get(kstDay(r.created_at));
+    if (si !== undefined) item.spark[si] += 1;
+    if (!item.title && r.title) item.title = r.title;
+    if (String(r.created_at || "") > String(item.lastViewedAt || "")) {
+      item.lastViewedAt = r.created_at || "";
+      if (r.title) item.title = r.title;
     }
   });
+  endEvents.forEach(r => {
+    const item = contentOf(r);
+    const duration = Number(r.meta?.durationMs) || 0;
+    const depth = Number(r.meta?.scrollDepth);
+    if (duration > 0) item.durations.push(duration);
+    if (Number.isFinite(depth)) item.depths.push(depth);
+  });
   const content = Array.from(contentMap.values())
+    .filter(item => item.views > 0)
     .map(item => ({
       contentType: item.contentType,
       contentId: item.contentId,
       title: item.title,
       views: item.views,
       uniqueReaders: item.readers.size,
+      medianDurationMs: median(item.durations),
+      durationSamples: item.durations.length,
+      completionRate: item.depths.length
+        ? Math.round((item.depths.filter(v => v >= 90).length / item.depths.length) * 100)
+        : null,
+      spark14: item.spark,
       lastViewedAt: item.lastViewedAt,
       referrers: Array.from(item.referrerMap.entries())
         .map(([source, count]) => ({ source, count }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 8)
+        .slice(0, 8),
+      searchTerms: Array.from(item.searchTermMap.entries())
+        .map(([term, count]) => ({ term, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
     }))
     .sort((a, b) => b.views - a.views || String(b.lastViewedAt).localeCompare(String(a.lastViewedAt)));
 
-  // ---- 사이트 전체 유입 경로 (page_view 기준) ----
+  // ---- 사이트 전체 유입 경로 / 검색어 / 디바이스 / 섹션 도달 ----
   const referrerMap = new Map();
-  pageEvents.forEach(row => {
-    const source = classifyReferrer(row.referrer, requestHost);
+  const searchTermMap = new Map();
+  const deviceMap = new Map();
+  pageEvents.forEach(r => {
+    const source = classifyReferrer(r.referrer, requestHost);
     referrerMap.set(source, (referrerMap.get(source) || 0) + 1);
+    const term = extractSearchTerm(r.referrer);
+    if (term) searchTermMap.set(term, (searchTermMap.get(term) || 0) + 1);
+    const device = r.device || "unknown";
+    deviceMap.set(device, (deviceMap.get(device) || 0) + 1);
   });
   const referrers = Array.from(referrerMap.entries())
     .map(([source, count]) => ({ source, count }))
     .sort((a, b) => b.count - a.count);
+  const searchTerms = Array.from(searchTermMap.entries())
+    .map(([term, count]) => ({ term, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 30);
+  const devices = Array.from(deviceMap.entries())
+    .map(([device, count]) => ({ device, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const sectionMap = new Map();
+  sectionEvents.forEach(r => {
+    const key = r.content_id || "unknown";
+    if (!sectionMap.has(key)) sectionMap.set(key, { sectionId: key, title: r.title || key, reach: new Set() });
+    const item = sectionMap.get(key);
+    const sid = r.session_id || visitorKey(r);
+    if (sid) item.reach.add(sid);
+    if (r.title) item.title = r.title;
+  });
+  const sections = Array.from(sectionMap.values())
+    .map(item => ({ sectionId: item.sectionId, title: item.title, sessions: item.reach.size }))
+    .sort((a, b) => b.sessions - a.sessions);
 
   return sendJson(res, 200, {
     summary: {
@@ -1270,11 +1451,23 @@ async function handleAdminAnalytics(req, res) {
       todayUnique: uniqueToday.size,
       last7Unique: uniqueLast7.size,
       contentViews: contentEvents.length,
-      todayContentViews
+      todayContentViews,
+      returningRate,
+      trackedClients,
+      medianDurationMs,
+      durationSamples: durations.length,
+      completionRate,
+      bounceRate,
+      contentsPerSession,
+      sessions
     },
     daily,
     content,
     referrers,
+    searchTerms,
+    devices,
+    sections,
+    heatmap: heat,
     truncated: events.length >= FETCH_LIMIT
   });
 }

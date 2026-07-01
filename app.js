@@ -227,6 +227,29 @@ function isOwnerBrowser() {
   try { return localStorage.getItem(OWNER_FLAG_KEY) === "1"; } catch { return false; }
 }
 
+function analyticsClientId() {
+  // 익명 영구 ID (IP 아님) — 재방문/순방문자 집계용
+  try {
+    let id = localStorage.getItem("hr-vid");
+    if (!id) {
+      id = (crypto.randomUUID && crypto.randomUUID()) || `v-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem("hr-vid", id);
+    }
+    return id;
+  } catch { return ""; }
+}
+
+function analyticsSessionId() {
+  try {
+    let id = sessionStorage.getItem("hr-sid");
+    if (!id) {
+      id = (crypto.randomUUID && crypto.randomUUID()) || `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      sessionStorage.setItem("hr-sid", id);
+    }
+    return id;
+  } catch { return ""; }
+}
+
 function trackAnalytics(payload, { onceKey = "" } = {}) {
   try {
     if (isOwnerBrowser()) return; // 관리자 브라우저는 집계 제외
@@ -241,6 +264,8 @@ function trackAnalytics(payload, { onceKey = "" } = {}) {
       body: JSON.stringify({
         path: `${location.pathname}${location.search}${location.hash}`,
         referrer: document.referrer || "",
+        clientId: analyticsClientId(),
+        sessionId: analyticsSessionId(),
         ...payload
       }),
       keepalive: true
@@ -249,6 +274,53 @@ function trackAnalytics(payload, { onceKey = "" } = {}) {
     // 분석 실패는 사용자 화면을 막지 않는다.
   }
 }
+
+// ---- 글 읽기 심층 계측: 체류시간 + 스크롤 깊이(완독률) ----
+const contentTiming = { active: null };
+
+function startContentTiming(contentType, contentId, title, scrollEl) {
+  endContentTiming(); // 이전 글이 열려 있었다면 먼저 마감
+  const timing = {
+    contentType, contentId, title,
+    startedAt: Date.now(),
+    maxScroll: 0,
+    scrollEl: scrollEl || null,
+    onScroll: null
+  };
+  if (scrollEl) {
+    timing.onScroll = () => {
+      const depth = scrollEl.scrollHeight <= scrollEl.clientHeight + 4
+        ? 100
+        : Math.min(100, Math.round(((scrollEl.scrollTop + scrollEl.clientHeight) / scrollEl.scrollHeight) * 100));
+      if (depth > timing.maxScroll) timing.maxScroll = depth;
+    };
+    timing.onScroll();
+    scrollEl.addEventListener("scroll", timing.onScroll, { passive: true });
+  }
+  contentTiming.active = timing;
+}
+
+function endContentTiming() {
+  const timing = contentTiming.active;
+  if (!timing) return;
+  contentTiming.active = null;
+  if (timing.scrollEl && timing.onScroll) {
+    timing.onScroll(); // 마지막 위치 반영
+    timing.scrollEl.removeEventListener("scroll", timing.onScroll);
+  }
+  const durationMs = Date.now() - timing.startedAt;
+  if (durationMs < 1200) return; // 오클릭 노이즈 컷
+  trackAnalytics({
+    eventType: "content_view_end",
+    contentType: timing.contentType,
+    contentId: timing.contentId,
+    title: timing.title,
+    durationMs,
+    scrollDepth: timing.maxScroll
+  });
+}
+
+window.addEventListener("pagehide", endContentTiming);
 
 async function loadSiteSettings() {
   const noticeLine = $("#siteNoticeLine");
@@ -1050,6 +1122,7 @@ function openEssayModal(card) {
     contentId: activeEssayId,
     title: card.dataset.title || ""
   }, { onceKey: `essay:${activeEssayId}` });
+  startContentTiming("essay", activeEssayId, card.dataset.title || "", document.querySelector("#essayModal .essay-modal-body"));
   $("#essayModalCategory").textContent = card.dataset.category || "Essay";
   $("#essayModalTitle").textContent = card.dataset.title || "";
   $("#essayModalMeta").textContent = `Uploaded · ${card.dataset.date || "날짜 미정"}`;
@@ -1106,6 +1179,7 @@ function openEssayModal(card) {
 }
 
 function closeEssayModal() {
+  endContentTiming();
   $("#essayModal").classList.remove("open");
   $("#essayModal").setAttribute("aria-hidden", "true");
   document.body.classList.remove("lock");
@@ -1248,6 +1322,12 @@ document.addEventListener("click", e => {
 $$(".tab[data-tab]").forEach(tab => {
   tab.addEventListener("click", () => {
     activatePanel(tab.dataset.tab, { scrollToStart: true });
+    trackAnalytics({
+      eventType: "section_view",
+      contentType: "section",
+      contentId: tab.dataset.tab,
+      title: tab.textContent.trim()
+    }, { onceKey: `section:${tab.dataset.tab}` });
   });
 });
 
@@ -1440,6 +1520,7 @@ async function openProjectModal(projectId) {
     contentId: fallback.id || projectId,
     title: fallback.title || projectId
   }, { onceKey: `project:${fallback.id || projectId}` });
+  startContentTiming("project", fallback.id || projectId, fallback.title || projectId, document.querySelector("#projectModal .project-body"));
   renderProjectModal({
     ...fallback,
     description: fallback.description || "백엔드 프로젝트 데이터를 불러오는 중입니다."
@@ -1545,6 +1626,7 @@ function renderAssetText(g, idx) {
 }
 
 function closeProjectModal() {
+  endContentTiming();
   setProjectImageZoom(false);
   $("#projectModal").classList.remove("open");
   $("#projectModal").setAttribute("aria-hidden", "true");

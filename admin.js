@@ -948,23 +948,47 @@ function analyticsTypeLabel(value) {
   return value || "Content";
 }
 
+function formatDuration(ms) {
+  const total = Math.round(Number(ms || 0) / 1000);
+  if (!total) return "-";
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+  return min ? `${min}분 ${sec}초` : `${sec}초`;
+}
+
+function formatPercent(value) {
+  return value === null || value === undefined ? "-" : `${value}%`;
+}
+
 function renderAnalyticsSummary(summary = {}) {
   if (!analyticsSummary) return;
   const cards = [
-    ["오늘 순방문자", summary.todayUnique, "uv"],
-    ["오늘 페이지뷰", summary.todayVisits, "pv"],
-    ["오늘 게시글 조회", summary.todayContentViews, "cv"],
-    ["최근 7일 순방문자", summary.last7Unique, "uv"],
-    ["최근 7일 페이지뷰", summary.last7Visits, "pv"],
-    ["90일 누적 페이지뷰", summary.totalVisits, "pv"],
-    ["90일 게시글 조회", summary.contentViews, "cv"]
+    ["오늘 순방문자", analyticsNumber(summary.todayUnique), "uv"],
+    ["오늘 페이지뷰", analyticsNumber(summary.todayVisits), "pv"],
+    ["오늘 게시글 조회", analyticsNumber(summary.todayContentViews), "cv"],
+    ["최근 7일 순방문자", analyticsNumber(summary.last7Unique), "uv"],
+    ["최근 7일 페이지뷰", analyticsNumber(summary.last7Visits), "pv"],
+    ["90일 페이지뷰", analyticsNumber(summary.totalVisits), "pv"],
+    ["90일 게시글 조회", analyticsNumber(summary.contentViews), "cv"],
+    ["재방문율", formatPercent(summary.returningRate), "uv"],
+    ["글 체류시간(중앙값)", formatDuration(summary.medianDurationMs), "cv"],
+    ["완독률", formatPercent(summary.completionRate), "cv"],
+    ["이탈률", formatPercent(summary.bounceRate), "pv"],
+    ["세션당 글 조회", summary.contentsPerSession ?? "-", "cv"]
   ];
   analyticsSummary.innerHTML = cards.map(([label, value, kind]) => `
     <article class="analytics-card analytics-card--${kind}">
       <span>${escapeHtml(label)}</span>
-      <strong>${analyticsNumber(value)}</strong>
+      <strong>${escapeHtml(String(value))}</strong>
     </article>
   `).join("");
+}
+
+function sparkBars(values = []) {
+  const max = Math.max(...values, 1);
+  return `<span class="analytics-spark" title="최근 14일 조회 추이">${values.map(v => `
+    <i style="height:${Math.max(Math.round((v / max) * 100), v > 0 ? 12 : 4)}%"></i>
+  `).join("")}</span>`;
 }
 
 function renderAnalyticsContent(items = []) {
@@ -975,23 +999,38 @@ function renderAnalyticsContent(items = []) {
   }
   analyticsContentList.innerHTML = items.map(item => {
     const referrers = Array.isArray(item.referrers) ? item.referrers : [];
+    const searchTerms = Array.isArray(item.searchTerms) ? item.searchTerms : [];
     const referrerRows = referrers.length
-      ? referrers.map(ref => `
-          <li><span>${escapeHtml(ref.source || "-")}</span><b>${analyticsNumber(ref.count)}</b></li>
-        `).join("")
+      ? referrers.map(ref => `<li><span>${escapeHtml(ref.source || "-")}</span><b>${analyticsNumber(ref.count)}</b></li>`).join("")
       : `<li class="analytics-ref-empty"><span>유입 경로 기록 없음</span></li>`;
+    const termRows = searchTerms.length
+      ? `<div class="analytics-detail-block"><h4>유입 검색어</h4><ul class="analytics-ref-list">${
+          searchTerms.map(t => `<li><span>${escapeHtml(t.term)}</span><b>${analyticsNumber(t.count)}</b></li>`).join("")
+        }</ul></div>`
+      : "";
+    const metrics = `
+      <div class="analytics-content-metrics">
+        <span>체류 <b>${formatDuration(item.medianDurationMs)}</b>${item.durationSamples ? ` <i>(${analyticsNumber(item.durationSamples)}건)</i>` : ""}</span>
+        <span>완독률 <b>${formatPercent(item.completionRate)}</b></span>
+        <span>순독자 <b>${analyticsNumber(item.uniqueReaders)}명</b></span>
+      </div>`;
     return `
     <details class="analytics-row analytics-row--expandable">
       <summary>
         <div>
           <strong>${escapeHtml(item.title || item.contentId || "-")}</strong>
-          <span>${escapeHtml(analyticsTypeLabel(item.contentType))} · 순독자 ${analyticsNumber(item.uniqueReaders)}명</span>
+          <span>${escapeHtml(analyticsTypeLabel(item.contentType))} · 순독자 ${analyticsNumber(item.uniqueReaders)}명 · 체류 ${formatDuration(item.medianDurationMs)}</span>
         </div>
+        ${sparkBars(item.spark14 || [])}
         <b>${analyticsNumber(item.views)}</b>
       </summary>
-      <ul class="analytics-ref-list" aria-label="유입 경로">
-        ${referrerRows}
-      </ul>
+      <div class="analytics-detail">
+        ${metrics}
+        <div class="analytics-detail-block"><h4>유입 경로</h4>
+          <ul class="analytics-ref-list">${referrerRows}</ul>
+        </div>
+        ${termRows}
+      </div>
     </details>
   `;
   }).join("");
@@ -1008,16 +1047,22 @@ function renderAnalyticsDaily(items = []) {
       <div><strong>일자</strong></div>
       <span class="analytics-daily-cols"><i>UV</i><i>PV</i><i>글조회</i></span>
     </article>
-  ` + items.slice().reverse().map(item => `
+  ` + items.slice().reverse().map(item => {
+    const hasSplit = (item.newVisitors || 0) + (item.returningVisitors || 0) > 0;
+    const split = hasSplit
+      ? `<span>신규 ${analyticsNumber(item.newVisitors)} · 재방문 ${analyticsNumber(item.returningVisitors)}</span>`
+      : "";
+    return `
     <article class="analytics-row">
-      <div><strong>${escapeHtml(item.date || "-")}</strong></div>
+      <div><strong>${escapeHtml(item.date || "-")}</strong>${split}</div>
       <span class="analytics-daily-cols">
         <i>${analyticsNumber(item.uniqueVisitors)}</i>
         <i>${analyticsNumber(item.visits)}</i>
         <i>${analyticsNumber(item.contentViews)}</i>
       </span>
     </article>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function renderAnalyticsReferrers(items = []) {
@@ -1036,6 +1081,50 @@ function renderAnalyticsReferrers(items = []) {
   `).join("");
 }
 
+function renderSimpleCountList(selector, items, keyField, emptyText, suffix = "") {
+  const box = document.querySelector(selector);
+  if (!box) return;
+  if (!items || !items.length) {
+    box.innerHTML = `<p class="memo-admin-empty">${emptyText}</p>`;
+    return;
+  }
+  const total = items.reduce((sum, item) => sum + Number(item.count ?? item.sessions ?? 0), 0) || 1;
+  box.innerHTML = items.map(item => {
+    const count = Number(item.count ?? item.sessions ?? 0);
+    return `
+    <article class="analytics-row">
+      <div><strong>${escapeHtml(String(item[keyField] || "-"))}</strong></div>
+      <b>${analyticsNumber(count)}${suffix} <em class="analytics-share">(${Math.round((count / total) * 100)}%)</em></b>
+    </article>
+  `;
+  }).join("");
+}
+
+const DEVICE_LABELS = { mobile: "모바일", desktop: "데스크톱", tablet: "태블릿", unknown: "미확인" };
+const HEAT_DOW_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function renderAnalyticsHeatmap(matrix = []) {
+  const box = document.querySelector("#analyticsHeatmap");
+  if (!box) return;
+  if (!Array.isArray(matrix) || matrix.length !== 7) {
+    box.innerHTML = `<p class="memo-admin-empty">아직 데이터가 없습니다.</p>`;
+    return;
+  }
+  const max = Math.max(...matrix.flat(), 1);
+  const hourHead = `<div class="heatmap-row heatmap-head"><i></i>${
+    Array.from({ length: 24 }, (_, h) => `<i>${h % 3 === 0 ? h : ""}</i>`).join("")
+  }</div>`;
+  const rows = matrix.map((row, dow) => `
+    <div class="heatmap-row">
+      <i class="heatmap-dow">${HEAT_DOW_LABELS[dow]}</i>
+      ${row.map((count, h) => `
+        <span class="heatmap-cell" style="--heat:${(count / max).toFixed(3)}" title="${HEAT_DOW_LABELS[dow]} ${h}시 · ${analyticsNumber(count)}회"></span>
+      `).join("")}
+    </div>
+  `).join("");
+  box.innerHTML = hourHead + rows;
+}
+
 async function loadAnalytics() {
   if (!analyticsSummary || !analyticsContentList || !analyticsDailyList) return;
   analyticsSummary.innerHTML = `<p class="memo-admin-empty">분석 데이터를 불러오는 중…</p>`;
@@ -1047,6 +1136,13 @@ async function loadAnalytics() {
     renderAnalyticsContent(data.content || []);
     renderAnalyticsDaily(data.daily || []);
     renderAnalyticsReferrers(data.referrers || []);
+    renderSimpleCountList("#analyticsSearchTermList", data.searchTerms, "term", "아직 검색 유입이 없습니다. (구글은 검색어를 넘기지 않는 경우가 많습니다)");
+    renderSimpleCountList("#analyticsDeviceList", (data.devices || []).map(d => ({ ...d, device: DEVICE_LABELS[d.device] || d.device })), "device", "아직 데이터가 없습니다.");
+    renderSimpleCountList("#analyticsSectionList", data.sections, "title", "아직 섹션 이동 기록이 없습니다.");
+    renderAnalyticsHeatmap(data.heatmap || []);
+    if (data.truncated) {
+      analyticsSummary.insertAdjacentHTML("afterbegin", `<p class="analytics-truncated">이벤트가 1만 건을 넘어 최근 데이터만 집계되었습니다.</p>`);
+    }
     if (analyticsUpdatedAt) analyticsUpdatedAt.textContent = `(${new Date().toLocaleString("ko-KR")})`;
   } catch (error) {
     analyticsSummary.innerHTML = `<p class="memo-admin-empty">분석 데이터를 불러오지 못했습니다.</p>`;

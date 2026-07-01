@@ -384,3 +384,21 @@ node --check "C:\Users\HP\Desktop\새 폴더\api\index.js"
 - visitor_hash가 `일자|IP|UA|salt` 해시라 UV는 "일 단위 순방문"임. 90일 uniqueVisitors는 일별 순방문의 합산 성격(같은 사람이 이틀 오면 2로 집계). 진짜 기간 UV가 필요하면 해시에서 day 제거 필요(프라이버시 트레이드오프).
 - 관리자 제외는 (1) admin 로그인한 브라우저의 localStorage 플래그 (2) 서버측 admin 세션 쿠키 (3) OWNER_IPS env 3중. 새 기기는 admin 로그인 한 번 또는 `?notrack=1` 접속으로 제외 등록.
 - 스키마 변경 없음 (`analytics_events` 기존 컬럼 그대로 사용).
+
+---
+
+## 8. 2026-07-02: Analytics v2 (심층 분석)
+
+**추가 지표**: 재방문율, 신규/재방문 분리, 글별 체류시간(중앙값)·완독률(스크롤 90%), 이탈률, 세션당 글 조회, 요일×시간 히트맵(KST), 유입 검색어(네이버/빙/다음/DDG 추출), 디바이스 분포, 섹션(탭) 도달, 글별 14일 스파크라인. 봇 UA 필터링 추가.
+
+**⚠️ 배포 전 Supabase SQL 1회 실행 필요**: `migration-analytics-v2.sql` (analytics_events에 client_id/session_id/device/meta 컬럼 추가). 실행 안 하면 track insert가 실패함.
+
+- `app.js`: `hr-vid`(localStorage 익명 영구 UUID) + `hr-sid`(세션 UUID) 전 이벤트에 첨부. `startContentTiming`/`endContentTiming` — 모달 열림~닫힘 체류시간 + 스크롤 최대 깊이 측정(essay: `.essay-modal-body`, project: `.project-body`), 1.2초 미만 노이즈 컷, pagehide에서도 마감. 탭 클릭 시 `section_view`(세션당 1회).
+- `api/index.js`: track — 이벤트 타입 allowlist(page_view/content_view/content_view_end/section_view), 봇 UA 스킵, device 판별, durationMs 30분 상한, meta jsonb 저장. admin analytics — 전 집계 KST 기준으로 변경(kstDay/kstHourSlot), client_id 기반 재방문(활동일 2일 이상)·신규/재방문 일별 분리, content_view_end에서 중앙값 체류/완독률, session 기반 이탈률, 7×24 히트맵, extractSearchTerm(referrer 쿼리 파라미터), spark14.
+- `admin.js/html/css`: 요약 카드 12종, 게시글 행 확장 시 체류·완독·유입경로·검색어, 히트맵 렌더러, 검색어/디바이스/섹션 목록, 신규·재방문 일별 표기, truncated 경고.
+
+**주의사항**
+- CSS 특이도 함정 재발: `.analytics-row span { display:block }`이 하위 컴포넌트 display를 덮음 → 새 span 컴포넌트는 반드시 `span.클래스명`으로 선언 (daily-cols, spark 두 번 당함).
+- 구글은 검색어를 referrer로 안 넘김(대부분). 검색어 목록은 네이버·빙·다음 위주로 쌓임.
+- 재방문/체류시간/완독률은 client_id·meta 도입 시점부터 쌓임. 기존 데이터는 UV(visitor_hash 폴백)와 조회수만 유효.
+- localStorage 삭제/시크릿 모드는 신규 방문자로 잡힘 — 원리상 한계.

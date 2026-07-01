@@ -537,18 +537,26 @@
           </div>
           <button type="button" id="reloadAnalytics">새로고침</button>
         </div>
-        <p class="security-copy">순방문자(UV)와 페이지뷰·게시글 조회를 분리해 집계합니다. IP 원문은 저장하지 않고 일 단위 해시로만 처리하며, <b>관리자 로그인한 브라우저의 방문은 집계에서 제외</b>됩니다.</p>
+        <p class="security-copy">순방문자·페이지뷰·게시글 조회를 분리 집계하고, 글별 체류시간·완독률·유입 검색어까지 추적합니다. IP 원문은 저장하지 않으며(익명 브라우저 ID 기반), <b>관리자 로그인한 브라우저와 봇의 방문은 집계에서 제외</b>됩니다. 시간 기준: KST.</p>
         <div id="analyticsSummary" class="analytics-summary" aria-live="polite"></div>
         <div class="analytics-layout">
           <section>
-            <h3>게시글별 조회 <span class="analytics-hint">(클릭하면 유입 경로가 펼쳐집니다)</span></h3>
+            <h3>게시글별 조회 <span class="analytics-hint">(클릭하면 체류시간·완독률·유입 경로·검색어가 펼쳐집니다)</span></h3>
             <div id="analyticsContentList" class="analytics-list" aria-live="polite"></div>
+            <h3 class="analytics-sub-head">요일 × 시간대 방문 히트맵 <span class="analytics-hint">(90일, KST)</span></h3>
+            <div id="analyticsHeatmap" class="analytics-heatmap" aria-live="polite"></div>
           </section>
           <section>
             <h3>최근 30일 일자별 집계</h3>
             <div id="analyticsDailyList" class="analytics-list compact" aria-live="polite"></div>
-            <h3 class="analytics-sub-head">사이트 전체 유입 경로 <span class="analytics-hint">(90일)</span></h3>
+            <h3 class="analytics-sub-head">유입 경로 <span class="analytics-hint">(90일)</span></h3>
             <div id="analyticsReferrerList" class="analytics-list compact" aria-live="polite"></div>
+            <h3 class="analytics-sub-head">유입 검색어</h3>
+            <div id="analyticsSearchTermList" class="analytics-list compact" aria-live="polite"></div>
+            <h3 class="analytics-sub-head">디바이스</h3>
+            <div id="analyticsDeviceList" class="analytics-list compact" aria-live="polite"></div>
+            <h3 class="analytics-sub-head">섹션 도달 <span class="analytics-hint">(세션 기준)</span></h3>
+            <div id="analyticsSectionList" class="analytics-list compact" aria-live="polite"></div>
           </section>
         </div>
       </section>
